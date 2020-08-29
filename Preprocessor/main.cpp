@@ -100,21 +100,7 @@ int main(int argv, char* argc[])
 	{
 		{
 			definition def;
-			def.m_defName = "__midl";
-			def.m_substitutionString = "10000";
-			defines.insert(std::unordered_map<string, definition>::value_type(def.m_defName,def));
-		}
-
-		{
-			definition def;
 			def.m_defName = "GENERATOR";
-			def.m_substitutionString = "1";
-			defines.insert(std::unordered_map<string, definition>::value_type(def.m_defName,def));
-		}
-
-		{
-			definition def;
-			def.m_defName = "USE_ASIO";
 			def.m_substitutionString = "1";
 			defines.insert(std::unordered_map<string, definition>::value_type(def.m_defName,def));
 		}
