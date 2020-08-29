@@ -1,9 +1,17 @@
-#include "stdafx.h"
-#include "macrohandler.h"
 
-#include "function_timer.h"
+#include <sstream>
+#include <stdio.h> 
+#include <iostream>
+#include <string>
+#include <list>
+#include <set>
+#include <unordered_map>
+#include <fstream>
 #include <filesystem>
 #include <algorithm>
+
+#include <macrohandler.h>
+#include <function_timer.h>
 
 xt::function_timer* p_timer = NULL;
 
@@ -30,11 +38,11 @@ int main(int argv, char* argc[])
 			i++;
 			if(i >= argv)
 			{
-				cout << "error missing -sourceFile parameter" << ends;
+				std::cout << "error missing -sourceFile parameter\n";
 				return -1;
 			}
 			sourceFile = argc[i];
-			cout << "-sourceFile " << sourceFile << std::endl;
+			std::cout << "-sourceFile " << sourceFile << "\n";
 			continue;
 		}
 		else if(!strcmp(argc[i],"-outputFile"))
@@ -42,11 +50,11 @@ int main(int argv, char* argc[])
 			i++;
 			if(i >= argv)
 			{
-				cout << "error missing -outputFile parameter" << ends;
+				std::cout << "error missing -outputFile parameter\n";
 				return -1;
 			}
 			outputFile = argc[i];
-			cout << "-outputFile " << outputFile << std::endl;
+			std::cout << "-outputFile " << outputFile << "\n";
 			continue;
 		}
 		else if(!strcmp(argc[i],"-includePath"))
@@ -54,18 +62,18 @@ int main(int argv, char* argc[])
 			i++;
 			if(i >= argv)
 			{
-				cout << "error missing -includePath parameter" << ends;
+				std::cout << "error missing -includePath parameter\n";
 				return -1;
 			}
 			includePath = argc[i];
-			cout << "-includePath " << includePath << std::endl;
+			std::cout << "-includePath " << includePath << "\n";
 			continue;
 		}
 		else if(strlen(argc[i]) > 2 && argc[i][0] == '-' && argc[i][1] == 'D' )
 		{
 			if(i >= argv)
 			{
-				cout << "error missing -D parameter" << ends;
+				std::cout << "error missing -D parameter\n";
 				return -1;
 			}
 			std::vector<std::string> elems;
@@ -77,8 +85,8 @@ int main(int argv, char* argc[])
 				{
 					def.m_substitutionString = elems[1];
 				}
-				cout << "#define: " << def.m_defName << " " << def.m_substitutionString << std::endl;
-				defines.insert(std::unordered_map<string, definition>::value_type(def.m_defName, def));
+				std::cout << "#define: " << def.m_defName << " " << def.m_substitutionString << "\n";
+				defines.insert(std::unordered_map<std::string, definition>::value_type(def.m_defName, def));
 			}
 			continue;
 		}
@@ -86,13 +94,13 @@ int main(int argv, char* argc[])
 
 	if(sourceFile == NULL)
 	{
-		cout << "error missing -sourceFile parameter" << ends;
+		std::cout << "error missing -sourceFile parameter\n";
 		return -1;
 	}
 
 	if(includePath == NULL)
 	{
-		cout << "error missing -includePath parameter" << ends;
+		std::cout << "error missing -includePath parameter\n";
 		return -1;
 	}
 
@@ -102,27 +110,27 @@ int main(int argv, char* argc[])
 			definition def;
 			def.m_defName = "GENERATOR";
 			def.m_substitutionString = "1";
-			defines.insert(std::unordered_map<string, definition>::value_type(def.m_defName,def));
+			defines.insert(std::unordered_map<std::string, definition>::value_type(def.m_defName,def));
 		}
 
 		{
 			definition def;
 			def.m_defName = "size_t";
 			def.m_substitutionString = "unsigned int ";
-			defines.insert(std::unordered_map<string, definition>::value_type(def.m_defName,def));
+			defines.insert(std::unordered_map<std::string, definition>::value_type(def.m_defName,def));
 		}
 
 		std::string includeDirectories = includePath;
 
 		std::error_code ec;
 
-		std::string modifiedOutputFile = std::experimental::filesystem::canonical(std::string(outputFile), ec).make_preferred().string();
-		cout << "modified outputFile: " << modifiedOutputFile << std::endl;
+		std::string modifiedOutputFile = std::filesystem::canonical(std::string(outputFile), ec).make_preferred().string();
+		std::cout << "modified outputFile: " << modifiedOutputFile << "\n";
 
-		std::string modifiedSourceFile = std::experimental::filesystem::canonical(std::string(sourceFile), ec).make_preferred().string();
-		cout << "modified SourceFile: " << modifiedSourceFile << std::endl;
+		std::string modifiedSourceFile = std::filesystem::canonical(std::string(sourceFile), ec).make_preferred().string();
+		std::cout << "modified SourceFile: " << modifiedSourceFile << "\n";
 
-		cout << "include directories: " << includeDirectories << std::endl;
+		std::cout << "include directories: " << includeDirectories << "\n";
 
 		std::ifstream source_file(modifiedSourceFile);
 		std::ofstream file(modifiedOutputFile);
@@ -130,7 +138,7 @@ int main(int argv, char* argc[])
 	}
 	catch(std::exception ex)
 	{
-		cout << ex.what() << '\n';
+		std::cout << ex.what() << '\n';
 	}
 	return 0;
 }
