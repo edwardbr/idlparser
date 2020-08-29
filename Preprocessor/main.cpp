@@ -142,7 +142,9 @@ int main(int argv, char* argc[])
 		std::ofstream file(modifiedOutputFile);
 		Load(file, source_file, includeDirectories);
 	}
-	catch(...)
-	{}
+	catch(std::exception ex)
+	{
+		cout << ex.what() << '\n';
+	}
 	return 0;
 }
