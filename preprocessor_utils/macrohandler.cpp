@@ -1,4 +1,3 @@
-#include <stdio.h> 
 #include <iostream>
 #include <string>
 #include <list>
@@ -534,15 +533,11 @@ void CleanBuffer(const char*& pData, std::ostream& dest, std::string& includeDir
 				pData++;
 			}
 
-			_strlwr((char*)var.data());
+			_strlwr(var.data());
 			if(openedImports.find(var) == openedImports.end())
 			{
 				openedImports.insert(var);
 				ParseAndLoad(ignoreText, dest, includeDirectories, var.data());
-			}
-			else
-			{
-			int i = 0;
 			}
 		}
 		else if(IsPreprocEat(pData,"define"))			
@@ -604,7 +599,6 @@ void CleanBuffer(const char*& pData, std::ostream& dest, std::string& includeDir
 					*pData == ';'  || 
 					*pData == ':'  || 
 					*pData == '\'' || 
-					*pData == '\'' || 
 					*pData == '<'  || 
 					*pData == '>'  || 
 					*pData == '.'  || 
@@ -626,12 +620,6 @@ void CleanBuffer(const char*& pData, std::ostream& dest, std::string& includeDir
 			pData++;
 		}
 	}
-
-/*	if(!ignoreText)
-	{
-		output << std::ends;
-		dest << output.str();
-	}*/
 }
 
 

@@ -1,4 +1,3 @@
-#include <stdio.h> 
 #include <iostream>
 #include <string>
 #include <sstream>
@@ -74,9 +73,6 @@ attributes GetAttributes(const char*& pData)
 
 FunctionObject ClassObject::GetFunction(const char*& pData, attributes& attribs, bool bFunctionIsInterface)
 {
-	if(name == "IXMLDocument")
-		int x = 1;
-
 	FunctionObject func(this, &GetLibrary());
 	func.m_attributes = attribs;
 
@@ -1550,9 +1546,6 @@ void ClassObject::GetInterfaceProperties(TYPEATTR* pTypeAttr, ClassObject& obj, 
 		hr = typeInfo->GetNames(pvardesc->memid, &name, 1, &cNames);    
 		if(SUCCEEDED(hr))
 			fn.name = W2CA(name.m_str);
-
-if(fn.name == "root" && obj.name == "IXMLDocument")
-	int x = 1;
 
 		if(pvardesc->elemdescVar.paramdesc.wParamFlags & PARAMFLAG_FIN)
 			fn.m_attributes.push_back("in");

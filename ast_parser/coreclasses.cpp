@@ -1,19 +1,8 @@
-#include <stdio.h> 
 #include <iostream>
 #include <string>
 #include <sstream>
 #include <list>
-#include <set>
-#include <algorithm>
 #include <unordered_map>
-#include <fstream>
-
-/*inline std::ostream& operator << (std::ostream& _O, const std::string& _X)
-{
-    _O << _X.c_str();
-    return _O; 
-}*/
-
 
 #include "coreclasses.h"
 

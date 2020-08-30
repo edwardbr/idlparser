@@ -1,5 +1,5 @@
 #include <vector>
-#include <assert.h>
+#include <cassert>
 #include "commonfuncs.h"
 
 struct definition

@@ -1,5 +1,6 @@
 #include "commonfuncs.h"
-#include <assert.h>
+#include <set>
+#include <cassert>
 
 #ifdef WIN32
 #ifdef USE_COM

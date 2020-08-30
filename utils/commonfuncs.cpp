@@ -1,10 +1,4 @@
-#include <stdio.h> 
-#include <iostream>
 #include <string>
-#include <list>
-#include <set>
-#include <algorithm>
-#include <unordered_map>
 #include <fstream>
 
 #include "commonfuncs.h"
