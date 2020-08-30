@@ -2095,7 +2095,8 @@ bool ClassObject::Load(const char* file)
 	{
 		return 0;
 	}
-	std::string preproc_data = std::string(std::istreambuf_iterator<char>(preproc_stream), std::istreambuf_iterator<char>());
+	std::string preproc_data;
+	std::getline(preproc_stream, preproc_data, '\0');
 
 	const char* tmp = preproc_data.data();
 	GetStructure(tmp, std::string(), true);

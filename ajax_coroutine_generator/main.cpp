@@ -195,15 +195,15 @@ int main(int argv, char* argc[])
 				std::error_code ec;
 				headerPath = std::filesystem::canonical(headerPath, ec).make_preferred().string();
 				ifstream hfs(headerPath.data());
-				interfaces_h_data = std::string(std::istreambuf_iterator<char>(hfs), std::istreambuf_iterator<char>());
+				std::getline(hfs, interfaces_h_data, '\0');
 
 				cppPath = std::filesystem::canonical(cppPath, ec).make_preferred().string();
 				ifstream cfs(cppPath.data());
-				interfaces_cpp_data = std::string(std::istreambuf_iterator<char>(cfs), std::istreambuf_iterator<char>());
+				std::getline(cfs, interfaces_cpp_data, '\0');
 
 				javascriptPath = std::filesystem::canonical(javascriptPath, ec).make_preferred().string();
 				ifstream afs(javascriptPath.data());
-				ajax_data = std::string(std::istreambuf_iterator<char>(afs), std::istreambuf_iterator<char>());
+				std::getline(afs, ajax_data, '\0');
 			}
 
 			std::stringstream header_stream;
