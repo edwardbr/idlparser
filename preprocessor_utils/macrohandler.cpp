@@ -402,6 +402,44 @@ bool macro_parser::ProcessIf(const char*& pData, std::ostream& dest, std::string
 	return true;
 }
 
+bool macro_parser::ParseInclude(const char*& pData, int ignoreText, std::ostream& dest, std::string& includeDirectories)
+{
+	if(!IsPreprocEat(pData,"include"))			
+		return false;
+
+	while(*pData == ' ')
+		pData++;
+
+	if(!(*pData == '\"' || *pData == '<'))
+	{
+		std::stringstream err;
+		err << "Error unexpected character: " << *pData;
+		err << std::ends;
+		std::string errString(err.str());
+		throw errString;
+	}
+	pData++;
+
+	std::string var;
+	while(*pData != '\0' && *pData != '\n' && *pData != '\"' && *pData != '>')
+	{
+		var += *pData++;
+	}
+
+	if(!(*pData == '\"' || *pData == '>'))
+	{
+		std::stringstream err;
+		err << "Error unexpected character: " << *pData;
+		err << std::ends;
+		std::string errString(err.str());
+		throw errString;
+	}
+	pData++;
+
+	ParseAndLoad(ignoreText, dest, includeDirectories, var.data());
+	return true;
+}
+
 void macro_parser::CleanBuffer(const char*& pData, std::ostream& dest, std::string& includeDirectories, int inIfDef, int ignoreText)
 {
 	int amountToReplace = 0;
@@ -422,40 +460,9 @@ void macro_parser::CleanBuffer(const char*& pData, std::ostream& dest, std::stri
 			}
 		}
 
-		if(IsPreprocEat(pData,"include"))			
+		if(ParseInclude(pData, ignoreText, dest, includeDirectories))
 		{
 			bInTheMiddleOfWord = false;
-
-			while(*pData == ' ')
-				pData++;
-
-			if(!(*pData == '\"' || *pData == '<'))
-			{
-				std::stringstream err;
-				err << "Error unexpected character: " << *pData;
-				err << std::ends;
-				std::string errString(err.str());
-				throw errString;
-			}
-			pData++;
-
-			std::string var;
-			while(*pData != '\0' && *pData != '\n' && *pData != '\"' && *pData != '>')
-			{
-				var += *pData++;
-			}
-
-			if(!(*pData == '\"' || *pData == '>'))
-			{
-				std::stringstream err;
-				err << "Error unexpected character: " << *pData;
-				err << std::ends;
-				std::string errString(err.str());
-				throw errString;
-			}
-			pData++;
-
-			ParseAndLoad(ignoreText, dest, includeDirectories, var.data());
 		}
 /*		else if(IsWord(pData,"importlib"))			
 		{

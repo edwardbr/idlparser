@@ -6,6 +6,8 @@
 #include <filesystem>
 
 #include <macrohandler.h>
+#include "edl_macro_handler.h"
+
 #include <function_timer.h>
 
 xt::function_timer* p_timer = NULL;
@@ -21,11 +23,42 @@ std::vector<std::string> &split(const std::string &s, char delim, std::vector<st
 
 int main(int argv, char* argc[])
 {
-	macro_parser parser;
+	std::unique_ptr<macro_parser> parser;
 
 	char* sourceFile = NULL;
 	char* outputFile = NULL;
 	char* includePath = NULL;
+
+	for(int i = 0; i < argv;i++)
+	{
+		if(!strcmp(argc[i],"-dialect"))
+		{
+			i++;
+			if(i >= argv)
+			{
+				std::cout << "error missing -dialect parameter\n";
+				return -1;
+			}
+			if(!strcmp(argc[i], "standard"))
+			{
+				parser = std::unique_ptr<macro_parser>(new macro_parser());
+			}
+			else if(!strcmp(argc[i], "edl"))
+			{
+				parser = std::unique_ptr<macro_parser>(new edl_macro_parser());
+			}
+			else
+			{
+				std::cerr << "invalid dialect\n";
+			}
+			
+		}
+	}
+
+	if(!parser)
+	{
+		parser = std::unique_ptr<macro_parser>(new macro_parser());
+	}
 
 	//get command line values
 	for(int i = 0; i < argv;i++)
@@ -83,7 +116,7 @@ int main(int argv, char* argc[])
 					def.m_substitutionString = elems[1];
 				}
 				std::cout << "#define: " << defName << " " << def.m_substitutionString << "\n";
-				parser.AddDefine(defName, def);
+				parser->AddDefine(defName, def);
 			}
 			continue;
 		}
@@ -106,14 +139,14 @@ int main(int argv, char* argc[])
 		{
 			macro_parser::definition def;
 			def.m_substitutionString = "1";
-			parser.AddDefine("GENERATOR", def);
+			parser->AddDefine("GENERATOR", def);
 
 		}
 
 		{
 			macro_parser::definition def;
 			def.m_substitutionString = "unsigned int ";
-			parser.AddDefine("size_t", def);
+			parser->AddDefine("size_t", def);
 		}
 
 		std::string includeDirectories = includePath;
@@ -130,7 +163,7 @@ int main(int argv, char* argc[])
 
 		std::ifstream source_file(modifiedSourceFile);
 		std::ofstream output_file(modifiedOutputFile);
-		parser.Load(output_file, source_file, includeDirectories);
+		parser->Load(output_file, source_file, includeDirectories);
 		output_file.close();
 	}
 	catch(std::exception ex)

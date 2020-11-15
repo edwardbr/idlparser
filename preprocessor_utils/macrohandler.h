@@ -1,5 +1,8 @@
+#pragma once
+
 #include <vector>
 #include <set>
+#include <unordered_map>
 #include <cassert>
 #include "commonfuncs.h"
 
@@ -33,6 +36,7 @@ struct macro_parser
 	virtual [[nodiscard]] bool Load(std::ostream& stream, std::istream& file, std::string& includeDirectories);
 	virtual [[nodiscard]] void ParseAndLoad(int ignoreText, std::ostream& stream, std::string& includeDirectories, const char* file);
 	virtual [[nodiscard]] bool LoadUsingEnv(std::ostream& stream, const std::string& file, std::string& includeDirectories);
+	virtual [[nodiscard]] bool ParseInclude(const char*& pData, int ignoreText, std::ostream& stream, std::string& includeDirectories);
 
 	virtual std::string not(const std::string val, const std::string);
 	virtual std::string bnot(const std::string val, const std::string);
