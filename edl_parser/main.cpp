@@ -6,14 +6,13 @@
 
 #include "function_timer.h"
 
-#include "commonfuncs.h"
-
 #include <coreclasses.h>
 
 #include <ComObjectGen.h>
 #include <ClientClassWrapper.h>
 #include <nb_json.h>
 #include <javascript_json.h>
+#include "commonfuncs.h"
 
 using namespace std;
 

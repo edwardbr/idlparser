@@ -4,9 +4,8 @@
 #include <list>
 #include <unordered_map>
 
+#include "commonfuncs.h"
 #include "coreclasses.h"
-
-extern std::vector<std::string> &split(const std::string &s, char delim, std::vector<std::string> &elems);
 
 std::ostream& operator<< ( std::ostream& os, attributes& attribs )
 {

@@ -10,17 +10,9 @@
 #include "edl_macro_handler.h"
 
 #include <function_timer.h>
+#include "commonfuncs.h"
 
 xt::function_timer* p_timer = NULL;
-
-std::vector<std::string> &split(const std::string &s, char delim, std::vector<std::string> &elems) {
-    std::stringstream ss(s);
-    std::string item;
-    while(std::getline(ss, item, delim)) {
-        elems.push_back(item);
-    }
-    return elems;
-}
 
 int main(int argv, char* argc[])
 {
