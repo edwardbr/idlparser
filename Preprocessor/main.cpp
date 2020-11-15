@@ -4,6 +4,7 @@
 #include <unordered_map>
 #include <fstream>
 #include <filesystem>
+#include <algorithm>
 
 #include <macrohandler.h>
 #include "edl_macro_handler.h"
@@ -27,8 +28,8 @@ int main(int argv, char* argc[])
 
 	char* sourceFile = NULL;
 	char* outputFile = NULL;
-	char* includePath = NULL;
-
+	paths includePaths;
+	
 	for(int i = 0; i < argv;i++)
 	{
 		if(!strcmp(argc[i],"-dialect"))
@@ -95,8 +96,30 @@ int main(int argv, char* argc[])
 				std::cout << "error missing -includePath parameter\n";
 				return -1;
 			}
-			includePath = argc[i];
+
+			char* includePath = argc[i];
 			std::cout << "-includePath " << includePath << "\n";
+			std::vector<std::string> results;
+
+			#ifdef WIN32
+				split(includePath, ';', results);
+			#else
+				split(includePath, ':', results);
+			#endif
+			for(auto result : results)
+			{
+				std::filesystem::path p(result);
+				if(p.has_root_directory())
+				{
+					includePaths.push_back(p);
+					std::cout << "include directory: " << p.string() << "\n";
+				}
+				else
+				{
+					includePaths.push_back(std::filesystem::current_path()/p);
+					std::cout << "include directory: " << (std::filesystem::current_path()/p).string() << "\n";
+				}
+			}
 			continue;
 		}
 		else if(strlen(argc[i]) > 2 && argc[i][0] == '-' && argc[i][1] == 'D' )
@@ -128,12 +151,6 @@ int main(int argv, char* argc[])
 		return -1;
 	}
 
-	if(includePath == NULL)
-	{
-		std::cout << "error missing -includePath parameter\n";
-		return -1;
-	}
-
 	try
 	{
 		{
@@ -149,8 +166,6 @@ int main(int argv, char* argc[])
 			parser->AddDefine("size_t", def);
 		}
 
-		std::string includeDirectories = includePath;
-
 		std::error_code ec;
 
 		std::string modifiedOutputFile = std::filesystem::canonical(std::string(outputFile), ec).make_preferred().string();
@@ -159,11 +174,9 @@ int main(int argv, char* argc[])
 		std::string modifiedSourceFile = std::filesystem::canonical(std::string(sourceFile), ec).make_preferred().string();
 		std::cout << "modified SourceFile: " << modifiedSourceFile << "\n";
 
-		std::cout << "include directories: " << includeDirectories << "\n";
-
 		std::ifstream source_file(modifiedSourceFile);
 		std::ofstream output_file(modifiedOutputFile);
-		parser->Load(output_file, source_file, includeDirectories);
+		parser->Load(output_file, source_file, includePaths);
 		output_file.close();
 	}
 	catch(std::exception ex)

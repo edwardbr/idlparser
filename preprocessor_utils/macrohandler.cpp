@@ -42,7 +42,7 @@ bool macro_parser::Init()
 	return true;
 }
 
-std::string macro_parser::ExtractExpression(const char*& pData, std::string& includeDirectories)
+std::string macro_parser::ExtractExpression(const char*& pData, const paths& includeDirectories)
 {
 	//((sfsd)*(gfg))
 	//       ^
@@ -281,7 +281,7 @@ enum if_status
 	hash_if
 };
 
-bool macro_parser::ProcessIf(const char*& pData, std::ostream& dest, std::string& includeDirectories, int& inIfDef, int& ignoreText, bool& bInTheMiddleOfWord)
+bool macro_parser::ProcessIf(const char*& pData, std::ostream& dest, const paths& includeDirectories, int& inIfDef, int& ignoreText, bool& bInTheMiddleOfWord)
 {
 
 	if_status status = ifdef;
@@ -402,7 +402,7 @@ bool macro_parser::ProcessIf(const char*& pData, std::ostream& dest, std::string
 	return true;
 }
 
-bool macro_parser::ParseInclude(const char*& pData, int ignoreText, std::ostream& dest, std::string& includeDirectories)
+bool macro_parser::ParseInclude(const char*& pData, int ignoreText, std::ostream& dest, const paths& includeDirectories)
 {
 	if(!IsPreprocEat(pData,"include"))			
 		return false;
@@ -440,7 +440,7 @@ bool macro_parser::ParseInclude(const char*& pData, int ignoreText, std::ostream
 	return true;
 }
 
-void macro_parser::CleanBuffer(const char*& pData, std::ostream& dest, std::string& includeDirectories, int inIfDef, int ignoreText)
+void macro_parser::CleanBuffer(const char*& pData, std::ostream& dest, const paths& includeDirectories, int inIfDef, int ignoreText)
 {
 	int amountToReplace = 0;
 	bool bInTheMiddleOfWord = false;
@@ -858,7 +858,7 @@ bool macro_parser::IsOperator(const char* pData, std::string& operatorString)
 
 
 //reduce a complex expression to its value
-std::string macro_parser::ReduceExpression(const char*& pData, std::string& includeDirectories)
+std::string macro_parser::ReduceExpression(const char*& pData, const paths& includeDirectories)
 {
 //	pData++;  //gobble up those leading brackets
 
@@ -1004,7 +1004,7 @@ std::string macro_parser::ReduceExpression(const char*& pData, std::string& incl
 	return *components.begin();
 }
 
-bool macro_parser::SubstituteMacro(int ignoreText, const char*& pData, std::ostream& dest, std::string& includeDirectories)
+bool macro_parser::SubstituteMacro(int ignoreText, const char*& pData, std::ostream& dest, const paths& includeDirectories)
 {
 	const char* tempdata = pData;
 
@@ -1283,7 +1283,7 @@ bool macro_parser::FindDefString(std::string& var)
 	return true;
 }
 
-bool macro_parser::Load(std::ostream& output_file, std::istream& input_file, std::string& includeDirectories)
+bool macro_parser::Load(std::ostream& output_file, std::istream& input_file, const paths& includeDirectories)
 {
 	
 	std::string data;
@@ -1298,125 +1298,55 @@ bool macro_parser::Load(std::ostream& output_file, std::istream& input_file, std
 }
 
 
-bool macro_parser::LoadUsingEnv(std::ostream& stream, const std::string& file, std::string& includeDirectories)
+bool macro_parser::LoadUsingEnv(std::ostream& stream, const std::string& file, const paths& includeDirectories)
 {
-	const char* includes = includeDirectories.data();
-	if(includes == NULL || includeDirectories.length() == 0)
+	if(std::filesystem::exists(file))
+	{
+		std::ifstream pathstream(file);
+		return Load(stream, pathstream, includeDirectories);
+	}
+
+	if(includeDirectories.empty())
 	{
 		return false;
 	}
 
-	while(*includes != NULL)
+	for(auto includeDirectory : includeDirectories)
 	{
 		if(p_timer != NULL && p_timer->is_timedOut())
 		{
 			exit(0);
 		}
 
-		std::string path;
-		while(*includes && *includes != ';')
-		{
-			path += *includes++;
-		}
-		path += '\\' + file;
-
+		auto candidate = includeDirectory/file;
 		std::error_code ec;
-		path = std::filesystem::canonical(path, ec).string();
+		candidate = std::filesystem::canonical(candidate, ec).string();
 		if(ec.value() == 0)
 		{
-			std::ifstream pathstream(path.data());
+			std::ifstream pathstream(candidate.string());
 			if(pathstream.is_open())
 			{
-				if(Load(stream, pathstream, includeDirectories) == true)
-				{
-					return true;
-				}
+				return Load(stream, pathstream, includeDirectories);
 			}
-		}
-
-		if(*includes == ';')
-		{
-			includes++;
 		}
 	}
 	return false;
 }
 
-void macro_parser::ParseAndLoad(int ignoreText, std::ostream& stream, std::string& includeDirectories, const char* file)
+void macro_parser::ParseAndLoad(int ignoreText, std::ostream& stream, const paths& includeDirectories, const char* file)
 {
 	if(ignoreText)
 	{
 		return;
 	}
 
-	const char* fname_ext = std::max(strrchr( file, '\\'), strrchr( file, '/'));
-	if(fname_ext != NULL)
-/*	char path[MAX_PATH];
-	char drive[_MAX_DRIVE];
-	char directory[_MAX_DIR];
-	_splitpath(file,drive, directory,NULL,NULL);
-	if(*drive || *directory)*/
+	if (!LoadUsingEnv(stream, file, includeDirectories))
 	{
-		std::stringstream pathstream(file);
-		if(Load(stream, pathstream, includeDirectories) == true)
-		{
-			return;	
-		}
-		if (!LoadUsingEnv(stream, file, includeDirectories))
-		{
-			std::stringstream err;
-			err << "failed to load " << file << "\n";
-			err << std::ends;
-			std::string errorMsg(err.str());
-			throw errorMsg;
-		}
-	}
-/*	else if(!file)
-	{
-		if(!LoadUsingEnv(file))
-		{
-			std::stringstream err;
-			err << "failed to load " << path << "\n";
-			err << std::ends;
-			std::string errorMsg(err.str());
-			throw errorMsg;
-		}
-	}*/
-	else
-	{
-		std::string path = file;
-/*		const char* fname_ext = std::max(strrchr( file, '\\'), strrchr( file, '/'));
-		if(fname_ext != NULL)
-		{
-			path.assign(file, fname_ext - file + 1);
-			path += temp.data());
-		}
-		else
-		(
-			strcpy(path, temp.data());
-		)
-		_splitpath(file,drive, directory,NULL,NULL);
-		_makepath(path,drive, directory,file,NULL);*/
-
-		std::error_code ec;
-		path = std::filesystem::canonical(path, ec).string();
-
-		std::ifstream pathstream(path.data());
-		if(pathstream.is_open())
-		{
-			Load(stream, pathstream, includeDirectories);
-		}
-		else
-		{
-			if(LoadUsingEnv(stream, file, includeDirectories) == false)
-			{
-				std::stringstream err;
-				err << "failed to load " << path << "\n";
-				err << std::ends;
-				std::string errorMsg(err.str());
-				throw errorMsg;
-			}
-		}
+		std::stringstream err;
+		err << "failed to load " << file << "\n";
+		err << std::ends;
+		std::string errorMsg(err.str());
+		throw errorMsg;
 	}
 }
 
@@ -1481,8 +1411,19 @@ void CleanBufferOfComments(const char*& pData)
 				exit(0);
 			}
 
+			if(IsPreproc(pData,"pragma"))
+			{
+				while(*pData != 0 && *pData != '\n')
+				{
+					pData++;
+				}
+				while(*pData == '\n')
+				{
+					pData++;
+				}
+			}
 			//#defines and conditional statements need special handling and are characterised by being terminated by a charage return 
-			if(IsPreproc(pData,"define") || IsPreproc(pData,"ifdef") || IsPreproc(pData,"ifndef") || IsPreproc(pData,"if") || IsPreproc(pData,"elif") || IsPreproc(pData,"endif")  || IsPreproc(pData,"error") || IsPreproc(pData,"pragma") || IsWord(pData,"cpp_quote"))			
+			else if(IsPreproc(pData,"define") || IsPreproc(pData,"ifdef") || IsPreproc(pData,"ifndef") || IsPreproc(pData,"if") || IsPreproc(pData,"elif") || IsPreproc(pData,"endif")  || IsPreproc(pData,"error") || IsWord(pData,"cpp_quote"))			
 			{
 				if(oldBufPos != pData)
 				{
