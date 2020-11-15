@@ -21,6 +21,8 @@ std::vector<std::string> &split(const std::string &s, char delim, std::vector<st
 
 int main(int argv, char* argc[])
 {
+	macro_parser parser;
+
 	char* sourceFile = NULL;
 	char* outputFile = NULL;
 	char* includePath = NULL;
@@ -74,14 +76,14 @@ int main(int argv, char* argc[])
 			std::vector<std::string> elems;
 			split(argc[i]+2, '=', elems);
 			{
-				definition def;
-				def.m_defName = elems[0];
+				macro_parser::definition def;
+				std::string defName = elems[0];
 				if(elems.size() > 1)
 				{
 					def.m_substitutionString = elems[1];
 				}
-				std::cout << "#define: " << def.m_defName << " " << def.m_substitutionString << "\n";
-				defines.insert(std::unordered_map<std::string, definition>::value_type(def.m_defName, def));
+				std::cout << "#define: " << defName << " " << def.m_substitutionString << "\n";
+				parser.AddDefine(defName, def);
 			}
 			continue;
 		}
@@ -102,17 +104,16 @@ int main(int argv, char* argc[])
 	try
 	{
 		{
-			definition def;
-			def.m_defName = "GENERATOR";
+			macro_parser::definition def;
 			def.m_substitutionString = "1";
-			defines.insert(std::unordered_map<std::string, definition>::value_type(def.m_defName,def));
+			parser.AddDefine("GENERATOR", def);
+
 		}
 
 		{
-			definition def;
-			def.m_defName = "size_t";
+			macro_parser::definition def;
 			def.m_substitutionString = "unsigned int ";
-			defines.insert(std::unordered_map<std::string, definition>::value_type(def.m_defName,def));
+			parser.AddDefine("size_t", def);
 		}
 
 		std::string includeDirectories = includePath;
@@ -129,7 +130,7 @@ int main(int argv, char* argc[])
 
 		std::ifstream source_file(modifiedSourceFile);
 		std::ofstream output_file(modifiedOutputFile);
-		Load(output_file, source_file, includeDirectories);
+		parser.Load(output_file, source_file, includeDirectories);
 		output_file.close();
 	}
 	catch(std::exception ex)
