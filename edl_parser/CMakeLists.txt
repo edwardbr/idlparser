@@ -7,7 +7,11 @@ enable_testing()
 add_executable(edl_circular_buffer_generator 
 main.cpp)
 
-target_link_libraries(edl_circular_buffer_generator PUBLIC ast_parser generators)
+target_link_libraries(edl_circular_buffer_generator 
+    PUBLIC 
+        ast_parser 
+        preprocessor_utils 
+        generators)
 set_property(TARGET edl_circular_buffer_generator PROPERTY COMPILE_PDB_NAME edl_circular_buffer_generator)
 
 set(CPACK_PROJECT_NAME ${PROJECT_NAME})

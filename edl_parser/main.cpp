@@ -3,6 +3,8 @@
 #include <sstream>
 #include <filesystem>
 #include <fstream>
+#include <unordered_map>
+#include <algorithm>
 
 #include "function_timer.h"
 
@@ -14,186 +16,296 @@
 #include <javascript_json.h>
 #include "commonfuncs.h"
 
-using namespace std;
-
-
-
-
-
+#include <macrohandler.h>
+#include "edl_macro_handler.h"
 
 xt::function_timer* p_timer = NULL;
 std::stringstream verboseStream;
 
-namespace javascript_json{	namespace json	{		extern string namespace_name;	}}
-
-int main(int argv, char* argc[])
+int main(int argc, char* argv[])
 {
-	string rootIdl;
-	string javascriptPath;
-	string headerPath;
-	string cppPath;
-	string ajax_class_name;
-	std::vector<std::string> namespaces;
+    std::unique_ptr<macro_parser> parser = std::unique_ptr<macro_parser>(new edl_macro_parser());
 
-	//get command line values
-	for(int i = 0; i < argv;i++)
-	{
-		if(!strcmp(argc[i],"-rootIdl"))
-		{
-			i++;
-			if(i >= argv)
-			{
-				cout << "error missing -rootIdl parameter" << ends;
-				return -1;
-			}
-			rootIdl = argc[i];
-			continue;
-		}
-		if (!strcmp(argc[i], "-javascriptPath"))
-		{
-			i++;
-			if (i >= argv)
-			{
-				cout << "error missing -javascriptPath parameter" << ends;
-				return -1;
-			}
-			javascriptPath = argc[i];
-			continue;
-		}
-		if (!strcmp(argc[i], "-headerPath"))
-		{
-			i++;
-			if (i >= argv)
-			{
-				cout << "error missing -headerPath parameter" << ends;
-				return -1;
-			}
-			headerPath = argc[i];
-			continue;
-		}
-		if (!strcmp(argc[i], "-cppPath"))
-		{
-			i++;
-			if (i >= argv)
-			{
-				cout << "error missing -cppPath parameter" << ends;
-				return -1;
-			}
-			cppPath = argc[i];
-			continue;
-		}
-		if(!strcmp(argc[i],"-ajax_class_name"))
-		{
-			i++;
-			if(i >= argv)
-			{
-				cout << "error missing -ajax_class_name parameter" << ends;
-				return -1;
-			}
-			ajax_class_name = argc[i];
-			continue;
-		}
-		if(!strcmp(argc[i],"-generated_namespace"))
-		{
-			i++;
-			if(i >= argv)
-			{
-				cout << "error missing -generated_namespace parameter" << ends;
-				return -1;
-			}
+    std::string sourceFile;
+    std::string preparseFile;
+    std::string outputFile;
+    paths includePaths;
+    std::string flatbufferPath;
+    std::string headerPath;
+    std::string cppPath;
+    std::string flatbuffer_class_name;
+    std::vector<std::string> namespaces;
 
-			split(argc[i], ':', namespaces);
-			continue;
-		}
-	}
+    {
+        // get command line values
+        for (int i = 0; i < argc; i++)
+        {
+            if (!strcmp(argv[i], "-sourceFile"))
+            {
+                i++;
+                if (i >= argc)
+                {
+                    std::cout << "error missing -sourceFile parameter\n";
+                    return -1;
+                }
+                sourceFile = argv[i];
+                std::cout << "-sourceFile " << sourceFile << "\n";
+                continue;
+            }
+            else if (!strcmp(argv[i], "-outputFile"))
+            {
+                i++;
+                if (i >= argc)
+                {
+                    std::cout << "error missing -outputFile parameter\n";
+                    return -1;
+                }
+                outputFile = argv[i];
+                std::cout << "-outputFile " << outputFile << "\n";
+                continue;
+            }
+            else if (!strcmp(argv[i], "-preparseFile"))
+            {
+                i++;
+                if (i >= argc)
+                {
+                    std::cout << "error missing -preparseFile parameter\n";
+                    return -1;
+                }
+                preparseFile = argv[i];
+                std::cout << "-preparseFile " << preparseFile << "\n";
+                continue;
+            }
+            else if (!strcmp(argv[i], "-includePath"))
+            {
+                i++;
+                if (i >= argc)
+                {
+                    std::cout << "error missing -includePath parameter\n";
+                    return -1;
+                }
 
-	if(rootIdl.empty())
-	{
-		cout << "error missing -rootIdl parameter" << ends;
-		return -1;
-	}
+                char* includePath = argv[i];
+                std::cout << "-includePath " << includePath << "\n";
+                std::vector<std::string> results;
 
-	if (javascriptPath.empty() == true)
-	{
-		cout << "error missing -javascriptPath parameter" << ends;
-		return -1;
-	}
-	if (headerPath.empty() == true)
-	{
-		cout << "error missing -headerPath parameter" << ends;
-		return -1;
-	}
-	if (cppPath.empty() == true)
-	{
-		cout << "error missing -cppPath parameter" << ends;
-		return -1;
-	}
+#ifdef WIN32
+                split(includePath, ';', results);
+#else
+                split(includePath, ':', results);
+#endif
+                for (auto result : results)
+                {
+                    std::filesystem::path p(result);
+                    if (p.has_root_directory())
+                    {
+                        includePaths.push_back(p);
+                        std::cout << "include directory: " << p.string() << "\n";
+                    }
+                    else
+                    {
+                        includePaths.push_back(std::filesystem::current_path() / p);
+                        std::cout << "include directory: " << (std::filesystem::current_path() / p).string() << "\n";
+                    }
+                }
+                continue;
+            }
+            else if (strlen(argv[i]) > 2 && argv[i][0] == '-' && argv[i][1] == 'D')
+            {
+                if (i >= argc)
+                {
+                    std::cout << "error missing -D parameter\n";
+                    return -1;
+                }
+                std::vector<std::string> elems;
+                split(argv[i] + 2, '=', elems);
+                {
+                    macro_parser::definition def;
+                    std::string defName = elems[0];
+                    if (elems.size() > 1)
+                    {
+                        def.m_substitutionString = elems[1];
+                    }
+                    std::cout << "#define: " << defName << " " << def.m_substitutionString << "\n";
+                    parser->AddDefine(defName, def);
+                }
+                continue;
+            }
+            else if (!strcmp(argv[i], "-flatbufferPath"))
+            {
+                i++;
+                if (i >= argc)
+                {
+                    std::cout << "error missing -flatbufferPath parameter\n";
+                    return -1;
+                }
+                flatbufferPath = argv[i];
+                continue;
+            }
+            else if (!strcmp(argv[i], "-headerPath"))
+            {
+                i++;
+                if (i >= argc)
+                {
+                    std::cout << "error missing -headerPath parameter\n";
+                    return -1;
+                }
+                headerPath = argv[i];
+                continue;
+            }
+            else if (!strcmp(argv[i], "-cppPath"))
+            {
+                i++;
+                if (i >= argc)
+                {
+                    std::cout << "error missing -cppPath parameter\n";
+                    return -1;
+                }
+                cppPath = argv[i];
+                continue;
+            }
+            else if (!strcmp(argv[i], "-flatbuffer_class_name"))
+            {
+                i++;
+                if (i >= argc)
+                {
+                    std::cout << "error missing -flatbuffer_class_name parameter\n";
+                    return -1;
+                }
+                flatbuffer_class_name = argv[i];
+                continue;
+            }
+            else if (!strcmp(argv[i], "-generated_namespace"))
+            {
+                i++;
+                if (i >= argc)
+                {
+                    std::cout << "error missing -generated_namespace parameter\n";
+                    return -1;
+                }
 
-	//load the idl file
-	Library objects;
-	objects.Load(rootIdl.data());
+                split(argv[i], ':', namespaces);
+                continue;
+            }
+        }
 
-	try
-	{
-		string interfaces_h_data;
-		string interfaces_cpp_data;
-		string ajax_data;
+        if (sourceFile.empty())
+        {
+            std::cout << "error missing -sourceFile parameter\n";
+            return -1;
+        }
+        if (flatbufferPath.empty() == true)
+        {
+            std::cout << "error missing -flatbufferPath parameter\n";
+            return -1;
+        }
+        if (headerPath.empty() == true)
+        {
+            std::cout << "error missing -headerPath parameter\n";
+            return -1;
+        }
+        if (cppPath.empty() == true)
+        {
+            std::cout << "error missing -cppPath parameter\n";
+            return -1;
+        }
+    }
 
-		//read the original data and close the files afterwards
-		{
-			std::error_code ec;
-			headerPath = std::filesystem::canonical(headerPath, ec).make_preferred().string();
-			ifstream hfs(headerPath.data());
-			std::getline(hfs, interfaces_h_data, '\0');
+    try
+    {
+        auto modifiedPreparseFile = std::filesystem::canonical(preparseFile).make_preferred();
+        std::cout << "modified preparseFile: " << modifiedPreparseFile << "\n";
 
-			cppPath = std::filesystem::canonical(cppPath, ec).make_preferred().string();
-			ifstream cfs(cppPath.data());
-			std::getline(cfs, interfaces_cpp_data, '\0');
+        auto modifiedSourceFile = std::filesystem::canonical(sourceFile).make_preferred();
+        std::cout << "modified SourceFile: " << modifiedSourceFile << "\n";
 
-			javascriptPath = std::filesystem::canonical(javascriptPath, ec).make_preferred().string();
-			ifstream afs(javascriptPath.data());
-			std::getline(afs, ajax_data, '\0');
-		}
+        {
+            {
+                macro_parser::definition def;
+                def.m_substitutionString = "1";
+                parser->AddDefine("GENERATOR", def);
+            }
 
-		std::stringstream header_stream;
-		std::stringstream cpp_stream;
-		std::stringstream ajax_stream;
+            {
+                macro_parser::definition def;
+                def.m_substitutionString = "unsigned int ";
+                parser->AddDefine("size_t", def);
+            }
 
-		//do the generation to the ostrstreams
-		{
-			non_blocking::json::writeFiles(objects, header_stream, cpp_stream, namespaces/*, headerPath*/);
+            std::ifstream source_file(modifiedSourceFile);
+            std::ofstream preparse_file(modifiedPreparseFile);
+            parser->Load(preparse_file, source_file, includePaths);
+            preparse_file.close();
+        }
+        {
+            // load the idl file
+            Library objects;
+            objects.Load(modifiedPreparseFile.string().data());
 
-			header_stream << ends;
-			cpp_stream << ends;
+            /*std::string interfaces_h_data;
+            std::string interfaces_cpp_data;
+            std::string ajax_data;
 
-			javascript_json::json::namespace_name = ajax_class_name;
-			javascript_json::json::writeJSONFiles(objects, ajax_stream);
-			ajax_stream << ends;
-		}
+            // read the original data and close the files afterwards
+            {
+                std::error_code ec;
+                headerPath = std::filesystem::canonical(headerPath, ec).make_preferred().string();
+                std::ifstream hfs(headerPath.data());
+                std::getline(hfs, interfaces_h_data, '\0');
 
-		//compare and write if different
-		if(interfaces_h_data != header_stream.str())
-		{
-			ofstream file(headerPath.data());
-			file << header_stream.str();
-		}
-		if(interfaces_cpp_data != cpp_stream.str())
-		{
-			ofstream file(cppPath.data());
-			file << cpp_stream.str();
-		}
-		if(ajax_data != ajax_stream.str())
-		{
-			ofstream file(javascriptPath.data());
-			file << ajax_stream.str();
-		}
+                cppPath = std::filesystem::canonical(cppPath, ec).make_preferred().string();
+                std::ifstream cfs(cppPath.data());
+                std::getline(cfs, interfaces_cpp_data, '\0');
 
-	}
-	catch (std::string msg)
-	{
-		std::cerr << msg << std::endl;
-		return 1;
-	}
+                javascriptPath = std::filesystem::canonical(javascriptPath, ec).make_preferred().string();
+                std::ifstream afs(javascriptPath.data());
+                std::getline(afs, ajax_data, '\0');
+            }
 
-	return 0;
+            std::stringstream header_stream;
+            std::stringstream cpp_stream;
+            std::stringstream ajax_stream;
+
+            // do the generation to the ostrstreams
+            {
+                non_blocking::json::writeFiles(objects, header_stream, cpp_stream, namespaces );
+
+                header_stream << ends;
+                cpp_stream << ends;
+
+                javascript_json::json::namespace_name = flatbuffer_class_name;
+                javascript_json::json::writeJSONFiles(objects, ajax_stream);
+                ajax_stream << ends;
+            }
+
+            // compare and write if different
+            if (interfaces_h_data != header_stream.str())
+            {
+                ofstream file(headerPath.data());
+                file << header_stream.str();
+            }
+            if (interfaces_cpp_data != cpp_stream.str())
+            {
+                ofstream file(cppPath.data());
+                file << cpp_stream.str();
+            }
+            if (ajax_data != ajax_stream.str())
+            {
+                ofstream file(javascriptPath.data());
+                file << ajax_stream.str();
+            }*/
+        }
+    }
+    catch (std::string msg)
+    {
+        std::cerr << msg << std::endl;
+        return 1;
+    }
+    catch (std::exception ex)
+    {
+        std::cerr << ex.what() << std::endl;
+        return 1;
+    }
+
+    return 0;
 }
