@@ -24,3 +24,4 @@ nb_json.h)
 
 target_link_libraries(generators PUBLIC utils ast_parser)
 target_include_directories(generators PUBLIC .)
+set_property(TARGET generators PROPERTY COMPILE_PDB_NAME generators)

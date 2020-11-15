@@ -14,7 +14,7 @@
 #include <javascript_json.h>
 
 using namespace std;
-using namespace stdext;
+
 
 
 inline ostream& operator << (ostream& _O, const std::string& _X)

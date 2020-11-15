@@ -10,3 +10,4 @@ macrohandler.cpp)
 
 target_link_libraries(preprocessor_utils PUBLIC utils)
 target_include_directories(preprocessor_utils PUBLIC .)
+set_property(TARGET preprocessor_utils PROPERTY COMPILE_PDB_NAME preprocessor_utils)

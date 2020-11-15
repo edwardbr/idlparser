@@ -1510,16 +1510,16 @@ bool FindDefString(std::string& var)
 	return true;
 }
 
-bool Load(std::ostream& stream, std::istream& file, std::string& includeDirectories)
+bool Load(std::ostream& output_file, std::istream& input_file, std::string& includeDirectories)
 {
 	
 	std::string data;
-	std::getline(file, data, '\0');
+	std::getline(input_file, data, '\0');
 	const char* pData = data.data();
 	
 	CleanBufferOfComments(pData);
 	pData = data.data();
-	CleanBuffer(pData, stream, includeDirectories);
+	CleanBuffer(pData, output_file, includeDirectories);
 
 	return true;
 }

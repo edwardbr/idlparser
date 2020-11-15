@@ -128,8 +128,9 @@ int main(int argv, char* argc[])
 		std::cout << "include directories: " << includeDirectories << "\n";
 
 		std::ifstream source_file(modifiedSourceFile);
-		std::ofstream file(modifiedOutputFile);
-		Load(file, source_file, includeDirectories);
+		std::ofstream output_file(modifiedOutputFile);
+		Load(output_file, source_file, includeDirectories);
+		output_file.close();
 	}
 	catch(std::exception ex)
 	{
