@@ -18,14 +18,6 @@
 using namespace std;
 
 
-
-inline ostream& operator << (ostream& _O, const std::string& _X)
-{
-    _O << _X.c_str();
-    return _O; 
-}
-
-
 xt::function_timer* p_timer = NULL;
 std::stringstream verboseStream;
 

@@ -30,12 +30,6 @@ using namespace std;
 
 #include <fstream>
 
-inline ostream& operator << (ostream& _O, const std::string& _X)
-{
-    _O << _X.c_str();
-    return _O; 
-}
-
 #include <direct.h>
 
 #endif // !defined(AFX_STDAFX_H__5A3A5F0F_E677_4B71_BA36_9EAAA07C8B4D__INCLUDED_)
