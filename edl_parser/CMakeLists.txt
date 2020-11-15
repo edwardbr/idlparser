@@ -5,7 +5,9 @@ include(CTest)
 enable_testing()
 
 add_executable(edl_circular_buffer_generator 
-main.cpp)
+main.cpp
+flatbuffer_gen.cpp
+flatbuffer_gen.h)
 
 target_link_libraries(edl_circular_buffer_generator 
     PUBLIC 

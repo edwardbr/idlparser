@@ -12,12 +12,12 @@
 
 #include <ComObjectGen.h>
 #include <ClientClassWrapper.h>
-#include <nb_json.h>
 #include <javascript_json.h>
 #include "commonfuncs.h"
 
 #include <macrohandler.h>
 #include "edl_macro_handler.h"
+#include "flatbuffer_gen.h"
 
 xt::function_timer* p_timer = NULL;
 std::stringstream verboseStream;
@@ -242,7 +242,7 @@ int main(int argc, char* argv[])
             Library objects;
             objects.Load(modifiedPreparseFile.string().data());
 
-            /*std::string interfaces_h_data;
+            std::string interfaces_h_data;
             std::string interfaces_cpp_data;
             std::string ajax_data;
 
@@ -257,43 +257,39 @@ int main(int argc, char* argv[])
                 std::ifstream cfs(cppPath.data());
                 std::getline(cfs, interfaces_cpp_data, '\0');
 
-                javascriptPath = std::filesystem::canonical(javascriptPath, ec).make_preferred().string();
-                std::ifstream afs(javascriptPath.data());
+                flatbufferPath = std::filesystem::canonical(flatbufferPath, ec).make_preferred().string();
+                std::ifstream afs(flatbufferPath.data());
                 std::getline(afs, ajax_data, '\0');
             }
 
             std::stringstream header_stream;
             std::stringstream cpp_stream;
-            std::stringstream ajax_stream;
+            std::stringstream fb_stream;
 
             // do the generation to the ostrstreams
             {
-                non_blocking::json::writeFiles(objects, header_stream, cpp_stream, namespaces );
+                flatbuffer::writeFiles(objects, fb_stream, namespaces );
 
-                header_stream << ends;
-                cpp_stream << ends;
-
-                javascript_json::json::namespace_name = flatbuffer_class_name;
-                javascript_json::json::writeJSONFiles(objects, ajax_stream);
-                ajax_stream << ends;
+                /*javascript_json::json::namespace_name = flatbuffer_class_name;
+                javascript_json::json::writeJSONFiles(objects, ajax_stream);*/
             }
 
             // compare and write if different
             if (interfaces_h_data != header_stream.str())
             {
-                ofstream file(headerPath.data());
+                std::ofstream file(headerPath.data());
                 file << header_stream.str();
             }
             if (interfaces_cpp_data != cpp_stream.str())
             {
-                ofstream file(cppPath.data());
+                std::ofstream file(cppPath.data());
                 file << cpp_stream.str();
             }
-            if (ajax_data != ajax_stream.str())
+            if (ajax_data != fb_stream.str())
             {
-                ofstream file(javascriptPath.data());
-                file << ajax_stream.str();
-            }*/
+                std::ofstream file(flatbufferPath.data());
+                file << fb_stream.str();
+            }
         }
     }
     catch (std::string msg)
