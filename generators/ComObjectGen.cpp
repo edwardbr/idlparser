@@ -188,9 +188,9 @@ void CreateComObject(const ClassObject& object, string& outputPath)
 	string cppFileName(outputPath);
 	string baseFileName(outputPath);
 
-	headerFileName += "\\" + object.name + "BP.h";
-	cppFileName += "\\" + object.name + "BP.cpp";
-	baseFileName += "\\" + object.name + "Base.h";
+	headerFileName += "/" + object.name + "BP.h";
+	cppFileName += "/" + object.name + "BP.cpp";
+	baseFileName += "/" + object.name + "Base.h";
 
 	fstream headerFile(headerFileName.data(),ios::out);
 	fstream cppFile(cppFileName.data(),ios::out);
@@ -610,14 +610,14 @@ void CreateComObjects(const Library& objects, string& outputPath)
 	///////////////////////////////////////////////////////////////////////////////
 	//ObjectMap.h
 	string objectMapFileName(outputPath);
-	objectMapFileName += "\\ObjectMap.h";
+	objectMapFileName += "/ObjectMap.h";
 	fstream objectMapFile(objectMapFileName.data(),ios::out);
 	objectMapFile << "//This file provides a list of COM class macros used in the instanciation of COM objects" << endl;
 
 	///////////////////////////////////////////////////////////////////////////////
 	//BPList.h
 	string BPListFileName(outputPath);
-	BPListFileName += "\\BPList.h";
+	BPListFileName += "/BPList.h";
 	fstream BPListFile(BPListFileName.data(),ios::out);
 	BPListFile << "//This file provides a list of COM class macros used in the instanciation of COM objects" << endl;
 

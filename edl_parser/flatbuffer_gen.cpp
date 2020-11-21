@@ -1418,26 +1418,29 @@ namespace flatbuffer
 		}
 		fos << std::endl;
 		
-		if(namespaces.size() > 0)
+		if(!namespaces.empty())
 		{
-			for(size_t i = 0;i < namespaces.size();i+=2)
+			fos << "namespace ";
+			for(const auto& ns : namespaces )
 			{
-				fos << "namespace " << namespaces[i] << " {" << std::endl;
+				if(&ns != &namespaces.front())
+					fos << ".";
+				fos << ns;
 			}
-			fos << std::endl;
+			fos << ";" << std::endl;
 		}
 	
 		std::set<std::string> used_classes;
 		
-		for(std::list<FunctionObject>::const_iterator fit = m_ob.functions.begin();fit != m_ob.functions.end();fit++)
+		for(const FunctionObject& func : m_ob.functions)
 		{
-			if(used_classes.find(fit->name) != used_classes.end())
+			if(used_classes.find(func.name) != used_classes.end())
 			{
 				continue;
 			}
-			used_classes.insert(fit->name);
+			used_classes.insert(func.name);
 
-			if(fit->type == FunctionTypeMethod)
+			if(func.type == FunctionTypeMethod)
 			{
 				std::string json_func_param_list;
 				std::string json_func_structure;
@@ -1453,20 +1456,10 @@ namespace flatbuffer
 
 				std::string param_list;
 				int i = 1;
-				for(list<ParameterObject>::const_iterator pit = fit->parameters.begin();pit != fit->parameters.end();pit++)
+				for(const ParameterObject& param : func.parameters)
 				{
-					bool is_last = false;
-
-					{
-						std::list<ParameterObject>::const_iterator temp = pit;
-						temp++;
-						if(temp == fit->parameters.end())
-						{
-							is_last = true;
-						}
-					}
-
-					if(is_last == true)
+					//break if last param
+					if(&param == &(*func.parameters.rbegin()))
 					{
 						break;
 					}
@@ -1481,23 +1474,23 @@ namespace flatbuffer
 						param_list += ", ";
 						parse_stream << "\t\t\t\tCHECK_CHARACTER(" << i++ << ", ',');" << std::endl;
 					}
-					parse_stream << "\t\t\t\tREAD_LABEL(" << i++ << ", \"" << pit->name << "\");" << std::endl;
+					parse_stream << "\t\t\t\tREAD_LABEL(" << i++ << ", \"" << param.name << "\");" << std::endl;
 					
-					std::string unconst_type = unconst(pit->type);
+					std::string unconst_type = unconst(param.type);
 					std::string paramType = unconst_type;
 
-					cleanupStream(cleanup_stream1, paramType, pit->name, pit->m_attributes, m_ob.GetLibrary());
+					cleanupStream(cleanup_stream1, paramType, param.name, param.m_attributes, m_ob.GetLibrary());
 
 					//remove reference modifiers from paramType
 					std::string referenceModifiers;
 					stripReferenceModifiers(paramType, referenceModifiers);
 					translateType(paramType, m_ob.GetLibrary());
 					paramType = unconst(paramType);
-					std::string modified_name = pit->name;
+					std::string modified_name = param.name;
 					bool isPointer = false;
 					if(referenceModifiers == "*")
 					{
-						constructor_stream << "\t\t\t, " << pit->name << "(NULL)" << std::endl;
+						constructor_stream << "\t\t\t, " << param.name << "(NULL)" << std::endl;
 						isPointer = true;
 					}
 
@@ -1509,12 +1502,12 @@ namespace flatbuffer
 
 					execute_param_stream << modified_name;
 
-					if(readTypeAtomic(parse_stream, paramType + referenceModifiers, i, pit->name.data(),4))
+					if(readTypeAtomic(parse_stream, paramType + referenceModifiers, i, param.name.data(),4))
 					{
-						member_definitition_atomic(member_stream, paramType, pit->name, isPointer);
+						member_definitition_atomic(member_stream, paramType, param.name, isPointer);
 						if(referenceModifiers != "*")
 						{
-							member_initialisation_atomic(constructor_stream, paramType, pit->name);
+							member_initialisation_atomic(constructor_stream, paramType, param.name);
 						}
 					}
 					else if(isJavaScriptObject(paramType) == true)
@@ -1523,7 +1516,7 @@ namespace flatbuffer
 					}
 					else if(isVector(paramType) == true)
 					{
-						buildVector(paramType, pit->m_attributes, m_ob.GetLibrary());
+						buildVector(paramType, param.m_attributes, m_ob.GetLibrary());
 
 						std::string ttype = getTemplateParam(paramType);
 						std::string innerReferenceModifiers;
@@ -1544,29 +1537,29 @@ namespace flatbuffer
 						{
 							if(innerReferenceModifiers == "*")
 							{
-								parse_stream  << "\t\t\t\tREAD_NULL(" << i << ", " << paramType << ", " << pit->name << ", READ_VECTOR_PTR(" << i << ", " << ttype << ", " << suffix << ",*" << pit->name << "));" << std::endl;
+								parse_stream  << "\t\t\t\tREAD_NULL(" << i << ", " << paramType << ", " << param.name << ", READ_VECTOR_PTR(" << i << ", " << ttype << ", " << suffix << ",*" << param.name << "));" << std::endl;
 							}
 							else
 							{
-								parse_stream  << "\t\t\t\tREAD_NULL(" << i << ", " << paramType << ", " << pit->name << ", READ_VECTOR_REF(" << i << ", " << ttype << ", " << suffix << ",*" << pit->name << "));" << std::endl;
+								parse_stream  << "\t\t\t\tREAD_NULL(" << i << ", " << paramType << ", " << param.name << ", READ_VECTOR_REF(" << i << ", " << ttype << ", " << suffix << ",*" << param.name << "));" << std::endl;
 							}
 						}
 						else
 						{
 							if(innerReferenceModifiers == "*")
 							{
-								parse_stream  << "\t\t\t\tREAD_VECTOR_PTR(" << i << ", " << ttype << ", " << suffix << "," << pit->name << ");" << std::endl;
+								parse_stream  << "\t\t\t\tREAD_VECTOR_PTR(" << i << ", " << ttype << ", " << suffix << "," << param.name << ");" << std::endl;
 							}
 							else
 							{
-								parse_stream  << "\t\t\t\tREAD_VECTOR_REF(" << i << ", " << ttype << ", " << suffix << "," << pit->name << ");" << std::endl;
+								parse_stream  << "\t\t\t\tREAD_VECTOR_REF(" << i << ", " << ttype << ", " << suffix << "," << param.name << ");" << std::endl;
 							}
 						}
-						member_stream << "\t\t" << paramType << memberStreamModifier << " " << pit->name << ";" << std::endl;
+						member_stream << "\t\t" << paramType << memberStreamModifier << " " << param.name << ";" << std::endl;
 					}
 					else if(isList(paramType) == true)
 					{
-						buildList(paramType, pit->m_attributes, m_ob.GetLibrary());
+						buildList(paramType, param.m_attributes, m_ob.GetLibrary());
 
 						
 						std::string ttype = getTemplateParam(paramType);
@@ -1588,29 +1581,29 @@ namespace flatbuffer
 						{
 							if(innerReferenceModifiers == "*")
 							{
-								parse_stream  << "\t\t\t\tREAD_NULL(" << i << ", " << paramType << ", " << pit->name << ", READ_LIST_PTR(" << i << ", " << ttype << ", " << suffix << ",*" << pit->name << "));" << std::endl;
+								parse_stream  << "\t\t\t\tREAD_NULL(" << i << ", " << paramType << ", " << param.name << ", READ_LIST_PTR(" << i << ", " << ttype << ", " << suffix << ",*" << param.name << "));" << std::endl;
 							}
 							else
 							{
-								parse_stream  << "\t\t\t\tREAD_NULL(" << i << ", " << paramType << ", " << pit->name << ", READ_LIST_REF(" << i << ", " << ttype << ", " << suffix << ",*" << pit->name << "));" << std::endl;
+								parse_stream  << "\t\t\t\tREAD_NULL(" << i << ", " << paramType << ", " << param.name << ", READ_LIST_REF(" << i << ", " << ttype << ", " << suffix << ",*" << param.name << "));" << std::endl;
 							}
 						}
 						else
 						{
 							if(innerReferenceModifiers == "*")
 							{
-								parse_stream  << "\t\t\t\tREAD_LIST_PTR(" << i << ", " << ttype << ", " << suffix << "," << pit->name << ");" << std::endl;
+								parse_stream  << "\t\t\t\tREAD_LIST_PTR(" << i << ", " << ttype << ", " << suffix << "," << param.name << ");" << std::endl;
 							}
 							else
 							{
-								parse_stream  << "\t\t\t\tREAD_LIST_REF(" << i << ", " << ttype << ", " << suffix << "," << pit->name << ");" << std::endl;
+								parse_stream  << "\t\t\t\tREAD_LIST_REF(" << i << ", " << ttype << ", " << suffix << "," << param.name << ");" << std::endl;
 							}							
 						}
-						member_stream << "\t\t" << paramType << memberStreamModifier << " " << pit->name << ";" << std::endl;
+						member_stream << "\t\t" << paramType << memberStreamModifier << " " << param.name << ";" << std::endl;
 					}
 					else if(isMap(paramType) == true)
 					{
-						buildMap(paramType, pit->m_attributes, m_ob.GetLibrary());
+						buildMap(paramType, param.m_attributes, m_ob.GetLibrary());
 
 						std::string ttype = getTemplateParam(paramType);
 						std::string innerReferenceModifiers;
@@ -1631,29 +1624,29 @@ namespace flatbuffer
 						{
 							if(innerReferenceModifiers == "*")
 							{
-								parse_stream  << "\t\t\t\tREAD_NULL(" << i << ", " << paramType << ", " << pit->name << ", READ_MAP_PTR(" << i << ", " << ttype << ", " << suffix << ",*" << pit->name << "));" << std::endl;
+								parse_stream  << "\t\t\t\tREAD_NULL(" << i << ", " << paramType << ", " << param.name << ", READ_MAP_PTR(" << i << ", " << ttype << ", " << suffix << ",*" << param.name << "));" << std::endl;
 							}
 							else
 							{
-								parse_stream  << "\t\t\t\tREAD_NULL(" << i << ", " << paramType << ", " << pit->name << ", READ_MAP_REF(" << i << ", " << ttype << ", " << suffix << ",*" << pit->name << "));" << std::endl;
+								parse_stream  << "\t\t\t\tREAD_NULL(" << i << ", " << paramType << ", " << param.name << ", READ_MAP_REF(" << i << ", " << ttype << ", " << suffix << ",*" << param.name << "));" << std::endl;
 							}
 						}
 						else
 						{
 							if(innerReferenceModifiers == "*")
 							{
-								parse_stream  << "\t\t\t\tREAD_MAP_PTR(" << i << ", " << ttype << ", " << suffix << "," << pit->name << ");" << std::endl;
+								parse_stream  << "\t\t\t\tREAD_MAP_PTR(" << i << ", " << ttype << ", " << suffix << "," << param.name << ");" << std::endl;
 							}
 							else
 							{
-								parse_stream  << "\t\t\t\tREAD_MAP_REF(" << i << ", " << ttype << ", " << suffix << "," << pit->name << ");" << std::endl;
+								parse_stream  << "\t\t\t\tREAD_MAP_REF(" << i << ", " << ttype << ", " << suffix << "," << param.name << ");" << std::endl;
 							}
 						}
-						member_stream << "\t\t" << paramType << memberStreamModifier << " " << pit->name << ";" << std::endl;
+						member_stream << "\t\t" << paramType << memberStreamModifier << " " << param.name << ";" << std::endl;
 					}
 					else if(isSet(paramType) == true)
 					{
-						buildSet(paramType, pit->m_attributes, m_ob.GetLibrary());
+						buildSet(paramType, param.m_attributes, m_ob.GetLibrary());
 						
 						std::string ttype = getTemplateParam(paramType);
 						std::string innerReferenceModifiers;
@@ -1674,26 +1667,26 @@ namespace flatbuffer
 						{
 							if(innerReferenceModifiers == "*")
 							{
-								parse_stream  << "\t\t\t\tREAD_NULL(" << i << ", " << paramType << ", " << pit->name << ", READ_SET_PTR(" << i << ", " << ttype << ", " << suffix << ",*" << pit->name << "));" << std::endl;
+								parse_stream  << "\t\t\t\tREAD_NULL(" << i << ", " << paramType << ", " << param.name << ", READ_SET_PTR(" << i << ", " << ttype << ", " << suffix << ",*" << param.name << "));" << std::endl;
 							}
 							else
 							{
-								parse_stream  << "\t\t\t\tREAD_NULL(" << i << ", " << paramType << ", " << pit->name << ", READ_SET_REF(" << i << ", " << ttype << ", " << suffix << ",*" << pit->name << "));" << std::endl;
+								parse_stream  << "\t\t\t\tREAD_NULL(" << i << ", " << paramType << ", " << param.name << ", READ_SET_REF(" << i << ", " << ttype << ", " << suffix << ",*" << param.name << "));" << std::endl;
 							}
 						}
 						else
 						{
 							if(innerReferenceModifiers == "*")
 							{
-								parse_stream  << "\t\t\t\tREAD_SET_PTR(" << i << ", " << ttype << ", " << suffix << "," << pit->name << ");" << std::endl;
+								parse_stream  << "\t\t\t\tREAD_SET_PTR(" << i << ", " << ttype << ", " << suffix << "," << param.name << ");" << std::endl;
 							}
 							else
 							{
-								parse_stream  << "\t\t\t\tREAD_SET_REF(" << i << ", " << ttype << ", " << suffix << "," << pit->name << ");" << std::endl;
+								parse_stream  << "\t\t\t\tREAD_SET_REF(" << i << ", " << ttype << ", " << suffix << "," << param.name << ");" << std::endl;
 							}							
 						}
 
-						member_stream << "\t\t" << paramType << memberStreamModifier << " " << pit->name << ";" << std::endl;
+						member_stream << "\t\t" << paramType << memberStreamModifier << " " << param.name << ";" << std::endl;
 					}
 					else if(isEnum(paramType, m_ob.GetLibrary()) == true)
 					{
@@ -1709,10 +1702,10 @@ namespace flatbuffer
 
 						if(referenceModifiers != "*")
 						{
-							constructor_stream << "\t\t\t, " << pit->name << "(" << enumType->functions.begin()->name << ")" << std::endl;
+							constructor_stream << "\t\t\t, " << param.name << "(" << enumType->functions.begin()->name << ")" << std::endl;
 						}
 
-						member_stream << "\t\t" << paramType << memberStreamModifier << " " << pit->name << ";" << std::endl;
+						member_stream << "\t\t" << paramType << memberStreamModifier << " " << param.name << ";" << std::endl;
 				
 						std::string parentType = enumType->parentName;
 						if(parentType != "")
@@ -1724,22 +1717,22 @@ namespace flatbuffer
 							parentType = "unsigned __int8";
 						}
 						parse_stream << "\t\t";
-						if(readTypeAtomic(parse_stream, parentType + memberStreamModifier, i, pit->name.data(), 2) == false)
+						if(readTypeAtomic(parse_stream, parentType + memberStreamModifier, i, param.name.data(), 2) == false)
 						{
 							throw "invalid base enum type";
 						}
 					}
 					else
 					{
-						member_stream << "\t\t" << paramType << memberStreamModifier << " " << pit->name << ";" << std::endl;
-						std::string struct_type = buildStructure(paramType, pit->m_attributes, m_ob.GetLibrary());
+						member_stream << "\t\t" << paramType << memberStreamModifier << " " << param.name << ";" << std::endl;
+						std::string struct_type = buildStructure(paramType, param.m_attributes, m_ob.GetLibrary());
 						if(referenceModifiers == "*")
 						{
-							parse_stream << "\t\t\t\tREAD_NULL(" << i << ", " << paramType << ", " << pit->name << ", GET_STRUCT(" << i << ", " << paramType << ",*" << pit->name  << "));" << std::endl;
+							parse_stream << "\t\t\t\tREAD_NULL(" << i << ", " << paramType << ", " << param.name << ", GET_STRUCT(" << i << ", " << paramType << ",*" << param.name  << "));" << std::endl;
 						}
 						else
 						{
-							parse_stream << "\t\t\t\tGET_STRUCT(" << i << ", " << paramType << "," << pit->name  << ");" << std::endl;
+							parse_stream << "\t\t\t\tGET_STRUCT(" << i << ", " << paramType << "," << param.name  << ");" << std::endl;
 						}
 					}
 					param_list += modified_name;
@@ -1748,17 +1741,17 @@ namespace flatbuffer
 
 
 				fos << "\ttemplate<class connection, class web_service_impl>" << std::endl;
-				fos << "\tclass " << fit->name << "Executer : public ajax::core::parser_executer<connection, web_service_impl>" << std::endl;
+				fos << "\tclass " << func.name << "Executer : public ajax::core::parser_executer<connection, web_service_impl>" << std::endl;
 				fos << "\t{" << std::endl;
 				fos << "\tpublic:" << std::endl;
-				fos << "\t\t" << fit->name << "Executer() : state_(0), child_(NULL)" << std::endl;
+				fos << "\t\t" << func.name << "Executer() : state_(0), child_(NULL)" << std::endl;
 				constructor_stream << std::ends;
 				fos << constructor_stream.str();
 				fos << "\t\t{" << std::endl;
-				buildFunctionInitMembers(&(*fit), fos, "");
+				buildFunctionInitMembers(&func, fos, "");
 				fos << "\t\t}" << std::endl;
 				fos << std::endl;
-				fos << "\t\t~" << fit->name << "Executer()" << std::endl;
+				fos << "\t\t~" << func.name << "Executer()" << std::endl;
 				fos << "\t\t{" << std::endl;
 				fos << "\t\t\tdelete child_;" << std::endl;
 				fos << "\t\t\tchild_ = NULL;" << std::endl;
@@ -1785,16 +1778,16 @@ namespace flatbuffer
 				fos << "\t\t\t}" << std::endl;
 				fos << "\t\t\tif(ret == ajax::core::parse_failed)" << std::endl;
 				fos << "\t\t\t{" << std::endl;
-				fos << "\t\t\t\tLOG_ERROR1(\"parsing error at state %s in " << fit->name << "Executer \", xt::int_to_string(state_));" << std::endl;
+				fos << "\t\t\t\tLOG_ERROR1(\"parsing error at state %s in " << func.name << "Executer \", xt::int_to_string(state_));" << std::endl;
 				fos << "\t\t\t}" << std::endl;
 				fos << "\t\t\treturn ret;" << std::endl;
 				fos << "\t\t}" << std::endl;
 				fos << std::endl;
 				fos << "\t\tvirtual xt::network::response_status execute(connection& con, std::ostream& reply, web_service_impl& ws)" << std::endl;
 				fos << "\t\t{" << std::endl;
-				if(fit->parameters.size() != 0)
+				if(func.parameters.size() != 0)
 				{
-					std::list<ParameterObject>::const_reverse_iterator rit = fit->parameters.rbegin();
+					std::list<ParameterObject>::const_reverse_iterator rit = func.parameters.rbegin();
 					const ParameterObject& last_param = *rit;
 
 					std::string paramType = unconst(last_param.type);
@@ -1853,25 +1846,25 @@ namespace flatbuffer
 						fos << "\t\t\t" << atomic_prefix << paramType << "_parser::initialise(" << last_param.name << ");" << std::endl;
 					}
 
-					if(fit->parameters.size() > 1)
+					if(func.parameters.size() > 1)
 					{
-						fos << "\t\t\txt::network::response_status ret = CONTEXT(" << fit->name << ") " << execute_param_stream.str() << ", " << last_param.name << " END_PARAMS;" << std::endl;
+						fos << "\t\t\txt::network::response_status ret = CONTEXT(" << func.name << ") " << execute_param_stream.str() << ", " << last_param.name << " END_PARAMS;" << std::endl;
 					}
 					else
 					{
-						fos << "\t\t\txt::network::response_status ret = CONTEXT(" << fit->name << ") " << last_param.name << " END_PARAMS;" << std::endl;
+						fos << "\t\t\txt::network::response_status ret = CONTEXT(" << func.name << ") " << last_param.name << " END_PARAMS;" << std::endl;
 					}
 				}
 				else
 				{
-					fos << "\t\t\txt::network::response_status ret = CONTEXT(" << fit->name << ") " << execute_param_stream.str() << " END_PARAMS;" << std::endl;
+					fos << "\t\t\txt::network::response_status ret = CONTEXT(" << func.name << ") " << execute_param_stream.str() << " END_PARAMS;" << std::endl;
 				}
 				fos << "\t\t\tif(ret == xt::network::ok)" << std::endl;
 				fos << "\t\t\t{" << std::endl;
 				//fos << "\t\t\t\tstd::std::stringstream buf;" << std::endl;
-				if(fit->parameters.size() != 0)
+				if(func.parameters.size() != 0)
 				{
-					std::list<ParameterObject>::const_reverse_iterator rit = fit->parameters.rbegin();
+					std::list<ParameterObject>::const_reverse_iterator rit = func.parameters.rbegin();
 
 					fos << execute_stream_stream.str();
 					//fos << "\t\t\t\treply = buf.str();" << std::endl;
@@ -1903,21 +1896,21 @@ namespace flatbuffer
 		fos << "\t{" << std::endl;
 		fos << "\t\tbool ret = true;" << std::endl;
 
-		for(std::list<FunctionObject>::const_iterator fit = m_ob.functions.begin();fit != m_ob.functions.end();fit++)
+		for(const FunctionObject& func : m_ob.functions)
 		{
-			if(fit->type == FunctionTypeMethod)
+			if(func.type == FunctionTypeMethod)
 			{
 				std::string json_func_param_list;
 
 				fos << "\t\t";
-				if(fit != m_ob.functions.begin())
+				if(&func != &m_ob.functions.front())
 				{
 					fos << "else ";
 				}
 
-				fos << "if(function == \"" << fit->name << "\")" << std::endl;
+				fos << "if(function == \"" << func.name << "\")" << std::endl;
 				fos << "\t\t{" << std::endl;
-				fos << "\t\t\tpp_executer = new " << fit->name << "Executer<connection, web_service_impl>();" << std::endl;
+				fos << "\t\t\tpp_executer = new " << func.name << "Executer<connection, web_service_impl>();" << std::endl;
 				fos << "\t\t}" << std::endl;
 			}
 		}

@@ -213,11 +213,8 @@ int main(int argc, char* argv[])
 
     try
     {
-        auto modifiedPreparseFile = std::filesystem::canonical(preparseFile).make_preferred();
-        std::cout << "modified preparseFile: " << modifiedPreparseFile << "\n";
-
-        auto modifiedSourceFile = std::filesystem::canonical(sourceFile).make_preferred();
-        std::cout << "modified SourceFile: " << modifiedSourceFile << "\n";
+        std::cout << "modified preparseFile: " << preparseFile << "\n";
+        std::cout << "modified SourceFile: " << sourceFile << "\n";
 
         {
             {
@@ -232,15 +229,15 @@ int main(int argc, char* argv[])
                 parser->AddDefine("size_t", def);
             }
 
-            std::ifstream source_file(modifiedSourceFile);
-            std::ofstream preparse_file(modifiedPreparseFile);
+            std::ifstream source_file(sourceFile);
+            std::ofstream preparse_file(preparseFile);
             parser->Load(preparse_file, source_file, includePaths);
             preparse_file.close();
         }
         {
             // load the idl file
             Library objects;
-            objects.Load(modifiedPreparseFile.string().data());
+            objects.Load(preparseFile.data());
 
             std::string interfaces_h_data;
             std::string interfaces_cpp_data;
@@ -249,26 +246,27 @@ int main(int argc, char* argv[])
             // read the original data and close the files afterwards
             {
                 std::error_code ec;
-                headerPath = std::filesystem::canonical(headerPath, ec).make_preferred().string();
+                //headerPath = std::filesystem::canonical(headerPath, ec).make_preferred().string();
                 std::ifstream hfs(headerPath.data());
                 std::getline(hfs, interfaces_h_data, '\0');
 
-                cppPath = std::filesystem::canonical(cppPath, ec).make_preferred().string();
+                //cppPath = std::filesystem::canonical(cppPath, ec).make_preferred().string();
                 std::ifstream cfs(cppPath.data());
                 std::getline(cfs, interfaces_cpp_data, '\0');
 
-                flatbufferPath = std::filesystem::canonical(flatbufferPath, ec).make_preferred().string();
+                //flatbufferPath = std::filesystem::canonical(flatbufferPath, ec).make_preferred().string();
                 std::ifstream afs(flatbufferPath.data());
                 std::getline(afs, ajax_data, '\0');
             }
 
             std::stringstream header_stream;
             std::stringstream cpp_stream;
+            std::ofstream file(flatbufferPath.data());//to be reverted
             std::stringstream fb_stream;
 
             // do the generation to the ostrstreams
             {
-                flatbuffer::writeFiles(objects, fb_stream, namespaces );
+                flatbuffer::writeFiles(objects, file, namespaces );
 
                 /*javascript_json::json::namespace_name = flatbuffer_class_name;
                 javascript_json::json::writeJSONFiles(objects, ajax_stream);*/
