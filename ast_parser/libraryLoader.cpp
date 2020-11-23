@@ -96,7 +96,16 @@ FunctionObject ClassObject::GetFunction(const char*& pData, attributes& attribs,
 		if(func.name == "const") //CORBA types
 			bConstant = true;
 
-		if(func.name == "const" || func.name == "unsigned"  || func.name == "signed" || (m_interface_spec == corba && func.name == "inout") || ((m_interface_spec == corba || m_interface_spec == com) && (func.name == "in" || func.name == "out"))) //CORBA types
+		if(func.name == "const" || 
+		func.name == "unsigned"  || 
+		func.name == "signed" || 
+		(m_interface_spec == corba && func.name == "inout") || //CORBA types
+		(
+			(m_interface_spec == corba || m_interface_spec == com) && 
+			(func.name == "in" || func.name == "out")
+		) ||
+		(m_interface_spec == edl && func.name == "public")
+		)
 		{
 			if(func.name == "inout")
 			{
@@ -591,6 +600,14 @@ void ClassObject::GetStructure(const char*& pData, const std::string& ns, bool b
 				else if(IfIsWordEat(pData,"namespace"))
 				{
 					GetNamespaceData(pData, ns);
+					continue;
+				}
+				else if(m_interface_spec == edl && (IsWord(pData,"enclave") || IsWord(pData,"trusted") || IsWord(pData,"untrusted")))
+				{
+					GetNamespaceData(pData, ns);
+					EAT_SPACES(pData)
+					if(*pData == ';')
+						pData++;
 					continue;
 				}
 				else

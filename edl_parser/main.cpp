@@ -237,6 +237,7 @@ int main(int argc, char* argv[])
         {
             // load the idl file
             Library objects;
+            objects.m_interface_spec = edl;
             objects.Load(preparseFile.data());
 
             std::string interfaces_h_data;
@@ -253,20 +254,15 @@ int main(int argc, char* argv[])
                 //cppPath = std::filesystem::canonical(cppPath, ec).make_preferred().string();
                 std::ifstream cfs(cppPath.data());
                 std::getline(cfs, interfaces_cpp_data, '\0');
-
-                //flatbufferPath = std::filesystem::canonical(flatbufferPath, ec).make_preferred().string();
-                std::ifstream afs(flatbufferPath.data());
-                std::getline(afs, ajax_data, '\0');
             }
 
             std::stringstream header_stream;
             std::stringstream cpp_stream;
-            std::ofstream file(flatbufferPath.data());//to be reverted
             std::stringstream fb_stream;
 
             // do the generation to the ostrstreams
             {
-                flatbuffer::writeFiles(objects, file, namespaces );
+                flatbuffer::writeFiles(objects, std::filesystem::path(flatbufferPath), namespaces );
 
                 /*javascript_json::json::namespace_name = flatbuffer_class_name;
                 javascript_json::json::writeJSONFiles(objects, ajax_stream);*/
@@ -282,11 +278,6 @@ int main(int argc, char* argv[])
             {
                 std::ofstream file(cppPath.data());
                 file << cpp_stream.str();
-            }
-            if (ajax_data != fb_stream.str())
-            {
-                std::ofstream file(flatbufferPath.data());
-                file << fb_stream.str();
             }
         }
     }

@@ -176,7 +176,8 @@ enum interface_spec
 {
 	header,
 	com,
-	corba
+	corba,
+	edl
 };
 
 struct ClassObject : objectBase

@@ -321,17 +321,18 @@ bool Library::FindClassObject(const std::string& type, const ClassObject*& obj) 
 		}
 	}
 
-	for(CLASS_OBJECT_LIST::const_iterator oit = m_classes.begin(); oit != m_classes.end();oit++)
+	for(const auto cls : m_classes)
 	{
-		const ClassObject& pobj = (*(*oit));
-		std::string name = pobj.name;
+		const ClassObject& clsRef = *cls;
 		/*if(pobj.type == ObjectTypedef)
 		{
 			name = pobj.parentName;
 		}*/
-		if(name == typ && namesp == pobj.m_namespace)
+		if(clsRef.name == typ && 
+		(namesp == clsRef.m_namespace || 
+		(m_interface_spec == edl && clsRef.m_namespace == "enclave")))
 		{
-			obj = (*oit).get();
+			obj = &clsRef;
 			return true;
 		}
 	}
