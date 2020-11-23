@@ -12,33 +12,44 @@ extern xt::function_timer* p_timer;
 
 namespace flatbuffer
 {
+	enum class render_type : int
+	{
+		request = 1,
+		response = 2,
+		structure = 4
+	};
+
 	set<std::string> structures_check;
 
-	bool writeSimpleType(ostream& fos, bool is_request, const FunctionObject& func, const ClassObject& ob, std::string& paramType, int comma_count)
+	void writeTable(std::stringstream& fos, render_type rt, const FunctionObject& func, const ClassObject& ob);
+	void writeTable(std::stringstream& fos, const ClassObject& func, const Library& library);
+
+	bool writeSimpleType(ostream& fos, const std::string& func_name, const std::string& paramType, int comma_count)
 	{
 		if(p_timer != NULL && p_timer->is_timedOut())
 		{
 			exit(0);
 		}
 		std::string referenceModifiers;
-		stripReferenceModifiers(paramType, referenceModifiers);
+		std::string modifiedParamType = paramType;
+		stripReferenceModifiers(modifiedParamType, referenceModifiers);
 
 		for(int i = 0;i<comma_count;i++) fos << '\t';
 
-		if		(isUInt8	(paramType)) fos << func.name << ":ubyte";
-		else if	(isInt8		(paramType)) fos << func.name << ":byte";
-		else if	(isUInt16	(paramType)) fos << func.name << ":ushort";
-		else if	(isInt16	(paramType)) fos << func.name << ":short";
-		else if	(isUInt32	(paramType)) fos << func.name << ":uint";
-		else if	(isInt32	(paramType)) fos << func.name << ":int";
-		else if	(isULong	(paramType)) fos << func.name << ":ulong";
-		else if	(isLong		(paramType)) fos << func.name << ":long";
-		else if	(isUInt64	(paramType)) fos << func.name << ":ulong";
-		else if	(isInt64	(paramType)) fos << func.name << ":long";
-		else if	(isBool		(paramType)) fos << func.name << ":bool";
-		else if	(isDouble	(paramType)) fos << func.name << ":double";
-		else if	(isFloat	(paramType)) fos << func.name << ":float";
-		else if	(isString	(paramType)) fos << func.name << ":string";
+		if		(isUInt8	(modifiedParamType)) fos << func_name << ":ubyte";
+		else if	(isInt8		(modifiedParamType)) fos << func_name << ":byte";
+		else if	(isUInt16	(modifiedParamType)) fos << func_name << ":ushort";
+		else if	(isInt16	(modifiedParamType)) fos << func_name << ":short";
+		else if	(isUInt32	(modifiedParamType)) fos << func_name << ":uint";
+		else if	(isInt32	(modifiedParamType)) fos << func_name << ":int";
+		else if	(isULong	(modifiedParamType)) fos << func_name << ":ulong";
+		else if	(isLong		(modifiedParamType)) fos << func_name << ":long";
+		else if	(isUInt64	(modifiedParamType)) fos << func_name << ":ulong";
+		else if	(isInt64	(modifiedParamType)) fos << func_name << ":long";
+		else if	(isBool		(modifiedParamType)) fos << func_name << ":bool";
+		else if	(isDouble	(modifiedParamType)) fos << func_name << ":double";
+		else if	(isFloat	(modifiedParamType)) fos << func_name << ":float";
+		else if	(isString	(modifiedParamType)) fos << func_name << ":string";
 		else
 		{
 			return false;
@@ -46,15 +57,13 @@ namespace flatbuffer
 		return true;
 	}
 
-	std::string buildStructure(std::string& paramType, const attributes& attrib, const Library& library)
+	std::string buildStructure(std::stringstream& fos, std::string& paramType, const attributes& attrib, const Library& library)
 	{
 		if(p_timer != NULL && p_timer->is_timedOut())
 		{
 			exit(0);
 		}
 		std::string type = unconst(paramType);
-
-		std::string functionName;
 		std::string dereftype = type;
 		bool typeIsPointer = false;
 		if(type[type.length() - 1] == '*')
@@ -75,12 +84,26 @@ namespace flatbuffer
 			if(structures_check.find(newType) == structures_check.end())
 			{
 				structures_check.insert(newType);
+				const ClassObject* pObj = NULL;
+				if(library.FindClassObject(newType, pObj) == true && pObj != NULL)
+				{
+					if(pObj->type == ObjectTypedef)
+					{
+						newType = pObj->parentName;
+						if(library.FindClassObject(newType, pObj) == true && pObj != NULL)
+						{
+
+						}
+					}
+				}
+				writeTable(fos, *pObj, library);
 			}			
 		}
 
 		return newType;
 	}
 
+/*
 	std::string buildVector(const std::string& type, const attributes& attrib, const Library& library)
 	{
 		if(p_timer != NULL && p_timer->is_timedOut())
@@ -212,284 +235,346 @@ namespace flatbuffer
 
 		return std::string();
 	}
+*/
+	void writeTable(std::stringstream& fos, const ClassObject& func, const Library& library)
+	{		
+		std::stringstream parse_stream;
 
-	void writeFunction(bool is_request, const FunctionObject& func, const ClassObject& ob, std::filesystem::path& path, std::vector<std::string>& namespaces)
-	{	
-		structures_check.clear();
-		auto file = path / (func.name + (is_request ? "_request.fbs" : "_response.fbs"));
+		parse_stream << "table " << func.name << std::endl;
+		parse_stream << "{\n";
 
-		std::stringstream fos;
-
+		for(const FunctionObject& param : func.functions)
 		{
-			std::stringstream parse_stream;
+			assert(param.type == FunctionType::FunctionTypeVariable);
+			std::string paramType = param.returnType;
 
-			if(!namespaces.empty())
+			//remove reference modifiers from paramType
+			std::string referenceModifiers;
+			stripReferenceModifiers(paramType, referenceModifiers);
+			translateType(paramType, library);
+			paramType = unconst(paramType);
+			std::string modified_name = param.name;
+			bool isPointer = false;
+			if(referenceModifiers == "*")
 			{
-				fos << "namespace ";
-				for(const auto& ns : namespaces )
-				{
-					if(&ns != &namespaces.front())
-						fos << ".";
-					fos << ns;
-				}
-				fos << ";\n";
+				isPointer = true;
 			}
 
-			for(const ParameterObject& param : func.parameters)
+			std::string memberStreamModifier = referenceModifiers;
+			if(memberStreamModifier == "&")
+			{
+				memberStreamModifier = "";
+			}
+
+			if(writeSimpleType(parse_stream, param.name, paramType + referenceModifiers,1))
+			{
+			}
+			else
+			{
+				std::string struct_type = buildStructure(fos, paramType, param.m_attributes, library);
+				parse_stream << param.name << ":" << struct_type;
+			}
+
+			if(&param != &(*func.functions.rbegin()))
+			{
+				parse_stream << ",";
+			}
+			parse_stream << "\n";
+		}
+
+		parse_stream << "};\n\n";
+
+		fos << parse_stream.str();
+	}
+	
+	
+	void writeTable(std::stringstream& fos, render_type rt, const FunctionObject& func, const ClassObject& ob)
+	{		
+		std::stringstream parse_stream;
+
+		parse_stream << "table " << func.name << std::endl;
+		parse_stream << "{\n";
+
+		for(const ParameterObject& param : func.parameters)
+		{
+			if(rt != render_type::structure)
 			{
 				bool is_out = std::find(param.m_attributes.begin(), param.m_attributes.end(), "out") != param.m_attributes.end();
-				bool is_in = std::find(param.m_attributes.begin(), param.m_attributes.end(), "out") != param.m_attributes.end();
+				bool is_in = std::find(param.m_attributes.begin(), param.m_attributes.end(), "in") != param.m_attributes.end();
 				if(!is_out && !is_in)
 					is_in = true;
-				if(is_request != is_out)
+				if(is_in && rt != render_type::request)
 				{
 					continue;
 				}
+				if(is_out && rt != render_type::response)
+				{
+					continue;
+				}
+			}
 
-				std::string unconst_type = unconst(param.type);
-				std::string paramType = unconst_type;
+			std::string unconst_type = unconst(param.type);
+			std::string paramType = unconst_type;
 
-				//remove reference modifiers from paramType
-				std::string referenceModifiers;
-				stripReferenceModifiers(paramType, referenceModifiers);
-				translateType(paramType, ob.GetLibrary());
-				paramType = unconst(paramType);
-				std::string modified_name = param.name;
-				bool isPointer = false;
+			//remove reference modifiers from paramType
+			std::string referenceModifiers;
+			stripReferenceModifiers(paramType, referenceModifiers);
+			translateType(paramType, ob.GetLibrary());
+			paramType = unconst(paramType);
+			std::string modified_name = param.name;
+			bool isPointer = false;
+			if(referenceModifiers == "*")
+			{
+				isPointer = true;
+			}
+
+			std::string memberStreamModifier = referenceModifiers;
+			if(memberStreamModifier == "&")
+			{
+				memberStreamModifier = "";
+			}
+
+			if(writeSimpleType(parse_stream, func.name, paramType + referenceModifiers,1))
+			{
+			}
+			/*else if(isVector(paramType) == true)
+			{
+				buildVector(paramType, param.m_attributes, ob.GetLibrary());
+
+				std::string ttype = getTemplateParam(paramType);
+				std::string innerReferenceModifiers;
+				stripReferenceModifiers(ttype, innerReferenceModifiers);
+				translateType(ttype, ob.GetLibrary());
+				string suffix = ttype;
+				if(suffix == "std::string")
+				{
+					suffix = "ajax::core::string";
+				}
+				else if(isUInt8(suffix) || isInt8(suffix) || isUInt16(suffix) || isInt16(suffix) || isUInt32(suffix) || isInt32(suffix) || isUInt64(suffix) || isInt64(suffix) || isULong(suffix) || isLong(suffix) || suffix == "float" || suffix == "double")
+				{
+					suffix = "ajax::core::" + suffix;
+				}
+
+
 				if(referenceModifiers == "*")
 				{
-					isPointer = true;
-				}
-
-				std::string memberStreamModifier = referenceModifiers;
-				if(memberStreamModifier == "&")
-				{
-					memberStreamModifier = "";
-				}
-
-				if(writeSimpleType(parse_stream, is_request, func, ob, paramType + referenceModifiers,1))
-				{
-				}
-				else if(isVector(paramType) == true)
-				{
-					buildVector(paramType, param.m_attributes, ob.GetLibrary());
-
-					std::string ttype = getTemplateParam(paramType);
-					std::string innerReferenceModifiers;
-					stripReferenceModifiers(ttype, innerReferenceModifiers);
-					translateType(ttype, ob.GetLibrary());
-					string suffix = ttype;
-					if(suffix == "std::string")
+					if(innerReferenceModifiers == "*")
 					{
-						suffix = "ajax::core::string";
-					}
-					else if(isUInt8(suffix) || isInt8(suffix) || isUInt16(suffix) || isInt16(suffix) || isUInt32(suffix) || isInt32(suffix) || isUInt64(suffix) || isInt64(suffix) || isULong(suffix) || isLong(suffix) || suffix == "float" || suffix == "double")
-					{
-						suffix = "ajax::core::" + suffix;
-					}
-
-
-					if(referenceModifiers == "*")
-					{
-						if(innerReferenceModifiers == "*")
-						{
-							parse_stream  << "READ_VECTOR_PTR(" << ttype << ", " << suffix << ",*" << param.name << ");";
-						}
-						else
-						{
-							parse_stream  << "READ_VECTOR_REF(" << ttype << ", " << suffix << ",*" << param.name << ");";
-						}
+						parse_stream  << "READ_VECTOR_PTR(" << ttype << ", " << suffix << ",*" << param.name << ");";
 					}
 					else
 					{
-						if(innerReferenceModifiers == "*")
-						{
-							parse_stream  << "READ_VECTOR_PTR(" << ttype << ", " << suffix << "," << param.name << ");";
-						}
-						else
-						{
-							parse_stream  << "READ_VECTOR_REF(" << ttype << ", " << suffix << "," << param.name << ");";
-						}
-					}
-				}
-				else if(isList(paramType) == true)
-				{
-					buildList(paramType, param.m_attributes, ob.GetLibrary());
-
-					
-					std::string ttype = getTemplateParam(paramType);
-					std::string innerReferenceModifiers;
-					stripReferenceModifiers(ttype, innerReferenceModifiers);
-					translateType(ttype, ob.GetLibrary());
-					string suffix = ttype;
-					if(suffix == "std::string")
-					{
-						suffix = "ajax::core::string";
-					}
-					else if(isUInt8(suffix) || isInt8(suffix) || isUInt16(suffix) || isInt16(suffix) || isUInt32(suffix) || isInt32(suffix) || isUInt64(suffix) || isInt64(suffix) || isULong(suffix) || isLong(suffix) || suffix == "float" || suffix == "double")
-					{
-						suffix = "ajax::core::" + suffix;
-					}
-
-
-					if(referenceModifiers == "*")
-					{
-						if(innerReferenceModifiers == "*")
-						{
-							parse_stream  << "READ_LIST_PTR(" << ttype << ", " << suffix << ",*" << param.name << ");";
-						}
-						else
-						{
-							parse_stream  << "READ_LIST_REF(" << ttype << ", " << suffix << ",*" << param.name << ");";
-						}
-					}
-					else
-					{
-						if(innerReferenceModifiers == "*")
-						{
-							parse_stream  << "READ_LIST_PTR(" << ttype << ", " << suffix << "," << param.name << ");";
-						}
-						else
-						{
-							parse_stream  << "READ_LIST_REF(" << ttype << ", " << suffix << "," << param.name << ");";
-						}							
-					}
-				}
-				else if(isMap(paramType) == true)
-				{
-					buildMap(paramType, param.m_attributes, ob.GetLibrary());
-
-					std::string ttype = getTemplateParam(paramType);
-					std::string innerReferenceModifiers;
-					stripReferenceModifiers(ttype, innerReferenceModifiers);
-					translateType(ttype, ob.GetLibrary());
-					string suffix = ttype;
-					if(suffix == "std::string")
-					{
-						suffix = "ajax::core::string";
-					}
-					else if(isUInt8(suffix) || isInt8(suffix) || isUInt16(suffix) || isInt16(suffix) || isUInt32(suffix) || isInt32(suffix) || isUInt64(suffix) || isInt64(suffix) || isULong(suffix) || isLong(suffix) || suffix == "float" || suffix == "double")
-					{
-						suffix = "ajax::core::" + suffix;
-					}
-
-
-					if(referenceModifiers == "*")
-					{
-						if(innerReferenceModifiers == "*")
-						{
-							parse_stream  << "READ_MAP_PTR(" << ttype << ", " << suffix << ",*" << param.name << ");";
-						}
-						else
-						{
-							parse_stream  << "READ_MAP_REF(" << ttype << ", " << suffix << ",*" << param.name << ");";
-						}
-					}
-					else
-					{
-						if(innerReferenceModifiers == "*")
-						{
-							parse_stream  << "READ_MAP_PTR(" << ttype << ", " << suffix << "," << param.name << ");";
-						}
-						else
-						{
-							parse_stream  << "READ_MAP_REF(" << ttype << ", " << suffix << "," << param.name << ");";
-						}
-					}
-				}
-				else if(isSet(paramType) == true)
-				{
-					buildSet(paramType, param.m_attributes, ob.GetLibrary());
-					
-					std::string ttype = getTemplateParam(paramType);
-					std::string innerReferenceModifiers;
-					stripReferenceModifiers(ttype, innerReferenceModifiers);
-					translateType(ttype, ob.GetLibrary());
-					string suffix = ttype;
-					if(suffix == "std::string")
-					{
-						suffix = "ajax::core::string";
-					}
-					else if(isUInt8(suffix) || isInt8(suffix) || isUInt16(suffix) || isInt16(suffix) || isUInt32(suffix) || isInt32(suffix) || isUInt64(suffix) || isInt64(suffix) || isULong(suffix) || isLong(suffix) || suffix == "float" || suffix == "double")
-					{
-						suffix = "ajax::core::" + suffix;
-					}
-
-
-					if(referenceModifiers == "*")
-					{
-						if(innerReferenceModifiers == "*")
-						{
-							parse_stream  << "READ_SET_PTR(" << ttype << ", " << suffix << ",*" << param.name << ");";
-						}
-						else
-						{
-							parse_stream  << "READ_SET_REF(" << ttype << ", " << suffix << ",*" << param.name << ");";
-						}
-					}
-					else
-					{
-						if(innerReferenceModifiers == "*")
-						{
-							parse_stream  << "READ_SET_PTR(" << ttype << ", " << suffix << "," << param.name << ");";
-						}
-						else
-						{
-							parse_stream  << "READ_SET_REF(" << ttype << ", " << suffix << "," << param.name << ");";
-						}							
-					}
-				}
-				else if(isEnum(paramType, ob.GetLibrary()) == true)
-				{
-					const ClassObject* enumType = NULL;
-					if(ob.GetLibrary().FindClassObject(paramType, enumType) == false || enumType == NULL)
-					{
-						std::stringstream err;
-						err << "unable to find type: " << paramType;
-						string errString(err.str());
-						throw errString;
-					}
-
-					std::string parentType = enumType->parentName;
-					if(parentType != "")
-					{
-						translateType(parentType, ob.GetLibrary().GetLibrary());
-					}
-					else
-					{
-						parentType = "unsigned __int8";
-					}
-					parse_stream << "";
-					if(writeSimpleType(parse_stream, is_request, func, ob, parentType + memberStreamModifier, 1) == false)
-					{
-						throw "invalid base enum type";
+						parse_stream  << "READ_VECTOR_REF(" << ttype << ", " << suffix << ",*" << param.name << ");";
 					}
 				}
 				else
 				{
-					std::string struct_type = buildStructure(paramType, param.m_attributes, ob.GetLibrary());
-					parse_stream << param.name << ":" << struct_type;
+					if(innerReferenceModifiers == "*")
+					{
+						parse_stream  << "READ_VECTOR_PTR(" << ttype << ", " << suffix << "," << param.name << ");";
+					}
+					else
+					{
+						parse_stream  << "READ_VECTOR_REF(" << ttype << ", " << suffix << "," << param.name << ");";
+					}
+				}
+			}
+			else if(isList(paramType) == true)
+			{
+				buildList(paramType, param.m_attributes, ob.GetLibrary());
+
+				
+				std::string ttype = getTemplateParam(paramType);
+				std::string innerReferenceModifiers;
+				stripReferenceModifiers(ttype, innerReferenceModifiers);
+				translateType(ttype, ob.GetLibrary());
+				string suffix = ttype;
+				if(suffix == "std::string")
+				{
+					suffix = "ajax::core::string";
+				}
+				else if(isUInt8(suffix) || isInt8(suffix) || isUInt16(suffix) || isInt16(suffix) || isUInt32(suffix) || isInt32(suffix) || isUInt64(suffix) || isInt64(suffix) || isULong(suffix) || isLong(suffix) || suffix == "float" || suffix == "double")
+				{
+					suffix = "ajax::core::" + suffix;
 				}
 
-				if(&param != &(*func.parameters.rbegin()))
+
+				if(referenceModifiers == "*")
 				{
-					parse_stream << ",";
+					if(innerReferenceModifiers == "*")
+					{
+						parse_stream  << "READ_LIST_PTR(" << ttype << ", " << suffix << ",*" << param.name << ");";
+					}
+					else
+					{
+						parse_stream  << "READ_LIST_REF(" << ttype << ", " << suffix << ",*" << param.name << ");";
+					}
 				}
-				parse_stream << "\n";
+				else
+				{
+					if(innerReferenceModifiers == "*")
+					{
+						parse_stream  << "READ_LIST_PTR(" << ttype << ", " << suffix << "," << param.name << ");";
+					}
+					else
+					{
+						parse_stream  << "READ_LIST_REF(" << ttype << ", " << suffix << "," << param.name << ");";
+					}							
+				}
+			}
+			else if(isMap(paramType) == true)
+			{
+				buildMap(paramType, param.m_attributes, ob.GetLibrary());
+
+				std::string ttype = getTemplateParam(paramType);
+				std::string innerReferenceModifiers;
+				stripReferenceModifiers(ttype, innerReferenceModifiers);
+				translateType(ttype, ob.GetLibrary());
+				string suffix = ttype;
+				if(suffix == "std::string")
+				{
+					suffix = "ajax::core::string";
+				}
+				else if(isUInt8(suffix) || isInt8(suffix) || isUInt16(suffix) || isInt16(suffix) || isUInt32(suffix) || isInt32(suffix) || isUInt64(suffix) || isInt64(suffix) || isULong(suffix) || isLong(suffix) || suffix == "float" || suffix == "double")
+				{
+					suffix = "ajax::core::" + suffix;
+				}
+
+
+				if(referenceModifiers == "*")
+				{
+					if(innerReferenceModifiers == "*")
+					{
+						parse_stream  << "READ_MAP_PTR(" << ttype << ", " << suffix << ",*" << param.name << ");";
+					}
+					else
+					{
+						parse_stream  << "READ_MAP_REF(" << ttype << ", " << suffix << ",*" << param.name << ");";
+					}
+				}
+				else
+				{
+					if(innerReferenceModifiers == "*")
+					{
+						parse_stream  << "READ_MAP_PTR(" << ttype << ", " << suffix << "," << param.name << ");";
+					}
+					else
+					{
+						parse_stream  << "READ_MAP_REF(" << ttype << ", " << suffix << "," << param.name << ");";
+					}
+				}
+			}
+			else if(isSet(paramType) == true)
+			{
+				buildSet(paramType, param.m_attributes, ob.GetLibrary());
+				
+				std::string ttype = getTemplateParam(paramType);
+				std::string innerReferenceModifiers;
+				stripReferenceModifiers(ttype, innerReferenceModifiers);
+				translateType(ttype, ob.GetLibrary());
+				string suffix = ttype;
+				if(suffix == "std::string")
+				{
+					suffix = "ajax::core::string";
+				}
+				else if(isUInt8(suffix) || isInt8(suffix) || isUInt16(suffix) || isInt16(suffix) || isUInt32(suffix) || isInt32(suffix) || isUInt64(suffix) || isInt64(suffix) || isULong(suffix) || isLong(suffix) || suffix == "float" || suffix == "double")
+				{
+					suffix = "ajax::core::" + suffix;
+				}
+
+
+				if(referenceModifiers == "*")
+				{
+					if(innerReferenceModifiers == "*")
+					{
+						parse_stream  << "READ_SET_PTR(" << ttype << ", " << suffix << ",*" << param.name << ");";
+					}
+					else
+					{
+						parse_stream  << "READ_SET_REF(" << ttype << ", " << suffix << ",*" << param.name << ");";
+					}
+				}
+				else
+				{
+					if(innerReferenceModifiers == "*")
+					{
+						parse_stream  << "READ_SET_PTR(" << ttype << ", " << suffix << "," << param.name << ");";
+					}
+					else
+					{
+						parse_stream  << "READ_SET_REF(" << ttype << ", " << suffix << "," << param.name << ");";
+					}							
+				}
+			}
+			else if(isEnum(paramType, ob.GetLibrary()) == true)
+			{
+				const ClassObject* enumType = NULL;
+				if(ob.GetLibrary().FindClassObject(paramType, enumType) == false || enumType == NULL)
+				{
+					std::stringstream err;
+					err << "unable to find type: " << paramType;
+					string errString(err.str());
+					throw errString;
+				}
+
+				std::string parentType = enumType->parentName;
+				if(parentType != "")
+				{
+					translateType(parentType, ob.GetLibrary().GetLibrary());
+				}
+				else
+				{
+					parentType = "unsigned __int8";
+				}
+				parse_stream << "";
+				if(writeSimpleType(parse_stream, is_request, func, ob, parentType + memberStreamModifier, 1) == false)
+				{
+					throw "invalid base enum type";
+				}
+			}
+			else*/
+			else
+			{
+				std::string struct_type = buildStructure(fos, paramType, param.m_attributes, ob.GetLibrary());
+				parse_stream << param.name << ":" << struct_type;
 			}
 
-
-			fos << "table " << func.name << std::endl;
-			fos << "{\n";
-			
-			fos << parse_stream.str();
-			
-			fos << "};\n\n";
-
-			fos << "root_type " << func.name << ";\n";
-
-			fos << std::endl;
+			if(&param != &(*func.parameters.rbegin()))
+			{
+				parse_stream << ",";
+			}
+			parse_stream << "\n";
 		}
+
+		parse_stream << "};\n\n";
+
+		fos << parse_stream.str();
+	}
+
+	void writeFunction(render_type rt, const FunctionObject& func, const ClassObject& ob, std::filesystem::path& path, std::vector<std::string>& namespaces)
+	{	
+		structures_check.clear();
+		auto file = path / (func.name + (rt == render_type::request ? "_request.fbs" : "_response.fbs"));
+
+		std::stringstream fos;
+
+		if(!namespaces.empty())
+		{
+			fos << "namespace ";
+			for(const auto& ns : namespaces )
+			{
+				if(&ns != &namespaces.front())
+					fos << ".";
+				fos << ns;
+			}
+			fos << ";\n";
+		}
+
+		writeTable(fos, rt, func, ob);
+
+		fos << "root_type " << func.name << ";\n";
+
+		fos << std::endl;
 		
 		std::string orig_data;
 		{
@@ -522,8 +607,8 @@ namespace flatbuffer
 
 			if(func.type == FunctionTypeMethod)
 			{
-				writeFunction(true, func, ob, path, namespaces);
-				writeFunction(false, func, ob, path, namespaces);
+				writeFunction(render_type::request, func, ob, path, namespaces);
+				writeFunction(render_type::response, func, ob, path, namespaces);
 			}	
 		}
 
