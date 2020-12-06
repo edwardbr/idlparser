@@ -145,6 +145,7 @@ struct ParameterObject : objectBase
 	ParameterObject(const ParameterObject& other);
 	void operator = (const ParameterObject& other);
 	std::string type;
+	size_t array_size = 0;
 	bool m_bIsMainVal;
 	bool m_bIsException;
 	bool m_bIsCallBack;
@@ -161,6 +162,7 @@ struct FunctionObject : objectBase
 	void operator = (const FunctionObject& other);
 	std::list<std::string> raises;
 	std::string returnType;
+	size_t array_size = 0;
 	bool pure_virtual;
 	FunctionType type;
 	bool hasImpl;

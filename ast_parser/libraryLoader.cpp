@@ -88,7 +88,7 @@ FunctionObject ClassObject::GetFunction(const char*& pData, attributes& attribs,
 			exit(0);
 		}
 
-		while(*pData != ' ' && *pData != '(' && *pData != ')' && *pData != ';' && *pData != 0)
+		while(*pData != ' ' && *pData != '(' && *pData != ')' && *pData != ';' && *pData != '[' && *pData != 0)
 			func.name += *pData++;
 
 		verboseStream << func.name.data() << " ";
@@ -132,6 +132,22 @@ FunctionObject ClassObject::GetFunction(const char*& pData, attributes& attribs,
 			pData++;
 			bFunctionIsProperty = false;
 			break;
+		}
+		else if(*pData == '[')
+		{
+			auto count = 0;
+			std::string buf;
+			do
+			{
+				if(*pData == '[')
+					count++;
+				else if(*pData == ']')
+					count--;
+				else
+					buf += *pData;
+				pData++;
+			} while (count && *pData);
+			func.array_size = std::stoul(buf);
 		}
 		else if(*pData == 0 || *pData == ';' || *pData == ')')
 		{
@@ -217,6 +233,22 @@ FunctionObject ClassObject::GetFunction(const char*& pData, attributes& attribs,
 					}
 					else 
 						std::cerr << "not a call back as expected";
+				}				
+				else if(*pData == '[')
+				{
+					auto count = 0;
+					std::string buf;
+					do
+					{
+						if(*pData == '[')
+							count++;
+						else if(*pData == ']')
+							count--;
+						else
+							buf += *pData;
+						pData++;
+					} while (count && *pData);
+					parameter.array_size = std::stoul(buf);
 				}
 				else
 				{

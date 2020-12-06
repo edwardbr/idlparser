@@ -24,7 +24,7 @@ namespace flatbuffer
 	void writeTable(std::stringstream& fos, render_type rt, const FunctionObject& func, const ClassObject& ob);
 	void writeTable(std::stringstream& fos, const ClassObject& func, const Library& library);
 
-	bool writeSimpleType(ostream& fos, const std::string& func_name, const std::string& paramType, int comma_count)
+	bool writeSimpleType(ostream& fos, const std::string& func_name, const std::string& paramType, int comma_count, size_t array_size)
 	{
 		if(p_timer != NULL && p_timer->is_timedOut())
 		{
@@ -36,24 +36,31 @@ namespace flatbuffer
 
 		for(int i = 0;i<comma_count;i++) fos << '\t';
 
-		if		(isUInt8	(modifiedParamType)) fos << func_name << ":ubyte";
-		else if	(isInt8		(modifiedParamType)) fos << func_name << ":byte";
-		else if	(isUInt16	(modifiedParamType)) fos << func_name << ":ushort";
-		else if	(isInt16	(modifiedParamType)) fos << func_name << ":short";
-		else if	(isUInt32	(modifiedParamType)) fos << func_name << ":uint";
-		else if	(isInt32	(modifiedParamType)) fos << func_name << ":int";
-		else if	(isULong	(modifiedParamType)) fos << func_name << ":ulong";
-		else if	(isLong		(modifiedParamType)) fos << func_name << ":long";
-		else if	(isUInt64	(modifiedParamType)) fos << func_name << ":ulong";
-		else if	(isInt64	(modifiedParamType)) fos << func_name << ":long";
-		else if	(isBool		(modifiedParamType)) fos << func_name << ":bool";
-		else if	(isDouble	(modifiedParamType)) fos << func_name << ":double";
-		else if	(isFloat	(modifiedParamType)) fos << func_name << ":float";
-		else if	(isString	(modifiedParamType)) fos << func_name << ":string";
+		const char* type = nullptr;
+		if		(isUInt8	(modifiedParamType)) type = "ubyte";
+		else if	(isInt8		(modifiedParamType)) type = "byte";
+		else if	(isUInt16	(modifiedParamType)) type = "ushort";
+		else if	(isInt16	(modifiedParamType)) type = "short";
+		else if	(isUInt32	(modifiedParamType)) type = "uint";
+		else if	(isInt32	(modifiedParamType)) type = "int";
+		else if	(isULong	(modifiedParamType)) type = "ulong";
+		else if	(isLong		(modifiedParamType)) type = "long";
+		else if	(isUInt64	(modifiedParamType)) type = "ulong";
+		else if	(isInt64	(modifiedParamType)) type = "long";
+		else if	(isBool		(modifiedParamType)) type = "bool";
+		else if	(isDouble	(modifiedParamType)) type = "double";
+		else if	(isFloat	(modifiedParamType)) type = "float";
+		else if	(isString	(modifiedParamType)) type = "string";
 		else
 		{
 			return false;
 		}
+
+		if	(!array_size)
+			fos << func_name << ":" << type;
+		else
+			fos << func_name << ":[" << type << ":" << array_size << "]";
+
 		return true;
 	}
 
@@ -240,7 +247,7 @@ namespace flatbuffer
 	{		
 		std::stringstream parse_stream;
 
-		parse_stream << "table " << func.name << std::endl;
+		parse_stream << "struct " << func.name << std::endl;
 		parse_stream << "{\n";
 
 		for(const FunctionObject& param : func.functions)
@@ -266,23 +273,24 @@ namespace flatbuffer
 				memberStreamModifier = "";
 			}
 
-			if(writeSimpleType(parse_stream, param.name, paramType + referenceModifiers,1))
+			if(writeSimpleType(parse_stream, param.name, paramType + referenceModifiers,1, param.array_size))
 			{
 			}
 			else
 			{
 				std::string struct_type = buildStructure(fos, paramType, param.m_attributes, library);
-				parse_stream << param.name << ":" << struct_type;
+				if	(!param.array_size)
+					parse_stream << param.name << ":" << struct_type;
+				else
+					parse_stream << param.name << "[" << struct_type << ":" << param.array_size << "]";
+				
 			}
 
-			if(&param != &(*func.functions.rbegin()))
-			{
-				parse_stream << ",";
-			}
+			parse_stream << ";";
 			parse_stream << "\n";
 		}
 
-		parse_stream << "};\n\n";
+		parse_stream << "}\n\n";
 
 		fos << parse_stream.str();
 	}
@@ -292,7 +300,7 @@ namespace flatbuffer
 	{		
 		std::stringstream parse_stream;
 
-		parse_stream << "table " << func.name << std::endl;
+		parse_stream << "struct " << func.name << "_payload" << std::endl;
 		parse_stream << "{\n";
 
 		for(const ParameterObject& param : func.parameters)
@@ -334,7 +342,7 @@ namespace flatbuffer
 				memberStreamModifier = "";
 			}
 
-			if(writeSimpleType(parse_stream, func.name, paramType + referenceModifiers,1))
+			if(writeSimpleType(parse_stream, param.name, paramType + referenceModifiers,1, param.array_size))
 			{
 			}
 			/*else if(isVector(paramType) == true)
@@ -539,15 +547,16 @@ namespace flatbuffer
 				parse_stream << param.name << ":" << struct_type;
 			}
 
-			if(&param != &(*func.parameters.rbegin()))
-			{
-				parse_stream << ",";
-			}
+			parse_stream << ";";
 			parse_stream << "\n";
 		}
 
-		parse_stream << "};\n\n";
-
+		parse_stream << "}\n\n";
+		parse_stream << "table " << func.name << std::endl;
+		parse_stream << "{\n";
+		parse_stream << "\tpayload:" << func.name << "_payload;" << std::endl;
+		parse_stream << "}\n";
+		
 		fos << parse_stream.str();
 	}
 

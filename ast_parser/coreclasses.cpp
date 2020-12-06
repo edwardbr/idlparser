@@ -36,6 +36,7 @@ ParameterObject::ParameterObject(ClassObject* pContainer, Library* pLibrary) :
 ParameterObject::ParameterObject(const ParameterObject& other) : 
 	objectBase(other),
 	type(other.type), 
+	array_size(other.array_size),
 	m_bIsMainVal(other.m_bIsMainVal),
 	m_bIsException(other.m_bIsException),
 	m_bIsCallBack(other.m_bIsCallBack),
@@ -46,6 +47,7 @@ void ParameterObject::operator = (const ParameterObject& other)
 {
 	(objectBase&)*this = other;
 	type = other.type;
+	array_size = other.array_size;
 	m_bIsMainVal = other.m_bIsMainVal;
 	m_bIsException = other.m_bIsException;
 	m_bIsCallBack = other.m_bIsCallBack;
@@ -74,6 +76,7 @@ FunctionObject::FunctionObject(const FunctionObject& other) :
 	objectBase(other),
 	type(other.type), 
 	returnType(other.returnType), 
+	array_size(other.array_size),
 	parameters(other.parameters),
 //	m_bIsGetProperty(other.m_bIsGetProperty),
 //	m_bIsPutProperty(other.m_bIsPutProperty),
@@ -88,7 +91,8 @@ void FunctionObject::operator = (const FunctionObject& other)
 	(objectBase&)*this = other;
 	type = other.type;
 //	m_attributes = other.m_attributes;
-	returnType = other.returnType;
+	returnType = other.returnType; 
+	array_size = other.array_size;
 	parameters = other.parameters;
 //	m_bIsGetProperty = other.m_bIsGetProperty;
 //	m_bIsPutProperty = other.m_bIsPutProperty;
