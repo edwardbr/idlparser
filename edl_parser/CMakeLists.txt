@@ -7,7 +7,9 @@ enable_testing()
 add_executable(edl_circular_buffer_generator 
 main.cpp
 flatbuffer_gen.cpp
-flatbuffer_gen.h)
+flatbuffer_gen.h
+ocall_gen.cpp
+ocall_gen.h)
 
 target_link_libraries(edl_circular_buffer_generator 
     PUBLIC 

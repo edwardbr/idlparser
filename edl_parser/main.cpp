@@ -213,6 +213,7 @@ int main(int argc, char* argv[])
         std::cout << "modified preparseFile: " << preparseFile << "\n";
         std::cout << "modified SourceFile: " << sourceFile << "\n";
 
+        std::vector<std::string> loaded_includes;
         {
             {
                 macro_parser::definition def;
@@ -226,9 +227,8 @@ int main(int argc, char* argv[])
                 parser->AddDefine("size_t", def);
             }
 
-            std::ifstream source_file(sourceFile);
             std::ofstream preparse_file(preparseFile);
-            parser->Load(preparse_file, source_file, includePaths);
+            parser->Load(preparse_file, sourceFile, includePaths, loaded_includes);
             preparse_file.close();
         }
         {
@@ -260,6 +260,7 @@ int main(int argc, char* argv[])
             // do the generation to the ostrstreams
             {
                 flatbuffer::writeFiles(objects, std::filesystem::path(flatbufferPath), namespaces );
+                ocall::writeFiles(objects, std::filesystem::path(flatbufferPath), namespaces, loaded_includes);
             }
 
             // compare and write if different

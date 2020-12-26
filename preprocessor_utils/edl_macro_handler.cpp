@@ -7,7 +7,7 @@ bool edl_macro_parser::Init()
     return macro_parser::Init();
 }
 
-bool edl_macro_parser::ParseInclude(const char*& pData, int ignoreText, std::ostream& dest, const paths& includeDirectories)
+bool edl_macro_parser::ParseInclude(const char*& pData, int ignoreText, std::ostream& dest, const paths& includeDirectories, std::vector<std::string>& loaded_includes)
 {
 	if(!IfIsWordEat(pData,"include") == true)
 	{
@@ -43,6 +43,6 @@ bool edl_macro_parser::ParseInclude(const char*& pData, int ignoreText, std::ost
 	}
 	pData++;
 
-	ParseAndLoad(ignoreText, dest, includeDirectories, var.data());
+	ParseAndLoad(ignoreText, dest, includeDirectories, var.data(), loaded_includes);
 	return true;
 }

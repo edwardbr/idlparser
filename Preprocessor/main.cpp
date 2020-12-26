@@ -162,9 +162,10 @@ int main(int argv, char* argc[])
 		std::string modifiedSourceFile = std::filesystem::canonical(std::string(sourceFile), ec).make_preferred().string();
 		std::cout << "modified SourceFile: " << modifiedSourceFile << "\n";
 
-		std::ifstream source_file(modifiedSourceFile);
+        std::vector<std::string> loaded_includes;
+
 		std::ofstream output_file(modifiedOutputFile);
-		parser->Load(output_file, source_file, includePaths);
+		parser->Load(output_file, modifiedSourceFile, includePaths, loaded_includes);
 		output_file.close();
 	}
 	catch(std::exception ex)
