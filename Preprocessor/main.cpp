@@ -93,11 +93,7 @@ int main(int argv, char* argc[])
 			std::cout << "-includePath " << includePath << "\n";
 			std::vector<std::string> results;
 
-			#ifdef WIN32
-				split(includePath, ';', results);
-			#else
-				split(includePath, ':', results);
-			#endif
+			split(includePath, '^', results);
 			for(auto result : results)
 			{
 				std::filesystem::path p(result);

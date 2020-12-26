@@ -18,6 +18,7 @@
 #include <macrohandler.h>
 #include "edl_macro_handler.h"
 #include "flatbuffer_gen.h"
+#include "ocall_gen.h"
 
 xt::function_timer* p_timer = NULL;
 std::stringstream verboseStream;
@@ -89,11 +90,7 @@ int main(int argc, char* argv[])
                 std::cout << "-includePath " << includePath << "\n";
                 std::vector<std::string> results;
 
-#ifdef WIN32
-                split(includePath, ';', results);
-#else
-                split(includePath, ':', results);
-#endif
+                split(includePath, '^', results);
                 for (auto result : results)
                 {
                     std::filesystem::path p(result);
@@ -263,9 +260,6 @@ int main(int argc, char* argv[])
             // do the generation to the ostrstreams
             {
                 flatbuffer::writeFiles(objects, std::filesystem::path(flatbufferPath), namespaces );
-
-                /*javascript_json::json::namespace_name = flatbuffer_class_name;
-                javascript_json::json::writeJSONFiles(objects, ajax_stream);*/
             }
 
             // compare and write if different

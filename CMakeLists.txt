@@ -27,4 +27,5 @@ add_subdirectory(ajax_coroutine_generator)
 add_subdirectory(com_wrapper_generator)
 add_subdirectory(edl_parser)
 
+#add_subdirectory(tests/fb_gen_test)
 add_subdirectory(tests/flatbuffer)

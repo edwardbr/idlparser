@@ -9,7 +9,7 @@ build_flatbuffers(
     "."
     flatbuffers_1 
     ""
-    "."
+    "C:/Dev/experiments/idlparser/build/preproc/"
     ""
     "")              
 
@@ -17,4 +17,4 @@ add_library(flatbuffer_generated INTERFACE)
 
 message(CMAKE_CURRENT_BINARY_DIR ${CMAKE_CURRENT_BINARY_DIR})
 
-add_dependencies(flatbuffer_generated flatbuffers_1 edl_circular_buffer_generator)
+add_dependencies(flatbuffer_generated flatbuffers_1 edl_circular_buffer_generator test_edl_circular_buffer_generator)
