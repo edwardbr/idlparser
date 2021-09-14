@@ -423,7 +423,7 @@ FunctionObject ClassObject::GetFunction(const char*& pData, attributes& attribs,
 				if(*pData == ',')
 				{
 					func.raises.push_back(exception);
-					exception.empty();
+					exception.clear();
 				}
 				else
 					exception += *pData;
@@ -2054,8 +2054,10 @@ void ClassObject::ParseAndLoad(const char*& pData, const char* file)
 					strcpy(path, temp.data());
 				}
 				if(!Load(path))
+				{
 //					if(!LoadUsingEnv(temp))
-						std::cerr << "failed to load " << path << "\n";
+					std::cerr << "failed to load " << path << "\n";
+				}
 			}
 			return;
 		}

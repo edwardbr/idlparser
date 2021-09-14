@@ -312,7 +312,7 @@ namespace ocall
 	}
 	
 	
-	void writeTable(std::stringstream& fos, render_type rt, const FunctionObject& func, const ClassObject& ob, std::vector<std::string>& loaded_includes)
+	void writeFunction(std::stringstream& fos, render_type rt, const FunctionObject& func, const ClassObject& ob, std::vector<std::string>& loaded_includes)
 	{		
 		std::stringstream parse_stream;
 
@@ -335,11 +335,11 @@ namespace ocall
 				bool is_in = std::find(param.m_attributes.begin(), param.m_attributes.end(), "in") != param.m_attributes.end();
 				if(!is_out && !is_in)
 					is_in = true;
-				if(is_in && (rt != render_type::request_write || rt != render_type::request_read))
+				if(is_in && !(rt == render_type::request_write || rt == render_type::request_read))
 				{
 					continue;
 				}
-				if(is_out && (rt != render_type::response_write || rt != render_type::response_read))
+				if(is_out && !(rt == render_type::response_write || rt == render_type::response_read))
 				{
 					continue;
 				}
@@ -583,45 +583,17 @@ namespace ocall
 		fos << parse_stream.str();
 	}
 
-	void writeFunction(render_type rt, const FunctionObject& func, const ClassObject& ob, std::filesystem::path& path, std::vector<std::string>& namespaces, std::vector<std::string>& loaded_includes)
-	{	
-		structures_check.clear();
-        std::filesystem::path file;
-        switch(rt)
-        {
-            case render_type::request_write:
-        		file = path / (func.name + "_request_write.h");
-                break;
-            case render_type::request_read:
-        		file = path / (func.name + "_request_write.h");
-                break;
-            case render_type::response_write:
-        		file = path / (func.name + "_request_write.h");
-                break;
-            case render_type::response_read:
-        		file = path / (func.name + "_request_write.h");
-                break;
-            default:
-                throw new std::runtime_error("invalid case");
-        };
-
-		std::stringstream fos;
-		fos << "#pragma once\n";
-
-		writeTable(fos, rt, func, ob, loaded_includes);
-
-
-		fos << std::endl;
-		
+	void write_to_disk(std::filesystem::path& file, std::stringstream& stream)
+	{
 		std::string orig_data;
 		{
 			std::ifstream ifs(file);
 			std::getline(ifs, orig_data, '\0');
 		}
-		if (orig_data != fos.str())
+		if (orig_data != stream.str())
 		{
 			std::ofstream ofs(file);
-			ofs << fos.str();
+			ofs << stream.str();
 		}
 	}
 
@@ -633,7 +605,19 @@ namespace ocall
 		}
 	
 		std::set<std::string> used_functions;
-		
+
+
+		structures_check.clear();
+		std::stringstream request_write_stream;
+		std::stringstream request_read_stream;
+		std::stringstream response_write_stream;
+		std::stringstream response_read_stream;
+		request_write_stream << "#pragma once\n";
+		request_read_stream << "#pragma once\n";
+		response_write_stream << "#pragma once\n";
+		response_read_stream << "#pragma once\n";
+
+
 		for(const FunctionObject& func : ob.functions)
 		{
 			if(func.name.empty() || used_functions.find(func.name) != used_functions.end())
@@ -644,12 +628,27 @@ namespace ocall
 
 			if(func.type == FunctionTypeMethod)
 			{
-				writeFunction(render_type::request_write, func, ob, path, namespaces, loaded_includes);
-				writeFunction(render_type::request_read, func, ob, path, namespaces, loaded_includes);
-				writeFunction(render_type::response_write, func, ob, path, namespaces, loaded_includes);
-				writeFunction(render_type::response_read, func, ob, path, namespaces, loaded_includes);
+				writeFunction(request_write_stream, render_type::request_write, func, ob, loaded_includes);
+				writeFunction(request_read_stream, render_type::request_read, func, ob, loaded_includes);
+				writeFunction(response_write_stream, render_type::response_write, func, ob, loaded_includes);
+				writeFunction(response_read_stream, render_type::response_read, func, ob, loaded_includes);
 			}	
 		}
+
+		request_write_stream << std::endl;
+		request_read_stream << std::endl;
+		response_write_stream << std::endl;
+		response_read_stream << std::endl;
+
+        std::filesystem::path request_write_file = path / "request_write.h";
+        std::filesystem::path request_read_file = path / "request_read.h";
+        std::filesystem::path response_write_file = path / "response_write.h";
+        std::filesystem::path response_read_file = path / "response_read.h";
+
+		write_to_disk(request_write_file, request_write_stream);
+		write_to_disk(request_read_file, request_read_stream);
+		write_to_disk(response_write_file, response_write_stream);
+		write_to_disk(response_read_file, response_read_stream);
 
 	}
 }

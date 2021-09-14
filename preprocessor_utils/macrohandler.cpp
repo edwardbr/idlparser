@@ -102,12 +102,12 @@ std::string macro_parser::ExtractExpression(const char*& pData, const paths& inc
 			if(!ExtractWord(pData, tempString))
 			{
 				std::cerr << "expected a word insde the brackets of the defined keyword\n";
-				tempString == "";
+				tempString = "";
 			}
 
 			if(tempString == "RC_INVOKED")
 			{
-			tempString = tempString;
+				tempString = tempString;
 			}
 
 			while(*pData == ' ')
@@ -116,7 +116,7 @@ std::string macro_parser::ExtractExpression(const char*& pData, const paths& inc
 			if(*pData != ')' && required_closing == true)
 			{
 				std::cerr << "expected a ')'\n";
-				tempString == "";
+				tempString = "";
 			}
 			else if(required_closing == true)
 			{
