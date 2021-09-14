@@ -105,11 +105,6 @@ std::string macro_parser::ExtractExpression(const char*& pData, const paths& inc
 				tempString = "";
 			}
 
-			if(tempString == "RC_INVOKED")
-			{
-				tempString = tempString;
-			}
-
 			while(*pData == ' ')
 				pData++;
 			
@@ -887,10 +882,6 @@ std::string macro_parser::ReduceExpression(const char*& pData, const paths& incl
 			{
 				std::string expr = ExtractExpression(pData, includeDirectories, loaded_includes);
 				assert(expr[0] == '(');
-			if(expr == "RC_INVOKED")
-			{
-			expr = expr;
-			}
 
 				expr = expr.substr(1,expr.length() - 2); //strip out the brackets
 				
