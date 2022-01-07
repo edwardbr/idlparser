@@ -26,7 +26,7 @@ struct macro_parser
 		std::string m_substitutionString;
 	};
 
-	virtual [[nodiscard]] bool Init();
+	macro_parser();
 	virtual [[nodiscard]] bool FindDefString(std::string& var);
 	virtual void UnDefine(std::string& var);
 	virtual void Define(std::string& var);

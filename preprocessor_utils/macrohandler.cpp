@@ -14,7 +14,7 @@
 
 extern xt::function_timer* p_timer;
 
-bool macro_parser::Init()
+macro_parser::macro_parser()
 {
 	operatorBehaviours.assign({
 		{"!",&macro_parser::not,true}, //Logical NOT   
@@ -39,7 +39,6 @@ bool macro_parser::Init()
 		{"||",&macro_parser::or,false} //Logical OR Left to right 
 	});
 	operators = {"reinterpret_cast", "dynamic_cast", "static_cast", "const_cast", "delete", "sizeof", "typeid", "new", "<<=", ">>=", "->*", "::", "++", "--", "->", ".*", "<<", ">>", "<=", ">=", "==", "!=", "&&", "||", "%=", "&=", "|=", "*=", "/=", "+=", "-=", "^=", "=", "!", "~", "*", "/", "%", "+", "-", "<", ">", "&", "^", "|", ",", ":", ".", ":", "[", "]", "(", ")", "!", "-", "+", "/"};
-	return true;
 }
 
 std::string macro_parser::ExtractExpression(const char*& pData, const paths& includeDirectories, std::vector<std::string>& loaded_includes)
@@ -405,31 +404,41 @@ bool macro_parser::ParseInclude(const char*& pData, int ignoreText, std::ostream
 	while(*pData == ' ')
 		pData++;
 
-	if(!(*pData == '\"' || *pData == '<'))
-	{
-		std::stringstream err;
-		err << "Error unexpected character: " << *pData;
-		err << std::ends;
-		std::string errString(err.str());
-		throw errString;
-	}
-	pData++;
-
 	std::string var;
-	while(*pData != '\0' && *pData != '\n' && *pData != '\"' && *pData != '>')
-	{
-		var += *pData++;
-	}
 
-	if(!(*pData == '\"' || *pData == '>'))
+	if(*pData == '\"' || *pData == '<')
 	{
-		std::stringstream err;
-		err << "Error unexpected character: " << *pData;
-		err << std::ends;
-		std::string errString(err.str());
-		throw errString;
+		pData++;
+
+		while(*pData != '\0' && *pData != '\n' && *pData != '\"' && *pData != '>')
+		{
+			var += *pData++;
+		}
+
+		if(!(*pData == '\"' || *pData == '>'))
+		{
+			std::stringstream err;
+			err << "Error unexpected character: " << *pData;
+			err << std::ends;
+			std::string errString(err.str());
+			throw errString;
+		}
+		pData++;
 	}
-	pData++;
+	else
+	{
+		ExtractWord(pData, var);
+		auto item = defines.find(var);
+		if(item == defines.end())
+		{
+			std::stringstream err;
+			err << "Error unexpected character: " << *pData;
+			err << std::ends;
+			std::string errString(err.str());
+			throw errString;
+		}
+		var = item->second.m_substitutionString;
+	}
 
 	ParseAndLoad(ignoreText, dest, includeDirectories, var.data(), loaded_includes);
 	return true;
@@ -840,7 +849,7 @@ std::string macro_parser::or(const std::string val1,const std::string val2)
 
 bool macro_parser::IsOperator(const char* pData, std::string& operatorString)
 {
-	for(int i = 0; i < sizeof(operators)/sizeof(operators[0]);i++)
+	for(int i = 0; i < operators.size();i++)
 	{
 		if(BeginsWith(pData,operators[i]))
 		{
@@ -932,7 +941,12 @@ std::string macro_parser::ReduceExpression(const char*& pData, const paths& incl
 			continue;
 		}
 		if(!ExtractWord(pData,temp))
+		{
 			assert(false);
+			return "";
+		}
+		components.push_back(temp);
+		temp = "";
 	}
 	if(temp.length())
 		components.push_back(temp);
@@ -943,9 +957,9 @@ std::string macro_parser::ReduceExpression(const char*& pData, const paths& incl
 	//Having reduced the expresion to a list of values sandwiched between operatorBehaviours we now evaluate the expression
 	//( ) Function call   //should now be evaluated
 	
-	for(int i = 0;i < sizeof(operatorBehaviours)/sizeof(operatorDesc) && components.size() > 1;i++)
+	for(std::list<std::string>::iterator it = components.begin(); it != components.end(); it++)
 	{
-		for(std::list<std::string>::iterator it = components.begin(); it != components.end(); it++)
+		for(int i = 0;i < operatorBehaviours.size() && components.size() > 1;i++)
 		{
 			if(*it == operatorBehaviours[i].m_name)
 			{
@@ -986,6 +1000,7 @@ std::string macro_parser::ReduceExpression(const char*& pData, const paths& incl
 					components.erase(it1,it2);
 					it = components.begin();
 				}
+				break;
 			}
 		}
 	}

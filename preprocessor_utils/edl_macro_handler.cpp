@@ -2,9 +2,8 @@
 #include <sstream>
 #include "edl_macro_handler.h"
 
-bool edl_macro_parser::Init()
+edl_macro_parser::edl_macro_parser() : macro_parser()
 {
-    return macro_parser::Init();
 }
 
 bool edl_macro_parser::ParseInclude(const char*& pData, int ignoreText, std::ostream& dest, const paths& includeDirectories, std::vector<std::string>& loaded_includes)
