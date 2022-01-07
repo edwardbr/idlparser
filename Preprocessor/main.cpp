@@ -32,11 +32,11 @@ int main(int argv, char* argc[])
 				std::cout << "error missing -dialect parameter\n";
 				return -1;
 			}
-			if(!strcmp(argc[i], "standard"))
+			if(!strcmp(argc[i], "standard_macro"))
 			{
 				parser = std::unique_ptr<macro_parser>(new macro_parser());
 			}
-			else if(!strcmp(argc[i], "edl"))
+			else if(!strcmp(argc[i], "edl_macro"))
 			{
 				parser = std::unique_ptr<macro_parser>(new edl_macro_parser());
 			}
