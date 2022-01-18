@@ -29,3 +29,5 @@ add_subdirectory(edl_parser)
 
 #add_subdirectory(tests/fb_gen_test)
 add_subdirectory(tests/flatbuffer)
+add_subdirectory(tests/coroutine)
+add_subdirectory(tests/coroutine2)
