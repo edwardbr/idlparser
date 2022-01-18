@@ -1,5 +1,6 @@
 #include "commonfuncs.h"
 #include <set>
+#include <list>
 #include <cassert>
 
 #ifdef WIN32
@@ -186,7 +187,7 @@ struct ClassObject : objectBase
 {
 	using ClassObjectRef = std::shared_ptr<ClassObject>;
 
-	ClassObject(ClassObject* pContainer, Library* pLibrary, const std::string& ns, interface_spec spec = header);
+	ClassObject(ClassObject* pContainer, Library* pLibrary, const std::string& ns, bool is_include, interface_spec spec = header);
 	ClassObject(const ClassObject& other);
 
 	std::string parentName;
@@ -194,24 +195,25 @@ struct ClassObject : objectBase
 	std::list<FunctionObject> functions;
 	std::list<std::string> m_ownedClasses;
 	std::list<templateParam> m_templateParams;
+	bool m_is_include;
 
 	void AddClass(ClassObjectRef classObject);
 	void operator = (const ClassObject& other);
 	friend std::ostream& operator<< ( std::ostream& os, ClassObject& objs );
-	ClassObjectRef ParseSequence(const char*& pData, attributes& attribs, const std::string& ns);
+	ClassObjectRef ParseSequence(const char*& pData, attributes& attribs, const std::string& ns, bool is_include);
 	void ParseUnion(const char*& pData, attributes& attribs);
 	bool ObjectHasTypeDefs(const char* pData);
-	ClassObjectRef ParseTypedef(const char*& pData, attributes& attribs, const std::string& ns, const char* type = NULL);
-	bool ExtractClass(const char*& pData, attributes& attribs, ClassObjectRef& obj, const std::string& ns, bool handleTypeDefs = true);
+	ClassObjectRef ParseTypedef(const char*& pData, attributes& attribs, const std::string& ns, const char* type, bool is_include);
+	bool ExtractClass(const char*& pData, attributes& attribs, ClassObjectRef& obj, const std::string& ns, bool handleTypeDefs, bool is_include);
 	FunctionObject GetFunction(const char*& pData, attributes& attribs, bool bFunctionIsInterface);
 	void GetVariable(const char*& pData);
-	ClassObjectRef GetInterface(const char*& pData, const ObjectType type, const attributes& attr, const std::string& ns);
+	ClassObjectRef GetInterface(const char*& pData, const ObjectType type, const attributes& attr, const std::string& ns, bool is_include);
 	void ExtractTemplate(const char*& pData, std::list<templateParam>& templateParams);
-	void GetNamespaceData(const char*& pData, const std::string& ns);
-	void GetStructure(const char*& pData, const std::string& ns, bool bInCurlyBrackets = false);
-	bool Load(const char* file);
-	void ParseAndLoad(const char*& pData, const char* file);
-	bool GetFileData(const char*& pData, const char* file);
+	void GetNamespaceData(const char*& pData, const std::string& ns, bool is_include);
+	void GetStructure(const char*& pData, const std::string& ns, bool bInCurlyBrackets, bool is_include);
+	bool Load(const char* file, bool is_include = false);
+	void ParseAndLoad(const char*& pData, const char* file, bool is_include);
+	bool GetFileData(const char*& pData, const char* file, bool is_include);
 
 #ifdef USE_COM
 	CComBSTR GetInterfaceName(ITypeInfo* typeInfo);
@@ -234,7 +236,7 @@ typedef std::list<ClassObject::ClassObjectRef > CLASS_OBJECT_LIST;
 
 struct Library : ClassObject//objectBase
 {
-	Library() : ClassObject(this, this, std::string())
+	Library() : ClassObject(this, this, std::string(), false)
 	{}
 	~Library()
 	{

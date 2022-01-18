@@ -117,13 +117,14 @@ std::ostream& operator<< ( std::ostream& os, FunctionObject& function)
 	return os;
 }
 
-ClassObject::ClassObject(ClassObject* pContainer, Library* pLibrary, const std::string& ns, interface_spec spec) :
+ClassObject::ClassObject(ClassObject* pContainer, Library* pLibrary, const std::string& ns, bool is_include, interface_spec spec) :
 	recurseImport(true),
 	recurseImportLib(true),
 	objectBase(pContainer, pLibrary),
 		type(pContainer == ((ClassObject*)pLibrary) ? ObjectLibrary :  pContainer->type),
 	m_namespace(ns),
-	m_interface_spec(spec)
+	m_interface_spec(spec),
+	m_is_include(is_include)
 {
 	if(ns != "")
 	{
@@ -139,7 +140,8 @@ ClassObject::ClassObject(const ClassObject& other) :
 	parentName(other.parentName), 
 	functions(other.functions),
 	m_namespace(other.m_namespace),
-	m_interface_spec(other.m_interface_spec)
+	m_interface_spec(other.m_interface_spec),
+	m_is_include(other.m_is_include)
 {
 	if(m_namespace != "")
 	{

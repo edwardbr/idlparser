@@ -562,7 +562,7 @@ void ClassObject::GetVariable(const char*& pData)
 		pData++;
 }
 
-void ClassObject::GetNamespaceData(const char*& pData, const std::string& ns)
+void ClassObject::GetNamespaceData(const char*& pData, const std::string& ns, bool is_include)
 {
 	EAT_SPACES(pData)
 
@@ -584,20 +584,25 @@ void ClassObject::GetNamespaceData(const char*& pData, const std::string& ns)
 		std::string errString(err.str());
 		throw errString;
 	}
-	GetStructure(pData, nameSpace);
+	GetStructure(pData, nameSpace, false, is_include);
 }
 
-ClassObject::ClassObjectRef ClassObject::GetInterface(const char*& pData, const ObjectType typ, const attributes& attr, const std::string& ns)
+ClassObject::ClassObjectRef ClassObject::GetInterface(
+	const char*& pData, 
+	const ObjectType typ, 
+	const attributes& attr, 
+	const std::string& ns, 
+	bool is_include)
 {
-	ClassObjectRef cls(new ClassObject(this, &GetLibrary(), ns));
+	ClassObjectRef cls(new ClassObject(this, &GetLibrary(), ns, is_include));
 	cls->type = typ;
 	cls->m_attributes = attr;
 
-	cls->GetStructure(pData, ns);
+	cls->GetStructure(pData, ns, false, is_include);
 	return cls;
 }
 
-void ClassObject::GetStructure(const char*& pData, const std::string& ns, bool bInCurlyBrackets)
+void ClassObject::GetStructure(const char*& pData, const std::string& ns, bool bInCurlyBrackets, bool is_include)
 {
 	bool bHasName = false;
 	while(*pData != 0)
@@ -627,16 +632,16 @@ void ClassObject::GetStructure(const char*& pData, const std::string& ns, bool b
 			{
 				EAT_SPACES(pData)
 
-				if(GetFileData(pData, NULL))
+				if(GetFileData(pData, NULL, is_include))
 				{}
 				else if(IfIsWordEat(pData,"namespace"))
 				{
-					GetNamespaceData(pData, ns);
+					GetNamespaceData(pData, ns, is_include);
 					continue;
 				}
 				else if(m_interface_spec == edl && (IsWord(pData,"enclave") || IsWord(pData,"trusted") || IsWord(pData,"untrusted")))
 				{
-					GetNamespaceData(pData, ns);
+					GetNamespaceData(pData, ns, is_include);
 					EAT_SPACES(pData)
 					if(*pData == ';')
 						pData++;
@@ -646,7 +651,7 @@ void ClassObject::GetStructure(const char*& pData, const std::string& ns, bool b
 				{
 
 					attributes attribs(GetAttributes(pData));
-					ClassObjectRef obj(new ClassObject(this, &GetLibrary(), ns));
+					ClassObjectRef obj(new ClassObject(this, &GetLibrary(), ns, is_include));
 					if(type == ObjectCoclass)
 					{
 						functions.push_back(GetFunction(pData, attribs, true));
@@ -655,7 +660,7 @@ void ClassObject::GetStructure(const char*& pData, const std::string& ns, bool b
 						if(*pData == ';')
 							pData++;
 					}
-					else if(ExtractClass(pData,attribs,obj, ns))
+					else if(ExtractClass(pData,attribs,obj, ns, true, is_include))
 					{
 	//					assert(*pData == ';');
 						if(*pData == ';')
@@ -880,9 +885,9 @@ void ClassObject::GetStructure(const char*& pData, const std::string& ns, bool b
 
 }
 
-ClassObject::ClassObjectRef ClassObject::ParseSequence(const char*& pData, attributes& attribs, const std::string& ns)
+ClassObject::ClassObjectRef ClassObject::ParseSequence(const char*& pData, attributes& attribs, const std::string& ns, bool is_include)
 {
-	ClassObjectRef newInterface(new ClassObject(this, &GetLibrary(), ns));
+	ClassObjectRef newInterface(new ClassObject(this, &GetLibrary(), ns, is_include));
 
 	EAT_SPACES(pData)
 
@@ -913,16 +918,16 @@ ClassObject::ClassObjectRef ClassObject::ParseSequence(const char*& pData, attri
 	return newInterface;
 }
 
-ClassObject::ClassObjectRef ClassObject::ParseTypedef(const char*& pData, attributes& attribs, const std::string& ns, const char* type)
+ClassObject::ClassObjectRef ClassObject::ParseTypedef(const char*& pData, attributes& attribs, const std::string& ns, const char* type, bool is_include)
 {
-	ClassObjectRef object(new ClassObject(this, &GetLibrary(), ns));
+	ClassObjectRef object(new ClassObject(this, &GetLibrary(), ns, is_include));
 
 	object->type = ObjectTypedef;
 
 	attribs.merge(GetAttributes(pData));
 
-	ClassObjectRef obj(new ClassObject(object.get(), &object->GetLibrary(), ns));
-	if(type == NULL && object->ExtractClass(pData, attribs,obj, ns,false))
+	ClassObjectRef obj(new ClassObject(object.get(), &object->GetLibrary(), ns, is_include));
+	if(type == NULL && object->ExtractClass(pData, attribs,obj, ns,false, is_include))
 	{
 		object->parentName = obj->name;
 		bool firstPass = true;
@@ -1017,7 +1022,7 @@ ClassObject::ClassObjectRef ClassObject::ParseTypedef(const char*& pData, attrib
 					else
 						break;
 				}
-				ParseTypedef(pData, attribs, ns, type.data());
+				ParseTypedef(pData, attribs, ns, type.data(), is_include);
 			}
 
 			//removing any nasty member structures, perhaps I'll do some thing intellegent with it one day...
@@ -1201,7 +1206,7 @@ void ClassObject::ExtractTemplate(const char*& pData, std::list<templateParam>& 
 	pData++;
 }
 
-bool ClassObject::ExtractClass(const char*& pData, attributes& attribs, ClassObjectRef& obj, const std::string& ns, bool handleTypeDefs)
+bool ClassObject::ExtractClass(const char*& pData, attributes& attribs, ClassObjectRef& obj, const std::string& ns, bool handleTypeDefs, bool is_include)
 {
 	bool bUseTypeDef = false;
 
@@ -1235,7 +1240,7 @@ bool ClassObject::ExtractClass(const char*& pData, attributes& attribs, ClassObj
 	}
 
 	if(bUseTypeDef || IfIsWordEat(pData,"typedef"))
-		obj = ParseTypedef(pData, attribs, ns);
+		obj = ParseTypedef(pData, attribs, ns, NULL, is_include);
 
 	else if(IfIsWordEat(pData,"library"))
 	{
@@ -1243,13 +1248,13 @@ bool ClassObject::ExtractClass(const char*& pData, attributes& attribs, ClassObj
 		{
 			std::cerr << "encountered a library inside a #import\n";
 			Library lib;
-			lib.GetInterface(pData,ObjectLibrary,attribs, ns);
+			lib.GetInterface(pData,ObjectLibrary,attribs, ns, is_include);
 		}
 		else
 		{
 			verboseStream << "library ";
 
-			obj = GetInterface(pData,ObjectLibrary,attribs, ns);
+			obj = GetInterface(pData,ObjectLibrary,attribs, ns, is_include);
 			AddClass(obj);
 		}
 
@@ -1262,7 +1267,7 @@ bool ClassObject::ExtractClass(const char*& pData, attributes& attribs, ClassObj
 
 		verboseStream << "coclass ";
 		
-		obj = GetInterface(pData,ObjectCoclass,attribs, ns);
+		obj = GetInterface(pData,ObjectCoclass,attribs, ns, is_include);
 		AddClass(obj);
 
 		verboseStream << "\n";
@@ -1272,7 +1277,7 @@ bool ClassObject::ExtractClass(const char*& pData, attributes& attribs, ClassObj
 	{
 		verboseStream << "struct ";
 		
-		obj = GetInterface(pData,ObjectStruct,attribs, ns);
+		obj = GetInterface(pData,ObjectStruct,attribs, ns, is_include);
 		AddClass(obj);
 
 		verboseStream << "\n";
@@ -1282,7 +1287,7 @@ bool ClassObject::ExtractClass(const char*& pData, attributes& attribs, ClassObj
 	{
 		verboseStream << "union ";
 		
-		obj = GetInterface(pData,ObjectUnion,attribs, ns);
+		obj = GetInterface(pData,ObjectUnion,attribs, ns, is_include);
 		AddClass(obj);
 
 		//ParseUnion(pData, attribs);//not implemented
@@ -1294,7 +1299,7 @@ bool ClassObject::ExtractClass(const char*& pData, attributes& attribs, ClassObj
 	{
 		verboseStream << "enum ";
 		
-		obj = GetInterface(pData,ObjectEnum,attribs, ns);
+		obj = GetInterface(pData,ObjectEnum,attribs, ns, is_include);
 		AddClass(obj);
 
 		verboseStream << "\n";
@@ -1304,7 +1309,7 @@ bool ClassObject::ExtractClass(const char*& pData, attributes& attribs, ClassObj
 	{
 		verboseStream << "typedef sequence<";
 		
-		obj = ParseSequence(pData, attribs, ns);
+		obj = ParseSequence(pData, attribs, ns, is_include);
 		AddClass(obj);
 		
 		verboseStream << "\n";
@@ -1314,7 +1319,7 @@ bool ClassObject::ExtractClass(const char*& pData, attributes& attribs, ClassObj
 	{
 		verboseStream << "exception ";
 		
-		obj = GetInterface(pData,ObjectException,attribs, ns);
+		obj = GetInterface(pData,ObjectException,attribs, ns, is_include);
 		AddClass(obj);
 
 		verboseStream << "\n";
@@ -1324,7 +1329,7 @@ bool ClassObject::ExtractClass(const char*& pData, attributes& attribs, ClassObj
 	{
 		verboseStream << "interface ";
 		
-		obj = GetInterface(pData,ObjectTypeInterface,attribs, ns);
+		obj = GetInterface(pData,ObjectTypeInterface,attribs, ns, is_include);
 		AddClass(obj);
 
 		verboseStream << "\n";
@@ -1334,7 +1339,7 @@ bool ClassObject::ExtractClass(const char*& pData, attributes& attribs, ClassObj
 	{
 		verboseStream << "class ";
 		
-		obj = GetInterface(pData,ObjectClass,attribs, ns);
+		obj = GetInterface(pData,ObjectClass,attribs, ns, is_include);
 		AddClass(obj);
 
 		verboseStream << "\n";
@@ -1352,7 +1357,7 @@ bool ClassObject::ExtractClass(const char*& pData, attributes& attribs, ClassObj
 		if(IfIsWordEat(pData,"class"))
 		{
 			EAT_SPACES(pData)
-			obj = GetInterface(pData,ObjectClass,attribs, ns);
+			obj = GetInterface(pData,ObjectClass,attribs, ns, is_include);
 			obj->m_templateParams = templateParams;
 			AddClass(obj);
 		}
@@ -1371,7 +1376,7 @@ bool ClassObject::ExtractClass(const char*& pData, attributes& attribs, ClassObj
 	else if(IfIsWordEat(pData,"dispinterface"))
 	{
 		verboseStream << "dispinterface ";
-		obj = GetInterface(pData,ObjectTypeDispInterface,attribs, ns);
+		obj = GetInterface(pData,ObjectTypeDispInterface,attribs, ns, is_include);
 		AddClass(obj);
 		verboseStream << "\n";
 	}
@@ -2013,7 +2018,7 @@ CComBSTR ClassObject::GetInterfaceName(ITypeInfo* typeInfo)
 }
 #endif
 
-void ClassObject::ParseAndLoad(const char*& pData, const char* file)
+void ClassObject::ParseAndLoad(const char*& pData, const char* file, bool is_include)
 {
 	EAT_SPACES(pData)
 
@@ -2037,7 +2042,7 @@ void ClassObject::ParseAndLoad(const char*& pData, const char* file)
 			const char* fname_ext = std::max(strrchr( temp.data(), '\\'), strrchr( temp.data(), '/'));
 			if(fname_ext != NULL)
 			{
-				if(!Load(temp.data()))
+				if(!Load(temp.data(), is_include))
 //					if(!LoadUsingEnv(temp))
 						std::cerr << "failed to load " << temp << "\n";
 			}
@@ -2053,7 +2058,7 @@ void ClassObject::ParseAndLoad(const char*& pData, const char* file)
 				{
 					strcpy(path, temp.data());
 				}
-				if(!Load(path))
+				if(!Load(path, is_include))
 				{
 //					if(!LoadUsingEnv(temp))
 					std::cerr << "failed to load " << path << "\n";
@@ -2086,12 +2091,12 @@ void MovePastComments(const char*& pData)
 	}
 }
 
-bool ClassObject::GetFileData(const char*& pData, const char* file)
+bool ClassObject::GetFileData(const char*& pData, const char* file, bool is_include)
 {
 	if(IfIsWordEat(pData,"#include"))
 	{
 		if(recurseImportLib)
-			ParseAndLoad(pData, file);
+			ParseAndLoad(pData, file, true);
 		else
 			MovePastComments(pData);
 		return true;
@@ -2102,7 +2107,7 @@ bool ClassObject::GetFileData(const char*& pData, const char* file)
 		pData++; //get past (
 		EAT_SPACES(pData)
 		if(recurseImportLib)
-			ParseAndLoad(pData, file);
+			ParseAndLoad(pData, file, is_include);
 		else
 			MovePastComments(pData);
 		EAT_SPACES(pData)
@@ -2118,7 +2123,7 @@ bool ClassObject::GetFileData(const char*& pData, const char* file)
 	{
 		isHashImport++;
 		if(recurseImport)
-			ParseAndLoad(pData, file);
+			ParseAndLoad(pData, file, is_include);
 		else
 			MovePastComments(pData);
 		EAT_SPACES(pData)
@@ -2131,7 +2136,7 @@ bool ClassObject::GetFileData(const char*& pData, const char* file)
 	return false;
 }
 
-bool ClassObject::Load(const char* file)
+bool ClassObject::Load(const char* file, bool is_include)
 {
 	if(loadedFiles.find(file) != loadedFiles.end())
 		return true;
@@ -2150,7 +2155,7 @@ bool ClassObject::Load(const char* file)
 	std::getline(preproc_stream, preproc_data, '\0');
 
 	const char* tmp = preproc_data.data();
-	GetStructure(tmp, std::string(), true);
+	GetStructure(tmp, std::string(), true, is_include);
 		
 	return true;
 }
