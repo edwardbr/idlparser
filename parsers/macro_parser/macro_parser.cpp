@@ -10,7 +10,7 @@
 
 #include "function_timer.h"
 
-#include "macrohandler.h"
+#include "macro_parser.h"
 
 extern xt::function_timer* p_timer;
 
@@ -568,7 +568,7 @@ void macro_parser::CleanBuffer(const char*& pData, std::ostream& dest, const pat
 				pData++;
 			}
 
-			_strlwr(var.data());
+			var = toLower(var);
 			if(openedImports.find(var) == openedImports.end())
 			{
 				openedImports.insert(var);

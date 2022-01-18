@@ -1296,7 +1296,7 @@ namespace non_blocking
 			{
 				std::string lead;
 				lead += templateType[5];
-				_strupr((char*)lead.data());
+				lead = toUpper(lead);
 				return lead + templateType.substr(6);
 			}
 			return templateType;

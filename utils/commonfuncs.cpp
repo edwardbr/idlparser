@@ -107,3 +107,20 @@ std::vector<std::string> &split(const std::string &s, char delim, std::vector<st
     }
     return elems;
 }
+
+
+std::string toLower(std::string s) 
+{
+    std::transform(s.begin(), s.end(), s.begin(),
+       [](unsigned char c){ return std::tolower(c); }
+    );
+    return s;
+}
+
+std::string toUpper(std::string s) 
+{
+    std::transform(s.begin(), s.end(), s.begin(),
+       [](unsigned char c){ return std::toupper(c); }
+    );
+    return s;
+}

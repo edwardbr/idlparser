@@ -10,7 +10,7 @@ namespace blocking
 		//utils
 		std::string unconst(const std::string& type);
 //		std::string strip_trailing_(std::string data);
-		size_t findKeyWord(const std::string& type, const char* val, bool check_end);
+		int findKeyWord(const std::string& type, const char* val, bool check_end);
 		bool isSize_t(const std::string& type);
 		bool isInt(const std::string& type);
 		bool isLong(const std::string& type);

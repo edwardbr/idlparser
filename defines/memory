@@ -1,0 +1,6 @@
+namespace std
+{
+	template<class T>
+	class std::shared_ptr
+	{};
+}

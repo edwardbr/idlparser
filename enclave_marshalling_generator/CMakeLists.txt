@@ -10,9 +10,11 @@ main.cpp)
 
 target_link_libraries(enclave_marshalling_generator 
 PUBLIC 
-ast_parser 
+ast_parser
+macro_parser 
 generators
 
+clipp::clipp
 fmt::fmt)
 set_property(TARGET enclave_marshalling_generator PROPERTY COMPILE_PDB_NAME enclave_marshalling_generator)
 

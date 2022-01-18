@@ -9,12 +9,14 @@ main.cpp
 flatbuffer_gen.cpp
 flatbuffer_gen.h
 ocall_gen.cpp
-ocall_gen.h)
+ocall_gen.h
+edl_macro_handler.h
+edl_macro_handler.cpp)
 
 target_link_libraries(edl_circular_buffer_generator 
     PUBLIC 
         ast_parser 
-        preprocessor_utils 
+        macro_parser 
         generators)
 set_property(TARGET edl_circular_buffer_generator PROPERTY COMPILE_PDB_NAME edl_circular_buffer_generator)
 

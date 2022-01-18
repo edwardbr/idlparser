@@ -1,0 +1,9 @@
+[submodule "submodules/fmt"]
+	path = submodules/fmt
+	url = https://github.com/fmtlib/fmt.git
+[submodule "submodules/yas"]
+	path = submodules/yas
+	url = https://github.com/secretarium/yas.git
+[submodule "submodules/clipp"]
+	path = submodules/clipp
+	url = https://github.com/muellan/clipp.git

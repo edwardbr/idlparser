@@ -16,16 +16,16 @@ namespace blocking
 		set<std::string> json_structures_check;
 		std::string wsdl_namespace;
 
-		size_t findKeyWord(const std::string& type, const char* val, bool check_end)
+		int findKeyWord(const std::string& type, const char* val, bool check_end)
 		{
-			int len = strlen(val);
+			size_t len = (int)strlen(val);
 			bool requires_loop = false;
 
 			const char* pos = strstr(type.data(), val);
 			
 			if(pos == NULL)
 			{
-				return (size_t)-1;
+				return -1;
 			}
 
 			if(pos != type.data())
@@ -43,7 +43,10 @@ namespace blocking
 				}
 				requires_loop = *(pos - 1) != ' ';
 			}	
-			return pos - type.data();;
+			auto offset = pos - type.data();
+			if(offset < 0)
+				return -1;
+			return (int)offset;
 		}
 
 		bool isInt(const std::string& type)
@@ -154,7 +157,9 @@ namespace blocking
 
 		void stripReferenceModifiers(std::string& paramType, std::string& referenceModifiers)
 		{
-			int i = paramType.length() - 1;
+			if(paramType.empty())
+				return;
+			size_t i = paramType.length() - 1;
 			for(;i >= 0 && (paramType[i] == '*' || paramType[i] == '&' || paramType[i] == ' ');i--)
 			{
 				if(paramType[i] == '*' || paramType[i] == '&')
@@ -497,7 +502,7 @@ namespace blocking
 			{
 				std::string lead;
 				lead += templateType[5];
-				_strupr((char*)lead.data());
+				lead = toUpper(lead);
 				return lead + templateType.substr(6);
 			}
 			return templateType;

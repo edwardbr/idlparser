@@ -201,7 +201,7 @@ void CreateComObject(const ClassObject& object, string& outputPath)
 
 	string objNameUpr(object.name.data());
 	//quick way to make an upper case string
-	_strupr((char*)objNameUpr.data());
+	objNameUpr = toUpper(objNameUpr);
 
 	//generate some metadata info
 	INTERFACEINFO_MAP topLevelInterfaces;

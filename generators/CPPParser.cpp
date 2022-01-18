@@ -58,7 +58,7 @@ size_t findKeyWord(const std::string& type, const char* val, bool check_end)
 		}
 		requires_loop = *(pos - 1) != ' ';
 	}	
-	return pos - type.data();;
+	return pos - type.data();
 }
 
 

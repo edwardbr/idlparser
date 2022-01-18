@@ -3,6 +3,7 @@
 #include <vector>
 #include <string>
 #include <iostream>
+#include <algorithm>
 
 int Strcmp2(const char *string1, const char *string2);
 bool BeginsWith(const char *string1, const char *string2);
@@ -21,3 +22,6 @@ inline std::ostream& operator << (std::ostream& _O, const std::string& _X)
     _O << _X.c_str();
     return _O; 
 }
+
+std::string toLower(std::string s);
+std::string toUpper(std::string s);

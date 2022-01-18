@@ -15,7 +15,7 @@
 #include <javascript_json.h>
 #include "commonfuncs.h"
 
-#include <macrohandler.h>
+#include <macro_parser.h>
 #include "edl_macro_handler.h"
 #include "flatbuffer_gen.h"
 #include "ocall_gen.h"

@@ -7,7 +7,7 @@ enable_testing()
 add_executable(preprocessor 
 main.cpp)
 
-target_link_libraries(preprocessor PUBLIC preprocessor_utils)
+target_link_libraries(preprocessor PUBLIC macro_parser)
 set_property(TARGET preprocessor PROPERTY COMPILE_PDB_NAME preprocessor)
 
 set(CPACK_PROJECT_NAME ${PROJECT_NAME})
