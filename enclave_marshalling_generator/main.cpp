@@ -29,7 +29,8 @@ int main(const int argc, char* argv[])
 {
 	string rootIdl;
 	string headerPath;
-	string cppPath;
+	string proxyPath;
+	string stubPath;
 	string output_path;
 	std::vector<std::string> namespaces;
 	std::vector<std::string> include_paths;
@@ -42,7 +43,8 @@ int main(const int argc, char* argv[])
         clipp::required("-i", "--idl").doc("the idl to be parsed") & clipp::value("idl",rootIdl),
         clipp::required("-p", "--output_path").doc("base output path") & clipp::value("output_path",output_path),
         clipp::required("-h", "--header").doc("the generated header relative filename") & clipp::value("header",headerPath),
-        clipp::required("-c", "--cpp").doc("the generated source relative filename") & clipp::value("cpp",cppPath),
+        clipp::required("-x", "--proxy").doc("the generated proxy relative filename") & clipp::value("proxy",proxyPath),
+        clipp::required("-s", "--stub").doc("the generated stub relative filename") & clipp::value("stub",stubPath),
 		clipp::repeatable(clipp::option("-p", "--path") & clipp::value("path",include_paths)).doc("locations of include files used by the idl"),
 		clipp::option("-n","--namespace").doc("namespace of the generated interface") & clipp::value("namespace",namespaces),
 		clipp::option("--dump_preprocessor_output_and_die").set(dump_preprocessor_output_and_die).doc("dump preprocessor output and die"),
@@ -69,7 +71,8 @@ int main(const int argc, char* argv[])
 	}
 
 	std::replace( headerPath.begin(), headerPath.end(), '\\', '/'); 
-	std::replace( cppPath.begin(), cppPath.end(), '\\', '/'); 
+	std::replace( proxyPath.begin(), proxyPath.end(), '\\', '/'); 
+	std::replace( stubPath.begin(), stubPath.end(), '\\', '/'); 
 	std::replace( output_path.begin(), output_path.end(), '\\', '/'); 
 
     std::unique_ptr<macro_parser> parser = std::unique_ptr<macro_parser>(new macro_parser());
@@ -146,10 +149,12 @@ int main(const int argc, char* argv[])
 	try
 	{
 		string interfaces_h_data;
-		string interfaces_cpp_data;
+		string interfaces_proxy_data;
+		string interfaces_stub_data;
 
 		auto header_path = std::filesystem::path(output_path) / "include" / headerPath;
-		auto cpp_path = std::filesystem::path(output_path) / "src" / cppPath;
+		auto proxy_path = std::filesystem::path(output_path) / "src" / proxyPath;
+		auto stub_path = std::filesystem::path(output_path) / "src" / stubPath;
 
 		std::filesystem::create_directories(header_path.parent_path());
 		std::filesystem::create_directories(header_path.parent_path());
@@ -160,19 +165,24 @@ int main(const int argc, char* argv[])
 			ifstream hfs(header_path);
 			std::getline(hfs, interfaces_h_data, '\0');
 
-			ifstream cfs(cpp_path);
-			std::getline(cfs, interfaces_cpp_data, '\0');
+			ifstream proxy_fs(proxy_path);
+			std::getline(proxy_fs, interfaces_proxy_data, '\0');
+
+			ifstream stub_fs(stub_path);
+			std::getline(stub_fs, interfaces_stub_data, '\0');
 		}
 
 		std::stringstream header_stream;
-		std::stringstream cpp_stream;
+		std::stringstream proxy_stream;
+		std::stringstream stub_stream;
 
 		//do the generation to the ostrstreams
 		{
-			enclave_marshalling_generator::host_ecall::write_files(objects, header_stream, cpp_stream, namespaces, headerPath);
+			enclave_marshalling_generator::host_ecall::write_files(objects, header_stream, proxy_stream, stub_stream, namespaces, headerPath);
 
 			header_stream << ends;
-			cpp_stream << ends;
+			proxy_stream << ends;
+			stub_stream << ends;
 		}
 
 		//compare and write if different
@@ -181,10 +191,15 @@ int main(const int argc, char* argv[])
 			ofstream file(header_path);
 			file << header_stream.str();
 		}
-		if(interfaces_cpp_data != cpp_stream.str())
+		if(interfaces_proxy_data != proxy_stream.str())
 		{
-			ofstream file(cpp_path);
-			file << cpp_stream.str();
+			ofstream file(proxy_path);
+			file << proxy_stream.str();
+		}
+		if(interfaces_stub_data != stub_stream.str())
+		{
+			ofstream file(stub_path);
+			file << stub_stream.str();
 		}
 
 	}
