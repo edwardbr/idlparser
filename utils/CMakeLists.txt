@@ -6,9 +6,7 @@ enable_testing()
 
 add_library(utils
 commonfuncs.h
-commonfuncs.cpp
-function_timer.h
-function_timer.cpp)
+commonfuncs.cpp)
 
 target_include_directories(utils PUBLIC .)
 set_property(TARGET utils PROPERTY COMPILE_PDB_NAME utils)

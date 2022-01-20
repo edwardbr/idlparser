@@ -8,11 +8,7 @@
 #include <fstream>
 #include <filesystem>
 
-#include "function_timer.h"
-
 #include "macro_parser.h"
-
-extern xt::function_timer* p_timer;
 
 macro_parser::macro_parser()
 {
@@ -63,11 +59,6 @@ std::string macro_parser::ExtractExpression(const char*& pData, const paths& inc
 	bool firstpass = true;
 	while(*pData != '\0' && *pData != '\n')
 	{
-		if(p_timer != NULL && p_timer->is_timedOut())
-		{
-			exit(0);
-		}
-
 		if(*pData == ' ')
 		{
 			pData++;
@@ -301,11 +292,6 @@ bool macro_parser::ProcessIf(const char*& pData, std::ostream& dest, const paths
 	bool expressionFound = false;
 	while(*pData != '\0')
 	{
-		if(p_timer != NULL && p_timer->is_timedOut())
-		{
-			exit(0);
-		}
-
 		if(!ignoreText)
 		{
 			dest << ' ';
@@ -451,11 +437,6 @@ void macro_parser::CleanBuffer(const char*& pData, std::ostream& dest, const pat
 	//strip out comments and endls;
 	while(*pData != 0)
 	{
-		if(p_timer != NULL && p_timer->is_timedOut())
-		{
-			exit(0);
-		}
-
 		if(inIfDef != 0)
 		{
 			if(IsPreproc(pData,"endif") || IsPreproc(pData,"else") || IsPreproc(pData,"elif"))
@@ -871,11 +852,6 @@ std::string macro_parser::ReduceExpression(const char*& pData, const paths& incl
 
 	while(*pData != '\0' && *pData != '\n')
 	{
-		if(p_timer != NULL && p_timer->is_timedOut())
-		{
-			exit(0);
-		}
-
 		if(*pData == ' ')
 		{
 			while(*pData == ' ')
@@ -963,10 +939,6 @@ std::string macro_parser::ReduceExpression(const char*& pData, const paths& incl
 		{
 			if(*it == operatorBehaviours[i].m_name)
 			{
-				if(p_timer != NULL && p_timer->is_timedOut())
-				{
-					exit(0);
-				}
 				if(operatorBehaviours[i].m_isunary)
 				{
 					it++;
@@ -1060,10 +1032,6 @@ bool macro_parser::SubstituteMacro(int ignoreText, const char*& pData, std::ostr
 		std::string param;
 		while(*pData)
 		{
-			if(p_timer != NULL && p_timer->is_timedOut())
-			{
-				exit(0);
-			}
 			if(inQuotes == true && *pData == '\\' && pData[1] == '\"')
 			{
 				pData += 2;
@@ -1079,10 +1047,6 @@ bool macro_parser::SubstituteMacro(int ignoreText, const char*& pData, std::ostr
 			{
 				while(1)
 				{
-					if(p_timer != NULL && p_timer->is_timedOut())
-					{
-						exit(0);
-					}
 					if(param[0] == ' ')
 					{
 						param = param.substr(1,param.length() - 1);
@@ -1323,11 +1287,6 @@ bool macro_parser::LoadUsingEnv(std::ostream& stream, const std::string& file, c
 
 	for(auto includeDirectory : includeDirectories)
 	{
-		if(p_timer != NULL && p_timer->is_timedOut())
-		{
-			exit(0);
-		}
-
 		auto candidate = includeDirectory/file;
 		std::error_code ec;
 		candidate = std::filesystem::canonical(candidate, ec).string();
@@ -1369,11 +1328,6 @@ void CleanBufferOfLineFeedsAndTabs(const char* pData)
 	char* oldBufPos = (char*)pData;
 	while(*pData)
 	{
-		if(p_timer != NULL && p_timer->is_timedOut())
-		{
-			exit(0);
-		}
-
 		if(*pData == '\r') //line feeds
 		{
 			if(pData[-1] != '\n' && pData[1] != '\n')
@@ -1417,11 +1371,6 @@ void CleanBufferOfComments(const char*& pData)
 		changed = false;
 		while(*pData != 0)
 		{
-			if(p_timer != NULL && p_timer->is_timedOut())
-			{
-				exit(0);
-			}
-
 			if(IsPreproc(pData,"pragma"))
 			{
 				while(*pData != 0 && *pData != '\n')
@@ -1443,10 +1392,6 @@ void CleanBufferOfComments(const char*& pData)
 
 				while(*pData != '\n'  && *pData)//copy the #define removing any continuance lines
 				{
-					if(p_timer != NULL && p_timer->is_timedOut())
-					{
-						exit(0);
-					}
 					if(*pData == '\\')
 					{
 						pData++;

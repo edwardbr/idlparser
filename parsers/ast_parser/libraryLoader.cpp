@@ -10,10 +10,6 @@
 
 #include "coreclasses.h"
 
-#include "function_timer.h"
-
-extern xt::function_timer* p_timer;
-
 //special attribute flags:
 //pointer to indicate that a typedef is of type pointer
 //switch for unions to indicate that the particular member of a union or struct is control member
@@ -83,11 +79,6 @@ FunctionObject ClassObject::GetFunction(const char*& pData, attributes& attribs,
 
 	while(*pData)
 	{
-		if(p_timer != NULL && p_timer->is_timedOut())
-		{
-			exit(0);
-		}
-
 		while(*pData != ' ' && *pData != '(' && *pData != ')' && *pData != ';' && *pData != '[' && *pData != 0)
 			func.name += *pData++;
 
@@ -195,11 +186,6 @@ FunctionObject ClassObject::GetFunction(const char*& pData, attributes& attribs,
 
 			while(*pData != 0)
 			{
-				if(p_timer != NULL && p_timer->is_timedOut())
-				{
-					exit(0);
-				}
-
 				//deal with call back functions
 				if(*pData == '(')
 				{
@@ -368,10 +354,6 @@ FunctionObject ClassObject::GetFunction(const char*& pData, attributes& attribs,
 
 	while(!bFunctionIsProperty && *pData != 0 && *pData != ';')
 	{
-		if(p_timer != NULL && p_timer->is_timedOut())
-		{
-			exit(0);
-		}
 		EAT_SPACES(pData)
 
 		if(*pData == '{')
@@ -415,11 +397,6 @@ FunctionObject ClassObject::GetFunction(const char*& pData, attributes& attribs,
 			std::string exception;
 			while(*pData != ')' && *pData != 0)
 			{
-				if(p_timer != NULL && p_timer->is_timedOut())
-				{
-					exit(0);
-				}
-
 				if(*pData == ',')
 				{
 					func.raises.push_back(exception);
@@ -477,10 +454,6 @@ bool isFunction(const char* pData)
 {
 	while(*pData != '\0' && *pData != ';')
 	{
-		if(p_timer != NULL && p_timer->is_timedOut())
-		{
-			exit(0);
-		}
 		if(*pData == '(')
 			return true;
 		if(*pData == '=')
@@ -495,10 +468,6 @@ void advancePassStatement(const char*& pData)
 {
 	while(*pData != '\0' && *pData != ';')
 	{
-		if(p_timer != NULL && p_timer->is_timedOut())
-		{
-			exit(0);
-		}
 		if(*pData == '\"')
 		{
 			pData++;
@@ -607,11 +576,6 @@ void ClassObject::GetStructure(const char*& pData, const std::string& ns, bool b
 	bool bHasName = false;
 	while(*pData != 0)
 	{
-		if(p_timer != NULL && p_timer->is_timedOut())
-		{
-			exit(0);
-		}
-
 		EAT_SPACES(pData)
 
 		if(*pData == 0)
@@ -711,10 +675,6 @@ void ClassObject::GetStructure(const char*& pData, const std::string& ns, bool b
 						std::string elemname;
 						while(ExtractWord(pData, elemname))
 						{
-							if(p_timer != NULL && p_timer->is_timedOut())
-							{
-								exit(0);
-							}
 							EAT_SPACES(pData);
 							std::string elemValue;
 							if(*pData == '=')
@@ -933,11 +893,6 @@ ClassObject::ClassObjectRef ClassObject::ParseTypedef(const char*& pData, attrib
 		bool firstPass = true;
 		do
 		{
-			if(p_timer != NULL && p_timer->is_timedOut())
-			{
-				exit(0);
-			}
-
 			ClassObjectRef source(object);
 			if(object->parentName == "")
 			{
@@ -986,10 +941,6 @@ ClassObject::ClassObjectRef ClassObject::ParseTypedef(const char*& pData, attrib
 			object->parentName = type;
 		while(*pData != 0 && *pData != ';')
 		{
-			if(p_timer != NULL && p_timer->is_timedOut())
-			{
-				exit(0);
-			}
 			if(object->parentName.length())
 				object->parentName += ' ';
 
@@ -1032,10 +983,6 @@ ClassObject::ClassObjectRef ClassObject::ParseTypedef(const char*& pData, attrib
 				int braketCount = 1;
 				while(braketCount)
 				{
-					if(p_timer != NULL && p_timer->is_timedOut())
-					{
-						exit(0);
-					}
 					if(*pData == '\0')
 						break;
 
@@ -1064,20 +1011,12 @@ void ClassObject::ParseUnion(const char*& pData, attributes& attribs)
 	verboseStream << "skipping past a union\n";
 	while(*pData && *pData != ';')
 	{
-		if(p_timer != NULL && p_timer->is_timedOut())
-		{
-			exit(0);
-		}
 		if(*pData == '{')
 		{
 			pData++;
 			int braketCount = 1;
 			while(braketCount)
 			{
-				if(p_timer != NULL && p_timer->is_timedOut())
-				{
-					exit(0);
-				}
 				if(*pData == '\0')
 					break;
 
@@ -1110,20 +1049,12 @@ bool ClassObject::ObjectHasTypeDefs(const char* pData)
 	int braketCount = -1;
 	while(*pData && *pData != ';')
 	{
-		if(p_timer != NULL && p_timer->is_timedOut())
-		{
-			exit(0);
-		}
 		if(*pData == '{')
 		{
 			pData++;
 			braketCount = 1;
 			while(braketCount)
 			{
-				if(p_timer != NULL && p_timer->is_timedOut())
-				{
-					exit(0);
-				}
 				if(*pData == '\0')
 					break;
 
@@ -2030,10 +1961,6 @@ void ClassObject::ParseAndLoad(const char*& pData, const char* file, bool is_inc
 	std::string temp;
 	while(*pData)
 	{
-		if(p_timer != NULL && p_timer->is_timedOut())
-		{
-			exit(0);
-		}
 		if(*pData == '\"' || *pData == '>')
 		{
 			pData++;
@@ -2075,10 +2002,6 @@ void MovePastComments(const char*& pData)
 	int count = 0;
 	while(*pData != NULL)
 	{
-		if(p_timer != NULL && p_timer->is_timedOut())
-		{
-			exit(0);
-		}
 		if(*pData == '\"')
 		{
 			count++;
