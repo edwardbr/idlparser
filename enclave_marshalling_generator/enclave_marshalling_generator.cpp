@@ -60,7 +60,8 @@ namespace enclave_marshalling_generator
         void write_interface_predeclaration(const Library& lib, const ClassObject& m_ob, writer& header, writer& proxy, writer& stub)
         {
             proxy("class {}_proxy;", 
-                m_ob.name, 
+                m_ob.name);
+            stub("class {}_stub;", 
                 m_ob.name);
         };
 
@@ -88,6 +89,21 @@ namespace enclave_marshalling_generator
             proxy("  {{}}", m_ob.name);
 			proxy("");
 
+
+            stub("class {}_stub : public i_marshaller", m_ob.name);
+			stub("{{");
+            stub("remote_shared_ptr<{}> target_;", m_ob.name);
+			stub("public:");
+			stub("");
+            stub("{}_stub(remote_shared_ptr<{}>& target) : ", m_ob.name, m_ob.name);
+            stub("  target_(target),", m_ob.name);
+            stub("  {{}}");
+			stub("");
+            stub("error_code send(int object_id, int interface_id, int method_id, const std::vector<uint8_t>& in, std::vector<uint8_t>& out) override");
+            stub("{{");
+            stub("{{");
+
+            int function_count = 1;
             for(auto& function : m_ob.functions)
             {
                 if(function.type != FunctionTypeMethod)
@@ -131,7 +147,7 @@ namespace enclave_marshalling_generator
                 proxy("  ));");
                 
                 proxy("std::vector<uint8_t> out_;");
-                proxy("int ret = marshaller_.send(object_id_, in_, out_);");
+                proxy("int ret = marshaller_.send(object_id_, {}::id, {}, in_, out_);", m_ob.name, function_count);
                 proxy("if(ret)");
                 proxy("{{");
                 proxy("return ret;");
@@ -155,6 +171,8 @@ namespace enclave_marshalling_generator
                 proxy("return ret;");
                 proxy("}}");
                 proxy("");
+
+                function_count++;
             }
 
             header("}};");            
@@ -162,9 +180,13 @@ namespace enclave_marshalling_generator
 
             proxy("}};");            
             proxy("");
+
+            stub("}}");
+            stub("}};");            
+            stub("");
         };
 
-        void write_struct(const ClassObject& m_ob, writer& header, writer& proxy, writer& stub)
+        void write_struct(const ClassObject& m_ob, writer& header)
         {
             header("struct {}{}{}", 
                 m_ob.name, 
@@ -382,7 +404,10 @@ namespace enclave_marshalling_generator
             header("");           
 
             header("//the used for marshalling data between zones");
-            header("class i_marshaller : public i_unknown {{}};");
+            header("class i_marshaller : public i_unknown");
+            header("{{");
+            header("virtual send(int object_id, int interface_id, int method_id, const std::vector<uint8_t>& in, std::vector<uint8_t>& out) = 0;");
+            header("}};");
             header("");
             
 
@@ -422,6 +447,9 @@ namespace enclave_marshalling_generator
   			proxy("#include \"{}\"", header_filename);
             proxy("");
 
+  			stub("#include \"{}\"", header_filename);
+            stub("");
+
 
             for(auto& ns : namespaces)
             {
@@ -429,6 +457,8 @@ namespace enclave_marshalling_generator
                 header("{{");
                 proxy("namespace {}", ns);
                 proxy("{{");
+                stub("namespace {}", ns);
+                stub("{{");
             }
 
             for(auto& name : lib.m_ownedClasses)
@@ -439,7 +469,7 @@ namespace enclave_marshalling_generator
                     continue;
                 }
                 if(obj->type == ObjectStruct)
-                    write_struct(*obj, header, proxy, stub);
+                    write_struct(*obj, header);
             }
             header("");
 
@@ -458,6 +488,7 @@ namespace enclave_marshalling_generator
             {
                 header("}}");
                 proxy("}}");
+                stub("}}");
             }
         }
     }
