@@ -4,6 +4,7 @@
 #include <list>
 #include <unordered_map>
 
+#include "cpp_parser.h"
 #include "commonfuncs.h"
 #include "coreclasses.h"
 
@@ -249,12 +250,6 @@ std::ostream& operator<< ( std::ostream& os, Library& objs )
 		os << *(*it);
 	return os;
 }
-
-extern std::string getTemplateParam(const std::string& type);
-extern void stripReferenceModifiers(std::string& paramType, std::string& referenceModifiers);
-extern bool isSet(const std::string& type);
-extern bool isVector(const std::string& type);
-extern bool isList(const std::string& type);
 
 bool Library::FindClassObject(const std::string& type, const ClassObject*& obj) const
 {

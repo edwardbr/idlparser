@@ -7,6 +7,8 @@ enable_testing()
 add_library(ast_parser
 coreclasses.h
 coreclasses.cpp
+cpp_parser.h
+cpp_parser.cpp
 libraryLoader.cpp)
 
 target_include_directories(ast_parser PUBLIC .)
