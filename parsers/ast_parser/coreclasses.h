@@ -185,8 +185,6 @@ enum interface_spec
 
 struct ClassObject : objectBase
 {
-	using ClassObjectRef = std::shared_ptr<ClassObject>;
-
 	ClassObject(ClassObject* pContainer, Library* pLibrary, const std::string& ns, bool is_include, interface_spec spec = header);
 	ClassObject(const ClassObject& other);
 
@@ -197,17 +195,17 @@ struct ClassObject : objectBase
 	std::list<templateParam> m_templateParams;
 	bool m_is_include;
 
-	void AddClass(ClassObjectRef classObject);
+	void AddClass(std::shared_ptr<ClassObject> classObject);
 	void operator = (const ClassObject& other);
 	friend std::ostream& operator<< ( std::ostream& os, ClassObject& objs );
-	ClassObjectRef ParseSequence(const char*& pData, attributes& attribs, const std::string& ns, bool is_include);
+	std::shared_ptr<ClassObject> ParseSequence(const char*& pData, attributes& attribs, const std::string& ns, bool is_include);
 	void ParseUnion(const char*& pData, attributes& attribs);
 	bool ObjectHasTypeDefs(const char* pData);
-	ClassObjectRef ParseTypedef(const char*& pData, attributes& attribs, const std::string& ns, const char* type, bool is_include);
-	bool ExtractClass(const char*& pData, attributes& attribs, ClassObjectRef& obj, const std::string& ns, bool handleTypeDefs, bool is_include);
+	std::shared_ptr<ClassObject> ParseTypedef(const char*& pData, attributes& attribs, const std::string& ns, const char* type, bool is_include);
+	bool ExtractClass(const char*& pData, attributes& attribs, std::shared_ptr<ClassObject>& obj, const std::string& ns, bool handleTypeDefs, bool is_include);
 	FunctionObject GetFunction(const char*& pData, attributes& attribs, bool bFunctionIsInterface);
 	void GetVariable(const char*& pData);
-	ClassObjectRef GetInterface(const char*& pData, const ObjectType type, const attributes& attr, const std::string& ns, bool is_include);
+	std::shared_ptr<ClassObject> GetInterface(const char*& pData, const ObjectType type, const attributes& attr, const std::string& ns, bool is_include);
 	void ExtractTemplate(const char*& pData, std::list<templateParam>& templateParams);
 	void GetNamespaceData(const char*& pData, const std::string& ns, bool is_include);
 	void GetStructure(const char*& pData, const std::string& ns, bool bInCurlyBrackets, bool is_include);
@@ -232,8 +230,6 @@ struct ClassObject : objectBase
 
 std::ostream& operator<< ( std::ostream& os, ClassObject& objs );
 
-typedef std::list<ClassObject::ClassObjectRef > CLASS_OBJECT_LIST;
-
 struct Library : ClassObject//objectBase
 {
 	Library() : ClassObject(this, this, std::string(), false)
@@ -244,8 +240,8 @@ struct Library : ClassObject//objectBase
 	friend std::ostream& operator<< ( std::ostream& os, Library& objs );
 
 	bool FindClassObject(const std::string& type, const ClassObject*& obj) const;
-	CLASS_OBJECT_LIST m_classes;
-	void AddClass(ClassObjectRef classObject)
+	std::list<std::shared_ptr<ClassObject> > m_classes;
+	void AddClass(std::shared_ptr<ClassObject> classObject)
 	{
 //		m_classes.insert(std::unordered_map<std::string, ClassObject>::value_type(classObject.name,classObject));
 		m_classes.push_back(classObject);

@@ -292,7 +292,7 @@ void stripReferenceModifiers(std::string& paramType, std::string& referenceModif
 	{
 		if(paramType[i] == '*' || paramType[i] == '&')
 		{
-			referenceModifiers += paramType[i];
+			referenceModifiers = paramType[i] + referenceModifiers;
 		}
 	}
 	paramType = paramType.substr(0, i + 1);

@@ -556,14 +556,14 @@ void ClassObject::GetNamespaceData(const char*& pData, const std::string& ns, bo
 	GetStructure(pData, nameSpace, false, is_include);
 }
 
-ClassObject::ClassObjectRef ClassObject::GetInterface(
+std::shared_ptr<ClassObject> ClassObject::GetInterface(
 	const char*& pData, 
 	const ObjectType typ, 
 	const attributes& attr, 
 	const std::string& ns, 
 	bool is_include)
 {
-	ClassObjectRef cls(new ClassObject(this, &GetLibrary(), ns, is_include));
+	std::shared_ptr<ClassObject> cls(new ClassObject(this, &GetLibrary(), ns, is_include));
 	cls->type = typ;
 	cls->m_attributes = attr;
 
@@ -615,7 +615,7 @@ void ClassObject::GetStructure(const char*& pData, const std::string& ns, bool b
 				{
 
 					attributes attribs(GetAttributes(pData));
-					ClassObjectRef obj(new ClassObject(this, &GetLibrary(), ns, is_include));
+					std::shared_ptr<ClassObject> obj(new ClassObject(this, &GetLibrary(), ns, is_include));
 					if(type == ObjectCoclass)
 					{
 						functions.push_back(GetFunction(pData, attribs, true));
@@ -845,9 +845,9 @@ void ClassObject::GetStructure(const char*& pData, const std::string& ns, bool b
 
 }
 
-ClassObject::ClassObjectRef ClassObject::ParseSequence(const char*& pData, attributes& attribs, const std::string& ns, bool is_include)
+std::shared_ptr<ClassObject> ClassObject::ParseSequence(const char*& pData, attributes& attribs, const std::string& ns, bool is_include)
 {
-	ClassObjectRef newInterface(new ClassObject(this, &GetLibrary(), ns, is_include));
+	std::shared_ptr<ClassObject> newInterface(new ClassObject(this, &GetLibrary(), ns, is_include));
 
 	EAT_SPACES(pData)
 
@@ -878,27 +878,27 @@ ClassObject::ClassObjectRef ClassObject::ParseSequence(const char*& pData, attri
 	return newInterface;
 }
 
-ClassObject::ClassObjectRef ClassObject::ParseTypedef(const char*& pData, attributes& attribs, const std::string& ns, const char* type, bool is_include)
+std::shared_ptr<ClassObject> ClassObject::ParseTypedef(const char*& pData, attributes& attribs, const std::string& ns, const char* type, bool is_include)
 {
-	ClassObjectRef object(new ClassObject(this, &GetLibrary(), ns, is_include));
+	std::shared_ptr<ClassObject> object(new ClassObject(this, &GetLibrary(), ns, is_include));
 
 	object->type = ObjectTypedef;
 
 	attribs.merge(GetAttributes(pData));
 
-	ClassObjectRef obj(new ClassObject(object.get(), &object->GetLibrary(), ns, is_include));
+	std::shared_ptr<ClassObject> obj(new ClassObject(object.get(), &object->GetLibrary(), ns, is_include));
 	if(type == NULL && object->ExtractClass(pData, attribs,obj, ns,false, is_include))
 	{
 		object->parentName = obj->name;
 		bool firstPass = true;
 		do
 		{
-			ClassObjectRef source(object);
+			std::shared_ptr<ClassObject> source(object);
 			if(object->parentName == "")
 			{
 				source = obj;
 			}
-			ClassObjectRef temp(new ClassObject(*source));
+			std::shared_ptr<ClassObject> temp(new ClassObject(*source));
 
 			//loop around to extract the names
 			EAT_SPACES(pData)
@@ -1137,7 +1137,7 @@ void ClassObject::ExtractTemplate(const char*& pData, std::list<templateParam>& 
 	pData++;
 }
 
-bool ClassObject::ExtractClass(const char*& pData, attributes& attribs, ClassObjectRef& obj, const std::string& ns, bool handleTypeDefs, bool is_include)
+bool ClassObject::ExtractClass(const char*& pData, attributes& attribs, std::shared_ptr<ClassObject>& obj, const std::string& ns, bool handleTypeDefs, bool is_include)
 {
 	bool bUseTypeDef = false;
 
@@ -1353,7 +1353,7 @@ bool ClassObject::ExtractClass(const char*& pData, attributes& attribs, ClassObj
 					if (SUCCEEDED(hr))
 					{
 						bool addClass = true;
-						ClassObjectRef obj(new ClassObject(this,&GetLibrary(), std::string()));
+						std::shared_ptr<ClassObject> obj(new ClassObject(this,&GetLibrary(), std::string()));
 
 						obj->name = W2CA(GetInterfaceName(typeInfo));
 

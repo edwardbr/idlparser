@@ -150,7 +150,7 @@ ClassObject::ClassObject(const ClassObject& other) :
 	}
 }
 
-void ClassObject::AddClass(ClassObjectRef classObject)
+void ClassObject::AddClass(std::shared_ptr<ClassObject> classObject)
 {
 	m_ownedClasses.push_back((*classObject).name);
 	GetLibrary().AddClass(classObject);
@@ -246,7 +246,7 @@ std::ostream& operator<< ( std::ostream& os, ClassObject& other)
 
 std::ostream& operator<< ( std::ostream& os, Library& objs )
 {
-	for(CLASS_OBJECT_LIST::iterator it = objs.m_classes.begin();it != objs.m_classes.end();it++)
+	for(auto it = objs.m_classes.begin();it != objs.m_classes.end();it++)
 		os << *(*it);
 	return os;
 }
