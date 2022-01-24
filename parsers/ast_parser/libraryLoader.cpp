@@ -492,14 +492,14 @@ void splitVariable(const std::string& phrase, std::string& name, std::string& ty
 	{
 		j--;
 	}
-	char end_pos = j;
+	size_t end_pos = j;
 	for(;j > 0;j--)
 	{
 		char it = phrase[j];
 		if(!((it >= '0' && it <= '9') || (it >= 'A' && it <= 'Z') || (it >= 'a' && it <= 'z') || (it == '_')))
 			break;
 	}
-	char start_pos = j;
+	size_t start_pos = j;
 	while(phrase[j] == ' ' && j > 0)
 	{
 		j--;
