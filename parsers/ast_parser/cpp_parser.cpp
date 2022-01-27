@@ -288,9 +288,9 @@ std::string unenum(const std::string& type)
 void stripReferenceModifiers(std::string& paramType, std::string& referenceModifiers)
 {
 	size_t i = paramType.length() - 1;
-	for(;i >= 0 && (paramType[i] == '*' || paramType[i] == '&' || paramType[i] == ' ');i--)
+	for(;i >= 0 && (paramType[i] == '*' || paramType[i] == '&' || paramType[i] == '^' || paramType[i] == ' ');i--)
 	{
-		if(paramType[i] == '*' || paramType[i] == '&')
+		if(paramType[i] == '*' || paramType[i] == '&'|| paramType[i] == '^')
 		{
 			referenceModifiers = paramType[i] + referenceModifiers;
 		}
