@@ -114,7 +114,7 @@ std::vector<std::string> split(const std::string &s, char delim)
 std::string to_lower(std::string s) 
 {
     std::transform(s.begin(), s.end(), s.begin(),
-       [](unsigned char c){ return std::tolower(c); }
+       [](unsigned char c){ return tolower(c); }
     );
     return s;
 }
@@ -122,7 +122,7 @@ std::string to_lower(std::string s)
 std::string to_upper(std::string s) 
 {
     std::transform(s.begin(), s.end(), s.begin(),
-       [](unsigned char c){ return std::toupper(c); }
+       [](unsigned char c){ return toupper(c); }
     );
     return s;
 }
