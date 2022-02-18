@@ -600,17 +600,6 @@ void class_entity::parse_structure(const char*& pData, bool bInCurlyBrackets)
                 {
                     continue;
                 }
-                else if (if_is_word_eat(pData, "namespace"))
-                {
-
-                    std::string nameSpace;
-                    extract_word(pData, nameSpace);
-                    auto obj = std::make_shared<class_entity>(this);
-
-                    obj->set_name(nameSpace);
-                    obj->parse_structure(pData, false);
-                    add_class(obj);
-                }
                 else if (interface_spec_ == edl
                          && (is_word(pData, "enclave") || is_word(pData, "trusted") || is_word(pData, "untrusted")))
                 {
@@ -1239,6 +1228,11 @@ bool class_entity::parse_class(const char*& pData, attributes& attribs, std::sha
     else if (is_variable == false && if_is_word_eat(pData, "struct"))
     {
         obj = parse_interface(pData, entity_type::STRUCT, attribs);
+        add_class(obj);
+    }
+    else if (is_variable == false && if_is_word_eat(pData, "namespace"))
+    {
+        obj = parse_interface(pData, entity_type::NAMESPACE, attribs);
         add_class(obj);
     }
     else if (if_is_word_eat(pData, "union"))
