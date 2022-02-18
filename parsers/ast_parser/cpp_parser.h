@@ -1,5 +1,5 @@
 
-class library_entity;
+class class_entity;
 class class_entity;
 
 //std::string strip_trailing_(std::string data);
@@ -18,11 +18,11 @@ bool is_bool(std::string type);
 bool is_float(std::string type);
 bool is_double(std::string type);
 bool is_char_star(std::string type);
-bool is_enum(std::string type, const library_entity& library);
+bool is_enum(std::string type, const class_entity& library);
 std::string unconst(std::string type);
 std::string unenum(std::string type);
 void strip_reference_modifiers(std::string& param_type, std::string& referenceModifiers);
-void translate_type(std::string param_type, const library_entity& library);
+void translate_type(std::string param_type, const class_entity& library);
 std::string get_template_param(std::string type);
 std::vector<std::string> split_namespaces(std::string type);
 

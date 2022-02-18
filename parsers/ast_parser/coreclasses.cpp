@@ -8,20 +8,10 @@
 #include "commonfuncs.h"
 #include "coreclasses.h"
 
-parameter_entity::parameter_entity(class_entity* pContainer, library_entity* pLibrary) :
-	entity(pContainer, pLibrary)
-{}
-
-function_entity::function_entity(class_entity* pContainer, library_entity* pLibrary) : 
-	entity(pContainer, pLibrary)
-{
-}
-
-class_entity::class_entity(class_entity* pContainer, library_entity* pLibrary, bool is_include, interface_spec spec) :
+class_entity::class_entity(class_entity* owner, interface_spec spec) :
+	owner_(owner),
 	recurseImport(true),
 	recurseImportLib(true),
-	entity(pContainer, pLibrary),
-		type_(pContainer == ((class_entity*)pLibrary) ? entity_type::NAMESPACE :  pContainer->type_),
 	interface_spec_(spec)
 {}
 
@@ -32,18 +22,22 @@ void class_entity::add_class(std::shared_ptr<class_entity> classObject)
 
 bool class_entity::find_class(std::string type, std::shared_ptr<class_entity>& obj) const
 {
-	
 	if(type.length() > 1 && type[0] == ':' && type[1] == ':')
 	{
-		auto owner = owner_.lock();
-		if(owner) //we are the ultimate global namespace so strip out the leading "::"
+		if(!owner_) //we are the ultimate global namespace so strip out the leading "::"
 			type = type.substr(2);
 		else
-			return owner->find_class(type, obj);
+			return owner_->find_class(type, obj);
 	}
 
 	auto path = split_namespaces(type);
-	return find_class(path, obj);
+	if(find_class(path, obj))
+		return true;
+	
+	if(owner_) //we are the ultimate global namespace so strip out the leading "::"
+		return owner_->find_class(type, obj);
+	else
+		return false;
 }
 
 bool class_entity::find_class(const std::vector<std::string>& type, std::shared_ptr<class_entity>& obj) const
@@ -67,7 +61,7 @@ bool class_entity::find_class(const std::vector<std::string>& type, std::shared_
 	return false;
 }
 
-/*std::string expandTypeString(const char* type, const library_entity& lib)
+/*std::string expandTypeString(const char* type, const class_entity& lib)
 {
 	std::string temp;
 	std::string ret;
@@ -103,7 +97,7 @@ bool class_entity::find_class(const std::vector<std::string>& type, std::shared_
 	return ret;
 }
 
-void getTypeStringInfo(const char* type, typeInfo& info, const library_entity& lib)
+void getTypeStringInfo(const char* type, typeInfo& info, const class_entity& lib)
 {
 	std::string temp;
 	bool inSuffix = false;

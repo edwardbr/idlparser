@@ -15,7 +15,6 @@
 class parameter_entity;
 class function_entity;
 class class_entity;
-class library_entity;
 
 
 enum class entity_type
@@ -49,42 +48,14 @@ public:
 //this class contains the name container and attributes used by a derived class
 class entity
 {
-	class_entity* container_;
-	library_entity* library_;
-
 protected:
 	attributes attributes_;
 	std::string name_;
 
-	entity(class_entity* pObjects, library_entity* pLibrary) : 
-		container_(pObjects),
-		library_(pLibrary)
-	{
-		assert(container_);
-		assert(library_);
-	}
-
 	entity(const entity& other) = default;
 	entity& operator = (const entity& other) = default;
 public:
-
-	class_entity* GetContainer()
-	{
-		return container_;
-	}
-	const class_entity* GetContainer() const 
-	{
-		return container_;
-	}
-
-	library_entity& GetLibrary()
-	{
-		return *library_;
-	}
-	const library_entity& GetLibrary() const 
-	{
-		return *library_;
-	}
+	entity() = default;
 	
 	const bool has_value(const char* valueName) const 
 	{
@@ -136,7 +107,7 @@ class parameter_entity : public entity
 	std::list<std::string> array_suffixes_;
 
 public:
-	parameter_entity(class_entity* pContainer, library_entity* pLibrary);
+	parameter_entity() = default;
 	parameter_entity(const parameter_entity& other) = default;
 	parameter_entity& operator = (const parameter_entity& other) = default;
 
@@ -165,7 +136,7 @@ class function_entity : public entity
 	std::list<parameter_entity> parameters_;
 
 public:
-	function_entity(class_entity* pContainer, library_entity* pLibrary);
+	function_entity() = default;
 	function_entity(const function_entity& other) = default;
 	function_entity& operator = (const function_entity& other) = default;
 
@@ -198,11 +169,14 @@ enum interface_spec
 	edl
 };
 
-class class_entity : public entity
+class class_entity : 
+	public entity,
+	std::enable_shared_from_this<class_entity>
 {
-	std::weak_ptr<class_entity> owner_;
-	std::string unidentified_owner_name_;
-	entity_type type_;
+	class_entity* owner_ = nullptr;
+	std::list<class_entity*> base_classes_;
+	std::string alias_name_;
+	entity_type type_ = entity_type::NAMESPACE;
 	std::list<function_entity> functions_;
 	std::list<std::shared_ptr<class_entity> > classes_;
 	std::list<template_param> template_params_;
@@ -214,18 +188,22 @@ class class_entity : public entity
 
 public:
 
-	class_entity(class_entity* pContainer, library_entity* pLibrary, bool is_include, interface_spec spec = header);
+	class_entity(class_entity* owner_, interface_spec spec = header);
 	class_entity(const class_entity& other) = default;
 	class_entity& operator = (const class_entity& other) = default;
 
 	entity_type get_type() const {return type_;}
 	void set_type(entity_type type){type_ = type;}
 
-	std::weak_ptr<class_entity> get_owner() const {return owner_;}
-	void set_owner(std::weak_ptr<class_entity> owner){owner_ = owner;}
+	class_entity* get_owner() const {return owner_;}
+	void set_owner(class_entity* owner){owner_ = owner;}
 
-	std::string get_unidentified_owner_name() const {return unidentified_owner_name_;}
-	void set_unidentified_owner_name(std::string name) {unidentified_owner_name_ = name;}
+	const std::list<class_entity*>& get_base_classes() const {return base_classes_;}
+	void set_base_classes(std::list<class_entity*> raisess){base_classes_ = raisess;}
+	void add_base_class(class_entity* base_class){base_classes_.push_back(base_class);}
+
+	std::string get_alias_name() const {return alias_name_;}
+	void set_alias_name(std::string name) {alias_name_ = name;}
 
 	const std::list<function_entity>& get_functions() const {return functions_;}
 	void set_functions(std::list<function_entity> raisess){functions_ = raisess;}
@@ -234,22 +212,21 @@ public:
 	void add_class(std::shared_ptr<class_entity> classObject);
 	const std::list<std::shared_ptr<class_entity> >& get_classes() const {return classes_;}
 	
-
-	//std::shared_ptr<class_entity> parse_sequence(const char*& pData, attributes& attribs, bool is_include);
+	//std::shared_ptr<class_entity> parse_sequence(const char*& pData, attributes& attribs);
 	void parse_union(const char*& pData, attributes& attribs);
 	bool has_typedefs(const char* pData);
-	std::shared_ptr<class_entity> parse_typedef(const char*& pData, attributes& attribs, const char* type, bool is_include);
-	bool parse_class(const char*& pData, attributes& attribs, std::shared_ptr<class_entity>& obj, bool handleTypeDefs, bool is_include);
+	std::shared_ptr<class_entity> parse_typedef(const char*& pData, attributes& attribs, const char* type);
+	bool parse_class(const char*& pData, attributes& attribs, std::shared_ptr<class_entity>& obj, bool handleTypeDefs);
 	function_entity parse_function(const char*& pData, attributes& attribs, bool bFunctionIsInterface);
 	void parse_variable(const char*& pData);
-	std::shared_ptr<class_entity> parse_interface(const char*& pData, const entity_type type, const attributes& attr, bool is_include);
+	std::shared_ptr<class_entity> parse_interface(const char*& pData, const entity_type type, const attributes& attr);
 	void parse_template(const char*& pData, std::list<template_param>& templateParams);
-	void parse_namespace(const char*& pData, bool is_include);
-	void parse_structure(const char*& pData, bool bInCurlyBrackets, bool is_include);
+	void parse_namespace(const char*& pData);
+	void parse_structure(const char*& pData, bool bInCurlyBrackets);
 
-	bool load(const char* file, bool is_include = false);
-	void extract_path_and_load(const char*& pData, const char* file, bool is_include);
-	bool parse_include(const char*& pData, const char* file, bool is_include);
+	bool load(const char* file = false);
+	void extract_path_and_load(const char*& pData, const char* file);
+	bool parse_include(const char*& pData, const char* file);
 
 	bool find_class(std::string type, std::shared_ptr<class_entity>& obj) const;
 
@@ -262,18 +239,6 @@ public:
 	void GetInterfaceFunctions(TYPEATTR* pTypeAttr, class_entity& obj, ITypeInfo* typeInfo);
 	void GetInterfaceProperties(TYPEATTR* pTypeAttr, class_entity& obj, ITypeInfo* typeInfo);
 #endif
-};
-
-class library_entity : public class_entity
-{
-public:
-	library_entity() : class_entity(this, this, false)
-	{}
-	~library_entity()
-	{
-	}
-
-
 };
 
 extern std::stringstream verboseStream;
@@ -290,5 +255,5 @@ struct typeInfo
 	const class_entity* pObj;
 };
 
-//std::string expandTypeString(const char* type, const library_entity& lib);
-//void getTypeStringInfo(const char* type, typeInfo& info, const library_entity& lib);
+//std::string expandTypeString(const char* type, const class_entity& lib);
+//void getTypeStringInfo(const char* type, typeInfo& info, const class_entity& lib);

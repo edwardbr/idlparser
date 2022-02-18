@@ -208,7 +208,7 @@ bool isJavaScriptObject(std::string type)
 {
 	return find_key_word(type, "javascript_object", false) != -1;
 }*/
-bool is_enum(std::string type, const library_entity& library)
+bool is_enum(std::string type, const class_entity& library)
 {
 	if(find_key_word(type, "enum", true) == -1)
 	{
@@ -298,15 +298,14 @@ void strip_reference_modifiers(std::string& param_type, std::string& referenceMo
 	param_type = param_type.substr(0, i + 1);
 }
 
-void translate_type(std::string param_type, const library_entity& library)
+void translate_type(std::string param_type, const class_entity& library)
 {
 	std::shared_ptr<class_entity> pObj;
 	if(library.find_class(param_type, pObj) == true && pObj != NULL)
 	{
 		if(pObj->get_type() == entity_type::TYPEDEF)
 		{
-			auto owner = pObj->get_owner().lock();
-			param_type = owner->get_name();
+			param_type = pObj->get_owner()->get_name();
 		}
 	}
 }

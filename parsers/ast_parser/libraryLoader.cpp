@@ -31,7 +31,7 @@ attributes GetAttributes(const char*& pData)
 
         EAT_SPACES(pData)
 
-        ;
+            ;
         bool bInAttribute = false;
         std::string property;
         int inBracket = 0;
@@ -70,7 +70,7 @@ attributes GetAttributes(const char*& pData)
 
 function_entity class_entity::parse_function(const char*& pData, attributes& attribs, bool bFunctionIsInterface)
 {
-    function_entity func(this, &GetLibrary());
+    function_entity func;
     func.set_attributes(attribs);
 
     bool bFunctionIsProperty = true;
@@ -78,9 +78,9 @@ function_entity class_entity::parse_function(const char*& pData, attributes& att
 
     EAT_SPACES(pData)
 
-	std::string func_name;
-	std::string return_type;
-	int array_size = 0;
+    std::string func_name;
+    std::string return_type;
+    int array_size = 0;
 
     while (*pData)
     {
@@ -172,15 +172,15 @@ function_entity class_entity::parse_function(const char*& pData, attributes& att
     {
         while (*pData != 0 && *pData != ')' && *pData != ';')
         {
-            parameter_entity parameter(this, &GetLibrary());
+            parameter_entity parameter;
             bool b_nullParam = false;
 
             EAT_SPACES(pData)
 
             parameter.set_attributes(GetAttributes(pData));
 
-			std::string parameter_name;
-			std::string parameter_type;
+            std::string parameter_name;
+            std::string parameter_type;
 
             while (*pData != 0)
             {
@@ -333,8 +333,8 @@ function_entity class_entity::parse_function(const char*& pData, attributes& att
                     parameter_name = "";
                 }
             }
-			parameter.set_name(parameter_name);
-			parameter.set_type(parameter_type);
+            parameter.set_name(parameter_name);
+            parameter.set_type(parameter_type);
             // eat comma
             if (*pData == ',')
                 pData++;
@@ -357,12 +357,12 @@ function_entity class_entity::parse_function(const char*& pData, attributes& att
 
         if (*pData == '{')
         {
-			std::stringstream err;
-			err << "function implementations are not supported";
-			err << std::ends;
-			std::string errString(err.str());
-			throw errString;
-		}
+            std::stringstream err;
+            err << "function implementations are not supported";
+            err << std::ends;
+            std::string errString(err.str());
+            throw errString;
+        }
         else if (func_name == get_name() && *pData == ':') // this is for constructor initialisers
         {
             pData++;
@@ -444,8 +444,8 @@ function_entity class_entity::parse_function(const char*& pData, attributes& att
         func.set_type(FunctionTypePropertyGet);
     }
 
-	func.set_name(func_name);
-	func.set_return_type(return_type);
+    func.set_name(func_name);
+    func.set_return_type(return_type);
     return func;
 }
 
@@ -516,17 +516,17 @@ void class_entity::parse_variable(const char*& pData)
         phrase += *pData;
     }
 
-    function_entity fn(this, &GetLibrary());
-	std::string fn_name;
-	std::string fn_return_type;
+    function_entity fn;
+    std::string fn_name;
+    std::string fn_return_type;
     splitVariable(phrase, fn_name, fn_return_type);
     // strip out yucky gsoap limiters
     if (fn_name == "0" || fn_name == "1")
     {
         splitVariable(fn_return_type, fn_name, fn_return_type);
     }
-	fn.set_name(fn_name);
-	fn.set_return_type(fn_return_type);
+    fn.set_name(fn_name);
+    fn.set_return_type(fn_return_type);
     fn.set_type(FunctionTypeVariable);
     functions_.push_back(fn);
 
@@ -534,7 +534,7 @@ void class_entity::parse_variable(const char*& pData)
         pData++;
 }
 
-void class_entity::parse_namespace(const char*& pData,  bool is_include)
+void class_entity::parse_namespace(const char*& pData)
 {
     EAT_SPACES(pData)
 
@@ -556,21 +556,22 @@ void class_entity::parse_namespace(const char*& pData,  bool is_include)
         std::string errString(err.str());
         throw errString;
     }
-    parse_structure(pData, false, is_include);
+    parse_structure(pData, false);
 }
 
 std::shared_ptr<class_entity> class_entity::parse_interface(const char*& pData, const entity_type typ,
-                                                         const attributes& attr, bool is_include)
+                                                            const attributes& attr)
 {
-    std::shared_ptr<class_entity> cls(new class_entity(this, &GetLibrary(), is_include));
+    auto cls = std::make_shared<class_entity>(this);
+
     cls->set_type(typ);
     cls->set_attributes(attr);
 
-    cls->parse_structure(pData, false, is_include);
+    cls->parse_structure(pData, false);
     return cls;
 }
 
-void class_entity::parse_structure(const char*& pData, bool bInCurlyBrackets, bool is_include)
+void class_entity::parse_structure(const char*& pData, bool bInCurlyBrackets)
 {
     bool bHasName = false;
     while (*pData != 0)
@@ -595,7 +596,7 @@ void class_entity::parse_structure(const char*& pData, bool bInCurlyBrackets, bo
                 EAT_SPACES(pData)
 
                 attributes attribs(GetAttributes(pData));
-                if (parse_include(pData, NULL, is_include))
+                if (parse_include(pData, NULL))
                 {
                     continue;
                 }
@@ -604,15 +605,16 @@ void class_entity::parse_structure(const char*& pData, bool bInCurlyBrackets, bo
 
                     std::string nameSpace;
                     extract_word(pData, nameSpace);
-                    std::shared_ptr<class_entity> obj(new class_entity(this, &GetLibrary(), is_include));
+                    auto obj = std::make_shared<class_entity>(this);
+
                     obj->set_name(nameSpace);
-                    obj->parse_structure(pData, false, is_include);
+                    obj->parse_structure(pData, false);
                     add_class(obj);
                 }
                 else if (interface_spec_ == edl
                          && (is_word(pData, "enclave") || is_word(pData, "trusted") || is_word(pData, "untrusted")))
                 {
-                    parse_namespace(pData, is_include);
+                    parse_namespace(pData);
                     EAT_SPACES(pData)
                     if (*pData == ';')
                         pData++;
@@ -620,8 +622,7 @@ void class_entity::parse_structure(const char*& pData, bool bInCurlyBrackets, bo
                 }
                 else
                 {
-
-                    std::shared_ptr<class_entity> obj(new class_entity(this, &GetLibrary(), is_include));
+                    auto obj = std::make_shared<class_entity>(this);
                     if (get_type() == entity_type::COCLASS)
                     {
                         functions_.push_back(parse_function(pData, attribs, true));
@@ -630,7 +631,7 @@ void class_entity::parse_structure(const char*& pData, bool bInCurlyBrackets, bo
                         if (*pData == ';')
                             pData++;
                     }
-                    else if (parse_class(pData, attribs, obj, true, is_include))
+                    else if (parse_class(pData, attribs, obj, true))
                     {
                         //					assert(*pData == ';');
                         if (*pData == ';')
@@ -699,7 +700,7 @@ void class_entity::parse_structure(const char*& pData, bool bInCurlyBrackets, bo
                                 }
                             }
 
-                            function_entity fn(this, &GetLibrary());
+                            function_entity fn;
                             fn.set_name(elemname);
                             fn.set_return_type(elemValue);
                             functions_.push_back(fn);
@@ -716,9 +717,9 @@ void class_entity::parse_structure(const char*& pData, bool bInCurlyBrackets, bo
                     {
                         function_entity func(parse_function(pData, attribs, false));
                         EAT_SPACES(pData);
-						assert(*pData == ';');
-						if (*pData == ';')
-							pData++;
+                        assert(*pData == ';');
+                        if (*pData == ';')
+                            pData++;
                         functions_.push_back(func);
                     }
                     else if (get_type() == entity_type::DISPATCH_INTERFACE)
@@ -752,9 +753,9 @@ void class_entity::parse_structure(const char*& pData, bool bInCurlyBrackets, bo
                     {
                         function_entity func(parse_function(pData, attribs, get_type() == entity_type::COCLASS));
                         EAT_SPACES(pData);
-						assert(*pData == ';');
-						if (*pData == ';')
-							pData++;
+                        assert(*pData == ';');
+                        if (*pData == ';')
+                            pData++;
                         functions_.push_back(func);
                     }
                     else
@@ -770,10 +771,10 @@ void class_entity::parse_structure(const char*& pData, bool bInCurlyBrackets, bo
             // get name
             if (!bHasName)
             {
-				std::string name;
+                std::string name;
                 while (*pData != 0 && *pData != ' ' && *pData != '{' && *pData != ';' && *pData != ':')
                     name += *pData++;
-				set_name(name);
+                set_name(name);
                 bHasName = true;
 
                 EAT_SPACES(pData)
@@ -794,18 +795,9 @@ void class_entity::parse_structure(const char*& pData, bool bInCurlyBrackets, bo
 
                     EAT_SPACES(pData)
 
-					std::string parent_name;
-                    extract_word(pData, parent_name);
-					std::shared_ptr<class_entity> pObj;
-					if(!find_class(parent_name, pObj))
-					{
-						std::stringstream err;
-						err << "type " << parent_name << " not known";
-						err << std::ends;
-						std::string errString(err.str());
-						throw errString;
-					}
-					set_owner(pObj);
+                    std::string switch_name;
+                    extract_word(pData, switch_name);
+                    set_alias_name(switch_name);
                 }
                 EAT_SPACES(pData)
             }
@@ -817,7 +809,7 @@ void class_entity::parse_structure(const char*& pData, bool bInCurlyBrackets, bo
 
                 EAT_SPACES(pData)
 
-				std::string parent_name;
+                std::string parent_name;
                 while (*pData != 0 && *pData != ' ' && *pData != '{' && *pData != ';' && *pData != ':')
                 {
                     parent_name += *pData;
@@ -838,16 +830,16 @@ void class_entity::parse_structure(const char*& pData, bool bInCurlyBrackets, bo
 
                 EAT_SPACES(pData)
 
-				std::shared_ptr<class_entity> pObj;
-				if(!find_class(parent_name, pObj))
-				{
-					std::stringstream err;
-					err << "type " << parent_name << " not known";
-					err << std::ends;
-					std::string errString(err.str());
-					throw errString;
-				}
-				set_owner(pObj);
+                std::shared_ptr<class_entity> pObj;
+                if (!find_class(parent_name, pObj))
+                {
+                    std::stringstream err;
+                    err << "type " << parent_name << " not known";
+                    err << std::ends;
+                    std::string errString(err.str());
+                    throw errString;
+                }
+                add_base_class(pObj.get());
             }
 
             if (*pData == '{')
@@ -864,34 +856,35 @@ void class_entity::parse_structure(const char*& pData, bool bInCurlyBrackets, bo
     }
     if (get_type() == entity_type::DISPATCH_INTERFACE)
     {
-		std::shared_ptr<class_entity> pObj;
-		if(!find_class("IDispatch", pObj))
-		{
-			std::stringstream err;
-			err << "type " << "IDispatch" << " not known";
-			err << std::ends;
-			std::string errString(err.str());
-			throw errString;
-		}
-		set_owner(pObj);
+        std::shared_ptr<class_entity> pObj;
+        if (!find_class("IDispatch", pObj))
+        {
+            std::stringstream err;
+            err << "type "
+                << "IDispatch"
+                << " not known";
+            err << std::ends;
+            std::string errString(err.str());
+            throw errString;
+        }
+        add_base_class(pObj.get());
         set_type(entity_type::INTERFACE);
     }
 }
 
-/*std::shared_ptr<class_entity> class_entity::parse_sequence(const char*& pData, attributes& attribs,
-                                                           bool is_include)
+/*std::shared_ptr<class_entity> class_entity::parse_sequence(const char*& pData, attributes& attribs)
 {
-    std::shared_ptr<class_entity> newInterface(new class_entity(this, &GetLibrary(), is_include));
+        auto newInterface = std::make_shared<class_entity>(shared_from_this());
 
     EAT_SPACES(pData)
 
-	std::string parent_name;
+        std::string parent_name;
     while (*pData != ' ' && *pData != '>' && *pData != 0)
     {
         parent_name += *pData;
         pData++;
     }
-	newInterface->set_parent_name(parent_name);
+        newInterface->set_parent_name(parent_name);
 
     if (*pData == 0)
     {
@@ -902,11 +895,11 @@ void class_entity::parse_structure(const char*& pData, bool bInCurlyBrackets, bo
 
     EAT_SPACES(pData)
 
-	std::string name;
+        std::string name;
     while (*pData != ';' && *pData != 0)
         name += *pData++;
 
-	newInterface->set_name(name);
+        newInterface->set_name(name);
 
     newInterface->set_type(entity_type::SEQUENCE);
     newInterface->set_attributes(attribs);
@@ -915,38 +908,39 @@ void class_entity::parse_structure(const char*& pData, bool bInCurlyBrackets, bo
     return newInterface;
 }*/
 
-std::shared_ptr<class_entity> class_entity::parse_typedef(const char*& pData, attributes& attribs, 
-                                                         const char* type, bool is_include)
+std::shared_ptr<class_entity> class_entity::parse_typedef(const char*& pData, attributes& attribs, const char* type)
 {
-    std::shared_ptr<class_entity> object(new class_entity(this, &GetLibrary(), is_include));
+    auto object = std::make_shared<class_entity>(this);
 
     object->set_type(entity_type::TYPEDEF);
 
     attribs.merge(GetAttributes(pData));
 
-    std::shared_ptr<class_entity> obj(new class_entity(object.get(), &object->GetLibrary(), is_include));
-    if (type == NULL && object->parse_class(pData, attribs, obj, false, is_include))
+    auto obj = std::make_shared<class_entity>(object.get());
+
+    if (type == NULL && object->parse_class(pData, attribs, obj, false))
     {
-		std::shared_ptr<class_entity> pObj;
-		if(!find_class(obj->get_name(), pObj))
-		{
-			std::stringstream err;
-			err << "type " << obj->get_name() << " not known";
-			err << std::ends;
-			std::string errString(err.str());
-			throw errString;
-		}
-		object->set_owner(pObj);
+        /*std::shared_ptr<class_entity> pObj;
+        if (!find_class(obj->get_name(), pObj))
+        {
+            std::stringstream err;
+            err << "type " << obj->get_name() << " not known";
+            err << std::ends;
+            std::string errString(err.str());
+            throw errString;
+        }
+        object->set_owner(pObj);*/
+		object->set_alias_name(obj->get_name());
 
         bool firstPass = true;
         do
         {
             std::shared_ptr<class_entity> source(object);
-            if (object->get_owner().lock() == nullptr)
+            if (object->get_owner() == nullptr)
             {
                 source = obj;
             }
-            std::shared_ptr<class_entity> temp(new class_entity(*source));
+            auto temp = std::make_shared<class_entity>(source.get());
 
             // loop around to extract the names
             EAT_SPACES(pData)
@@ -964,13 +958,13 @@ std::shared_ptr<class_entity> class_entity::parse_typedef(const char*& pData, at
                 EAT_SPACES(pData)
             }
 
-			std::string name;
+            std::string name;
             while (*pData != 0 && *pData != ';' && *pData != '[' && *pData != ',' && *pData != '{')
             {
                 name += *pData;
                 pData++;
             }
-			temp->set_name(name);
+            temp->set_name(name);
             if (ispointer)
                 temp->add_attribute(std::string("pointer"));
 
@@ -988,16 +982,16 @@ std::shared_ptr<class_entity> class_entity::parse_typedef(const char*& pData, at
     }
     else
     {
-		std::string parent_name;
-		{
-			auto owner = object->get_owner().lock();
-			if(owner)
-			{
-				parent_name= owner->get_name();
-			}
-		}
+        std::string parent_name;
+        {
+            auto owner = object->get_owner();
+            if (owner)
+            {
+                parent_name = owner->get_name();
+            }
+        }
 
-		std::string object_name = object->get_name();
+        std::string object_name = object->get_name();
         if (type != NULL)
             parent_name = type;
         while (*pData != 0 && *pData != ';')
@@ -1034,7 +1028,7 @@ std::shared_ptr<class_entity> class_entity::parse_typedef(const char*& pData, at
                     else
                         break;
                 }
-                parse_typedef(pData, attribs, type.data(), is_include);
+                parse_typedef(pData, attribs, type.data());
             }
 
             // removing any nasty member structures, perhaps I'll do some thing intellegent with it one day...
@@ -1056,16 +1050,8 @@ std::shared_ptr<class_entity> class_entity::parse_typedef(const char*& pData, at
                 }
             }
         }
-		object->set_name(object_name);
-		std::shared_ptr<class_entity> pObj;
-		if(find_class(parent_name, pObj))
-		{
-			object->set_owner(pObj);
-		}
-		else
-		{
-			object->set_unidentified_owner_name(parent_name);
-		}
+        object->set_name(object_name);
+        object->set_alias_name(parent_name);
         add_class(object);
         assert(*pData == ';');
     }
@@ -1192,7 +1178,7 @@ void class_entity::parse_template(const char*& pData, std::list<template_param>&
 }
 
 bool class_entity::parse_class(const char*& pData, attributes& attribs, std::shared_ptr<class_entity>& obj,
-                                bool handleTypeDefs, bool is_include)
+                               bool handleTypeDefs)
 {
     bool bUseTypeDef = false;
 
@@ -1207,15 +1193,15 @@ bool class_entity::parse_class(const char*& pData, attributes& attribs, std::sha
         const char* semicolonPos = strchr(&*pData, ';');
         if (curlyPos == NULL || curlyPos > semicolonPos)
         {
-            if (obj->GetContainer() == NULL
-                || (obj->GetContainer()->get_type() != entity_type::CLASS 
-					&& obj->GetContainer()->get_type() != entity_type::STRUCT
-					)
-				)
+            /*if (obj->GetContainer() == NULL
+                || (obj->GetContainer()->get_type() != entity_type::CLASS
+                                        && obj->GetContainer()->get_type() != entity_type::STRUCT
+                                        )
+                                )
             {
                 EAT_PAST_SEMICOLON(pData)
                 return true;
-            }
+            }*/
             is_variable = true;
         }
 
@@ -1224,20 +1210,21 @@ bool class_entity::parse_class(const char*& pData, attributes& attribs, std::sha
     }
 
     if (bUseTypeDef || if_is_word_eat(pData, "typedef"))
-        obj = parse_typedef(pData, attribs, NULL, is_include);
+        obj = parse_typedef(pData, attribs, NULL);
 
     else if (if_is_word_eat(pData, "library"))
     {
         if (is_hash_import)
         {
             std::cerr << "encountered a library inside a #import\n";
-            library_entity lib;
-            lib.parse_interface(pData, entity_type::LIBRARY, attribs, is_include);
+            auto lib = std::make_shared<class_entity>(this);
+
+            lib->parse_interface(pData, entity_type::LIBRARY, attribs);
         }
         else
         {
 
-            obj = parse_interface(pData, entity_type::LIBRARY, attribs, is_include);
+            obj = parse_interface(pData, entity_type::LIBRARY, attribs);
             add_class(obj);
         }
     }
@@ -1246,43 +1233,43 @@ bool class_entity::parse_class(const char*& pData, attributes& attribs, std::sha
         if (is_hash_import)
             std::cerr << "encountered a coclass inside a #import\n";
 
-        obj = parse_interface(pData, entity_type::COCLASS, attribs, is_include);
+        obj = parse_interface(pData, entity_type::COCLASS, attribs);
         add_class(obj);
     }
     else if (is_variable == false && if_is_word_eat(pData, "struct"))
     {
-        obj = parse_interface(pData, entity_type::STRUCT, attribs, is_include);
+        obj = parse_interface(pData, entity_type::STRUCT, attribs);
         add_class(obj);
     }
     else if (if_is_word_eat(pData, "union"))
     {
-        obj = parse_interface(pData, entity_type::UNION, attribs, is_include);
+        obj = parse_interface(pData, entity_type::UNION, attribs);
         add_class(obj);
-		return false;
+        return false;
     }
     else if (is_variable == false && if_is_word_eat(pData, "enum"))
     {
-        obj = parse_interface(pData, entity_type::ENUM, attribs, is_include);
+        obj = parse_interface(pData, entity_type::ENUM, attribs);
         add_class(obj);
     }
     /*else if (if_is_word_eat(pData, "typedef sequence<"))
     {
-        obj = parse_sequence(pData, attribs, is_include);
+        obj = parse_sequence(pData, attribs);
         add_class(obj);
     }*/
     else if (if_is_word_eat(pData, "exception"))
     {
-        obj = parse_interface(pData, entity_type::EXCEPTION, attribs, is_include);
+        obj = parse_interface(pData, entity_type::EXCEPTION, attribs);
         add_class(obj);
     }
     else if (if_is_word_eat(pData, "interface"))
     {
-        obj = parse_interface(pData, entity_type::INTERFACE, attribs, is_include);
+        obj = parse_interface(pData, entity_type::INTERFACE, attribs);
         add_class(obj);
     }
     else if (if_is_word_eat(pData, "class"))
     {
-        obj = parse_interface(pData, entity_type::CLASS, attribs, is_include);
+        obj = parse_interface(pData, entity_type::CLASS, attribs);
         add_class(obj);
     }
     else if (if_is_word_eat(pData, "template"))
@@ -1297,7 +1284,7 @@ bool class_entity::parse_class(const char*& pData, attributes& attribs, std::sha
         if (if_is_word_eat(pData, "class"))
         {
             EAT_SPACES(pData)
-            obj = parse_interface(pData, entity_type::CLASS, attribs, is_include);
+            obj = parse_interface(pData, entity_type::CLASS, attribs);
             obj->template_params_ = templateParams;
             add_class(obj);
         }
@@ -1313,7 +1300,7 @@ bool class_entity::parse_class(const char*& pData, attributes& attribs, std::sha
 
     else if (if_is_word_eat(pData, "dispinterface"))
     {
-        obj = parse_interface(pData, entity_type::DISPATCH_INTERFACE, attribs, is_include);
+        obj = parse_interface(pData, entity_type::DISPATCH_INTERFACE, attribs);
         add_class(obj);
     }
     else
@@ -1358,7 +1345,9 @@ bool class_entity::parse_class(const char*& pData, attributes& attribs, std::sha
                                         if (SUCCEEDED(hr))
                                         {
                                                 bool addClass = true;
-                                                std::shared_ptr<class_entity> obj(new class_entity(this,&GetLibrary(),
+                                                                                        auto obj =
+std::make_shared<class_entity>(shared_from_this());
+
 std::string()));
 
                                                 obj->name = W2CA(GetInterfaceName(typeInfo));
@@ -1521,7 +1510,7 @@ void class_entity::GetInterfaceProperties(TYPEATTR* pTypeAttr, class_entity& obj
         if (FAILED(hr))
             break;
 
-        function_entity fn(&obj, &obj.GetLibrary());
+        function_entity fn(&obj);
         fn.type = FunctionTypePropertyGet;
 
         char buf[256];
@@ -1616,7 +1605,7 @@ void class_entity::GetInterfaceFunctions(TYPEATTR* pTypeAttr, class_entity& obj,
         HRESULT hr = typeInfo->GetFuncDesc(n, &desc);
         if (SUCCEEDED(hr))
         {
-            function_entity fn(&obj, &obj.GetLibrary());
+            function_entity fn(&obj);
 
             CComBSTR name;
             HRESULT hr = typeInfo->GetDocumentation(desc->memid, &name, NULL, NULL, NULL);
@@ -1686,7 +1675,7 @@ void class_entity::GetInterfaceFunctions(TYPEATTR* pTypeAttr, class_entity& obj,
             {
                 for (int p = 1; p < desc->cParams; p++)
                 {
-                    parameter_entity param(&obj, &obj.GetLibrary());
+                    parameter_entity param(&obj);
                     param.name = W2CA(rgbstrNames[p]);
                     param.type = GenerateTypeString(desc->lprgelemdescParam[p].tdesc, typeInfo);
 
@@ -1737,7 +1726,7 @@ void class_entity::GetCoclassInterfaces(TYPEATTR* pTypeAttr, class_entity& obj, 
     // Enumerate interfaces/dispinterfaces in coclass and return a collection of these.
     for (unsigned int n = 0; n < pTypeAttr->cImplTypes; n++)
     {
-        function_entity fn(&obj, &obj.GetLibrary());
+        function_entity fn(&obj);
 
         int flags = 0;
         HRESULT hr = typeInfo->GetImplTypeFlags(n, &flags);
@@ -1772,7 +1761,7 @@ void class_entity::GetVariables(class_entity& theClass, unsigned variableCount, 
         HRESULT hr = typeInfo->GetVarDesc(n, &pvardesc);
         if (SUCCEEDED(hr))
         {
-            function_entity fn(&theClass, &theClass.GetLibrary());
+            function_entity fn(&theClass);
             char buf[256];
             sprintf(buf, "id(%d)", pvardesc->memid);
             fn.add_attribute(buf);
@@ -1951,7 +1940,7 @@ CComBSTR class_entity::GetInterfaceName(ITypeInfo* typeInfo)
 }
 #endif
 
-void class_entity::extract_path_and_load(const char*& pData, const char* file, bool is_include)
+void class_entity::extract_path_and_load(const char*& pData, const char* file)
 {
     EAT_SPACES(pData)
 
@@ -1970,7 +1959,7 @@ void class_entity::extract_path_and_load(const char*& pData, const char* file, b
             const char* fname_ext = std::max(strrchr(temp.data(), '\\'), strrchr(temp.data(), '/'));
             if (fname_ext != NULL)
             {
-                if (!load(temp.data(), is_include))
+                if (!load(temp.data()))
                     //					if(!LoadUsingEnv(temp))
                     std::cerr << "failed to load " << temp << "\n";
             }
@@ -1986,7 +1975,7 @@ void class_entity::extract_path_and_load(const char*& pData, const char* file, b
                 {
                     strcpy(path, temp.data());
                 }
-                if (!load(path, is_include))
+                if (!load(path))
                 {
                     //					if(!LoadUsingEnv(temp))
                     std::cerr << "failed to load " << path << "\n";
@@ -2015,12 +2004,12 @@ void move_past_comments(const char*& pData)
     }
 }
 
-bool class_entity::parse_include(const char*& pData, const char* file, bool is_include)
+bool class_entity::parse_include(const char*& pData, const char* file)
 {
     if (if_is_word_eat(pData, "#include"))
     {
         if (recurseImportLib)
-            extract_path_and_load(pData, file, true);
+            extract_path_and_load(pData, file);
         else
             move_past_comments(pData);
         return true;
@@ -2031,7 +2020,7 @@ bool class_entity::parse_include(const char*& pData, const char* file, bool is_i
         pData++; // get past (
         EAT_SPACES(pData)
         if (recurseImportLib)
-            extract_path_and_load(pData, file, is_include);
+            extract_path_and_load(pData, file);
         else
             move_past_comments(pData);
         EAT_SPACES(pData)
@@ -2047,7 +2036,7 @@ bool class_entity::parse_include(const char*& pData, const char* file, bool is_i
     {
         is_hash_import++;
         if (recurseImport)
-            extract_path_and_load(pData, file, is_include);
+            extract_path_and_load(pData, file);
         else
             move_past_comments(pData);
         EAT_SPACES(pData)
@@ -2060,7 +2049,7 @@ bool class_entity::parse_include(const char*& pData, const char* file, bool is_i
     return false;
 }
 
-bool class_entity::load(const char* file, bool is_include)
+bool class_entity::load(const char* file)
 {
     if (loaded_files.find(file) != loaded_files.end())
         return true;
@@ -2078,7 +2067,7 @@ bool class_entity::load(const char* file, bool is_include)
     std::getline(preproc_stream, preproc_data, '\0');
 
     const char* tmp = preproc_data.data();
-    parse_structure(tmp, true, is_include);
+    parse_structure(tmp, true);
 
     return true;
 }
