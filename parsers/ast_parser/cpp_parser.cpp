@@ -22,7 +22,7 @@ std::string strip_trailing_(std::string data)
 	return data;
 }*/
 
-size_t findKeyWord(const std::string& type, const char* val, bool check_end)
+size_t find_key_word(std::string type, const char* val, bool check_end)
 {
 	size_t len = strlen(val);
 	bool requires_loop = false;
@@ -61,105 +61,105 @@ size_t findKeyWord(const std::string& type, const char* val, bool check_end)
 }
 
 
-bool isUInt8(std::string& type)
+bool is_uint8(std::string type)
 {
-	if(findKeyWord(type, "char", true) != -1  ||
-			findKeyWord(type, "unsigned char", true) != -1 ||
-			findKeyWord(type, "unsigned __int8", true) != -1 ||
-			findKeyWord(type, "uint8_t", true) != -1)
+	if(find_key_word(type, "char", true) != -1  ||
+			find_key_word(type, "unsigned char", true) != -1 ||
+			find_key_word(type, "unsigned __int8", true) != -1 ||
+			find_key_word(type, "uint8_t", true) != -1)
 	{
 		type = "uint8_t";
 		return true;
 	}
 	return false;
 }
-bool isInt8(std::string& type)
+bool is_int8(std::string type)
 {
-	if(findKeyWord(type, "signed char", true) != -1 ||
-		findKeyWord(type, "signed __int8", true) != -1 ||
-		findKeyWord(type, "__int8", true) != -1 ||
-		findKeyWord(type, "int8_t", true) != -1)
+	if(find_key_word(type, "signed char", true) != -1 ||
+		find_key_word(type, "signed __int8", true) != -1 ||
+		find_key_word(type, "__int8", true) != -1 ||
+		find_key_word(type, "int8_t", true) != -1)
 	{
 		type = "int8_t";
 		return true;
 	}
 	return false;
 }
-bool isUInt16(std::string& type)
+bool is_uint16(std::string type)
 {
-	if(findKeyWord(type, "unsigned short", true) != -1 ||
-			findKeyWord(type, "unsigned __int16", true) != -1 ||
-			findKeyWord(type, "uint16_t", true) != -1)
+	if(find_key_word(type, "unsigned short", true) != -1 ||
+			find_key_word(type, "unsigned __int16", true) != -1 ||
+			find_key_word(type, "uint16_t", true) != -1)
 	{
 		type = "uint16_t";
 		return true;
 	}
 	return false;
 }
-bool isInt16(std::string& type)
+bool is_int16(std::string type)
 {
-	if(findKeyWord(type, "short", true) != -1 ||
-			findKeyWord(type, "__int16", true) != -1 ||
-			findKeyWord(type, "signed short", true) != -1 ||
-			findKeyWord(type, "signed __int16", true) != -1 ||
-			findKeyWord(type, "int16_t", true) != -1)
+	if(find_key_word(type, "short", true) != -1 ||
+			find_key_word(type, "__int16", true) != -1 ||
+			find_key_word(type, "signed short", true) != -1 ||
+			find_key_word(type, "signed __int16", true) != -1 ||
+			find_key_word(type, "int16_t", true) != -1)
 	{
 		type = "int16_t";
 		return true;
 	}
 	return false;
 }
-bool isUInt32(std::string& type)
+bool is_uint32(std::string type)
 {
-	if(findKeyWord(type, "unsigned", true) != -1 ||
-			findKeyWord(type, "unsigned int", true) != -1 ||
-			findKeyWord(type, "unsigned __int32", true) != -1 ||
-			findKeyWord(type, "uint32_t", true) != -1)
+	if(find_key_word(type, "unsigned", true) != -1 ||
+			find_key_word(type, "unsigned int", true) != -1 ||
+			find_key_word(type, "unsigned __int32", true) != -1 ||
+			find_key_word(type, "uint32_t", true) != -1)
 	{
 		type = "uint32_t";
 		return true;
 	}
 	return false;
 }
-bool isInt32(std::string& type)
+bool is_int32(std::string type)
 {
-	if(findKeyWord(type, "int", true) != -1 ||
-			findKeyWord(type, "__int32", true) != -1 ||
-			findKeyWord(type, "signed int", true) != -1 ||
-			findKeyWord(type, "signed __int32", true) != -1 ||
-			findKeyWord(type, "int32_t", true) != -1)
+	if(find_key_word(type, "int", true) != -1 ||
+			find_key_word(type, "__int32", true) != -1 ||
+			find_key_word(type, "signed int", true) != -1 ||
+			find_key_word(type, "signed __int32", true) != -1 ||
+			find_key_word(type, "int32_t", true) != -1)
 	{
 		type = "int32_t";
 		return true;
 	}
 	return false;
 }
-bool isULong(const std::string& type)
+bool is_ulong(std::string type)
 {
-	return 	findKeyWord(type, "unsigned long", true) != -1;
+	return 	find_key_word(type, "unsigned long", true) != -1;
 }
-bool isLong(const std::string& type)
+bool is_long(std::string type)
 {
-	return findKeyWord(type, "long", true) != -1;
+	return find_key_word(type, "long", true) != -1;
 }
-bool isUInt64(std::string& type)
+bool is_uint64(std::string type)
 {
-	if(findKeyWord(type, "unsigned long long", true) != -1 ||
-			findKeyWord(type, "unsigned __int64", true) != -1 ||
-			findKeyWord(type, "uint64_t", true) != -1)
+	if(find_key_word(type, "unsigned long long", true) != -1 ||
+			find_key_word(type, "unsigned __int64", true) != -1 ||
+			find_key_word(type, "uint64_t", true) != -1)
 	{
 		type = "uint64_t";
 		return true;
 	}
 	return false;
 }
-bool isInt64(std::string& type)
+bool is_int64(std::string type)
 {
-	if( findKeyWord(type, "long long", true) != -1 ||
-			findKeyWord(type, "__int64", true) != -1 ||
-			findKeyWord(type, "signed long long", true) != -1 ||
-			findKeyWord(type, "signed __int64", true) != -1 ||
-			findKeyWord(type, "int64_t", true) != -1)
+	if( find_key_word(type, "long long", true) != -1 ||
+			find_key_word(type, "__int64", true) != -1 ||
+			find_key_word(type, "signed long long", true) != -1 ||
+			find_key_word(type, "signed __int64", true) != -1 ||
+			find_key_word(type, "int64_t", true) != -1)
 	{
 		type = "int64_t";
 		return true;
@@ -168,54 +168,54 @@ bool isInt64(std::string& type)
 }
 
 
-bool isBool(const std::string& type)
+bool is_bool(std::string type)
 {
-	return findKeyWord(type, "bool", true) != -1;
+	return find_key_word(type, "bool", true) != -1;
 }
-bool isFloat(const std::string& type)
+bool is_float(std::string type)
 {
-	return findKeyWord(type, "float", true) != -1;
+	return find_key_word(type, "float", true) != -1;
 }
-bool isDouble(const std::string& type)
+bool is_double(std::string type)
 {
-	return findKeyWord(type, "double", true) != -1;
+	return find_key_word(type, "double", true) != -1;
 }
-bool isCharStar(const std::string& type)
+bool is_char_star(std::string type)
 {
-	return findKeyWord(type, "char*", true) != -1 || findKeyWord(type, "char *", true) != -1;
+	return find_key_word(type, "char*", true) != -1 || find_key_word(type, "char *", true) != -1;
 }
-bool isString(const std::string& type)
+/*bool isString(std::string type)
 {
-	return findKeyWord(type, "std::string", true) != -1;
+	return find_key_word(type, "std::string", true) != -1;
 }
-bool isVector(const std::string& type)
+bool isVector(std::string type)
 {
-	return findKeyWord(type, "std::vector", false) != -1;
+	return find_key_word(type, "std::vector", false) != -1;
 }
-bool isList(const std::string& type)
+bool isList(std::string type)
 {
-	return findKeyWord(type, "std::list", false) != -1;
+	return find_key_word(type, "std::list", false) != -1;
 }
-bool isMap(const std::string& type)
+bool isMap(std::string type)
 {
-	return findKeyWord(type, "std::map", false) != -1;
+	return find_key_word(type, "std::map", false) != -1;
 }
-bool isSet(const std::string& type)
+bool isSet(std::string type)
 {
-	return findKeyWord(type, "std::set", false) != -1;
+	return find_key_word(type, "std::set", false) != -1;
 }
-bool isJavaScriptObject(const std::string& type)
+bool isJavaScriptObject(std::string type)
 {
-	return findKeyWord(type, "javascript_object", false) != -1;
-}
-bool isEnum(const std::string& type, const Library& library)
+	return find_key_word(type, "javascript_object", false) != -1;
+}*/
+bool is_enum(std::string type, const library_entity& library)
 {
-	if(findKeyWord(type, "enum", true) == -1)
+	if(find_key_word(type, "enum", true) == -1)
 	{
-		const ClassObject* pObj = NULL;
-		if(library.FindClassObject(type, pObj) == true && pObj != NULL)
+		std::shared_ptr<class_entity> pObj;
+		if(library.find_class(type, pObj) == true && pObj != NULL)
 		{
-			if(pObj->type == ObjectEnum)
+			if(pObj->get_type() == entity_type::ENUM)
 			{
 				return true;
 			}
@@ -227,11 +227,11 @@ bool isEnum(const std::string& type, const Library& library)
 
 
 //strip out constness
-std::string unconst(const std::string& type)
+std::string unconst(std::string type)
 {
 	std::string temp = type;
 	const char* searchString = "const";
-	size_t pos = findKeyWord(temp, searchString, true);
+	size_t pos = find_key_word(temp, searchString, true);
 	if(pos != -1)
 	{
 		temp = temp.substr(0, pos) + temp.substr(pos + strlen(searchString));
@@ -246,7 +246,7 @@ std::string unconst(const std::string& type)
 	}	
 
 	searchString = "struct";
-	pos = findKeyWord(temp, searchString, true);
+	pos = find_key_word(temp, searchString, true);
 	if(pos != -1)
 	{
 		temp = temp.substr(0, pos) + temp.substr(pos + strlen(searchString));
@@ -263,11 +263,11 @@ std::string unconst(const std::string& type)
 	return temp;
 }
 //strip out constness
-std::string unenum(const std::string& type)
+std::string unenum(std::string type)
 {
 	std::string temp = type;
 	const char* searchString = "enum";
-	size_t pos = findKeyWord(temp, searchString, true);
+	size_t pos = find_key_word(temp, searchString, true);
 	if(pos != -1)
 	{
 		temp = temp.substr(0, pos) + temp.substr(pos + strlen(searchString));
@@ -285,32 +285,33 @@ std::string unenum(const std::string& type)
 }
 
 
-void stripReferenceModifiers(std::string& paramType, std::string& referenceModifiers)
+void strip_reference_modifiers(std::string& param_type, std::string& referenceModifiers)
 {
-	size_t i = paramType.length() - 1;
-	for(;i >= 0 && (paramType[i] == '*' || paramType[i] == '&' || paramType[i] == '^' || paramType[i] == ' ');i--)
+	size_t i = param_type.length() - 1;
+	for(;i >= 0 && (param_type[i] == '*' || param_type[i] == '&' || param_type[i] == '^' || param_type[i] == ' ');i--)
 	{
-		if(paramType[i] == '*' || paramType[i] == '&'|| paramType[i] == '^')
+		if(param_type[i] == '*' || param_type[i] == '&'|| param_type[i] == '^')
 		{
-			referenceModifiers = paramType[i] + referenceModifiers;
+			referenceModifiers = param_type[i] + referenceModifiers;
 		}
 	}
-	paramType = paramType.substr(0, i + 1);
+	param_type = param_type.substr(0, i + 1);
 }
 
-void translateType(std::string& paramType, const Library& library)
+void translate_type(std::string param_type, const library_entity& library)
 {
-	const ClassObject* pObj = NULL;
-	if(library.FindClassObject(paramType, pObj) == true && pObj != NULL)
+	std::shared_ptr<class_entity> pObj;
+	if(library.find_class(param_type, pObj) == true && pObj != NULL)
 	{
-		if(pObj->type == ObjectTypedef)
+		if(pObj->get_type() == entity_type::TYPEDEF)
 		{
-			paramType = pObj->parentName;
+			auto owner = pObj->get_owner().lock();
+			param_type = owner->get_name();
 		}
 	}
 }
 
-std::string getTemplateParam(const std::string& type)
+std::string get_template_param(std::string type)
 {
 	std::string param;
 	bool inBrackets = false;
@@ -341,4 +342,20 @@ std::string getTemplateParam(const std::string& type)
 		throw errString;
 	}
 	return param;
+}
+
+std::vector<std::string> split_namespaces(std::string type)
+{
+	std::vector<std::string> ret;
+	auto elems = split(type, ':');
+	assert(elems.size() % 2);
+
+	for(auto i = 0 ; i < elems.size();i++)
+	{
+		if(!(i%2))
+		{
+			ret.push_back(elems[i]);
+		}
+	}
+	return ret;
 }

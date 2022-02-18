@@ -12,35 +12,33 @@
 #endif
 #endif
 
-struct ParameterObject;
-struct FunctionObject;
-struct ClassObject;
-struct Library;
+class parameter_entity;
+class function_entity;
+class class_entity;
+class library_entity;
 
 
-enum ObjectType
+enum class entity_type
 {
-	ObjectTypeNull		=  0,
-	ObjectStruct		=  1,
-	ObjectEnum			=  2,
-	ObjectException		=  4,
-	ObjectSequence		=  8,
-	ObjectTypeInterface	=  16,
-	ObjectTypedef		=  32,
-	ObjectCoclass		=  64,
-	ObjectUnion			= 128,
-	ObjectLibrary		= 256,
-	ObjectTypeDispInterface	=  512,//used only temporarily not seen by client apps
-	ObjectClass	=  1024,//used only temporarily not seen by client apps
-	ObjectTemplate	=  2048,//used only temporarily not seen by client apps
-	ObjectNamespace	=  4096,//used only temporarily not seen by client apps
-
-	ObjectTypeFixedSize = ObjectStruct | ObjectEnum | ObjectUnion
+	TYPE_NULL			= 0,
+	STRUCT				= 1,
+	ENUM				= 2,
+	EXCEPTION			= 4,
+	SEQUENCE			= 8,
+	INTERFACE			= 16,
+	TYPEDEF				= 32,
+	COCLASS				= 64,
+	UNION				= 128,
+	LIBRARY				= 256,
+	DISPATCH_INTERFACE	= 512,//used only temporarily not seen by client apps
+	CLASS				= 1024,//used only temporarily not seen by client apps
+	TEMPLATE			= 2048,//used only temporarily not seen by client apps
+	NAMESPACE			= 4096,//used only temporarily not seen by client apps
 };
 
 typedef std::list<std::string> attributes;
 
-struct templateParam
+struct template_param
 {
 public:
 	std::string type;
@@ -49,71 +47,58 @@ public:
 
 
 //this class contains the name container and attributes used by a derived class
-struct objectBase
+class entity
 {
+	class_entity* container_;
+	library_entity* library_;
+
 protected:
-	objectBase(ClassObject* pObjects, Library* pLibrary) : 
-		m_pContainer(pObjects),
-		m_pLibrary(pLibrary)
+	attributes attributes_;
+	std::string name_;
+
+	entity(class_entity* pObjects, library_entity* pLibrary) : 
+		container_(pObjects),
+		library_(pLibrary)
 	{
-		assert(m_pContainer);
-		assert(m_pLibrary);
+		assert(container_);
+		assert(library_);
 	}
 
-	objectBase(const objectBase& other) : 
-		m_pContainer(other.m_pContainer), 
-		m_attributes(other.m_attributes), 
-		name(other.name),
-		m_pLibrary(other.m_pLibrary)
-	{
-		assert(m_pContainer);
-		assert(m_pLibrary);
-	}
+	entity(const entity& other) = default;
+	entity& operator = (const entity& other) = default;
 public:
-	void operator = (const objectBase& other)
-	{
-		assert(other.m_pContainer);
-		m_attributes = other.m_attributes;
-		m_pContainer = other.m_pContainer;
-		name = other.name;
-		m_pLibrary = other.m_pLibrary;
 
-		assert(m_pContainer);
-		assert(m_pLibrary);
+	class_entity* GetContainer()
+	{
+		return container_;
+	}
+	const class_entity* GetContainer() const 
+	{
+		return container_;
 	}
 
-	ClassObject* GetContainer()
+	library_entity& GetLibrary()
 	{
-		return m_pContainer;
+		return *library_;
 	}
-	const ClassObject* GetContainer() const 
+	const library_entity& GetLibrary() const 
 	{
-		return m_pContainer;
+		return *library_;
 	}
-
-	Library& GetLibrary()
-	{
-		return *m_pLibrary;
-	}
-	const Library& GetLibrary() const 
-	{
-		return *m_pLibrary;
-	}
-
 	
-	const bool HasValue(const char* valueName) const 
+	const bool has_value(const char* valueName) const 
 	{
-		for(std::list<std::string>::const_iterator it = m_attributes.begin(); it != m_attributes.end();it++)
-			if(!Strcmp2((*it).data(), valueName))
+		for(std::list<std::string>::const_iterator it = attributes_.begin(); it != attributes_.end();it++)
+			if(!strcmp2((*it).data(), valueName))
 				return true;
 		return false;
 	}
-	const bool GetValue(const char* valueName, std::string& value) const
+	const bool get_value(const char* valueName, std::string& value) const
 	{
-		for(std::list<std::string>::const_iterator it = m_attributes.begin(); it != m_attributes.end();it++)
+		for(std::list<std::string>::const_iterator it = attributes_.begin(); it != attributes_.end();it++)
 		{
 			const char* name = (*it).data();
-			if(!Strcmp2(name, valueName))
+			if(!strcmp2(name, valueName))
 			{
 				value = &name[strlen(valueName)];
 				return true;
@@ -121,16 +106,17 @@ public:
 		}
 		return false;
 	}
-	attributes m_attributes;
-	std::string name;
-private:
-	ClassObject* m_pContainer;
-	Library* m_pLibrary;
+
+	std::string get_name() const {return name_;}
+	void set_name(std::string name){name_ = name;}
+
+	const attributes& get_attributes() const {return attributes_;}
+	void set_attributes(attributes attribs){attributes_ = attribs;}
+	void add_attribute(std::string attrib){attributes_.push_back(attrib);}
+	void merge_attributes(attributes attribs){attributes_.merge(attribs);}
 };
 
-std::ostream& operator<< ( std::ostream& os, attributes& attribs );
-
-enum FunctionType
+enum function_type
 {
 	FunctionTypeOther = 0,
 	FunctionTypeMethod,
@@ -140,40 +126,69 @@ enum FunctionType
 };
 
 
-struct ParameterObject : objectBase
+class parameter_entity : public entity
 {
-	ParameterObject(ClassObject* pContainer, Library* pLibrary);
-	ParameterObject(const ParameterObject& other);
-	void operator = (const ParameterObject& other);
-	std::string type;
-	size_t array_size = 0;
-	bool m_bIsMainVal;
-	bool m_bIsException;
-	bool m_bIsCallBack;
-	std::list<std::string> m_arraySuffix;
+	std::string type_;
+	size_t array_size_ = 0;
+	bool m_bIsMainVal = false;
+	bool m_bIsException = false;
+	bool is_call_back_ = false;
+	std::list<std::string> array_suffixes_;
 
-	friend std::ostream& operator<< ( std::ostream& os, ParameterObject& params );
+public:
+	parameter_entity(class_entity* pContainer, library_entity* pLibrary);
+	parameter_entity(const parameter_entity& other) = default;
+	parameter_entity& operator = (const parameter_entity& other) = default;
+
+	std::string get_type() const {return type_;}
+	void set_type(std::string type){type_ = type;}
+
+	size_t get_array_size() const {return array_size_;}
+	void set_array_size(size_t size){array_size_ = size;}
+
+	const std::list<std::string>& get_array_suffixes() const {return array_suffixes_;}
+	void set_array_suffixes(std::list<std::string> suffixes){array_suffixes_ = suffixes;}
+	void add_array_suffix(std::string item){array_suffixes_.push_back(item);}
+
+	bool is_callback() const {return is_call_back_;}
+	void set_callback(bool is_cb){is_call_back_ = is_cb;}
 };
-std::ostream& operator<< ( std::ostream& os, ParameterObject& params );
 
-struct FunctionObject : objectBase
+class function_entity : public entity
 {
-	FunctionObject(ClassObject* pContainer, Library* pLibrary);
-	FunctionObject(const FunctionObject& other);
-	void operator = (const FunctionObject& other);
-	std::list<std::string> raises;
-	std::string returnType;
-	size_t array_size = 0;
-	bool pure_virtual;
-	FunctionType type;
-	bool hasImpl;
+	std::list<std::string> raises_;
+	std::string return_type_;
+	size_t array_size_ = 0;
+	bool pure_virtual_ = false;
+	function_type type_ = FunctionTypeMethod;
 
-	std::list<ParameterObject> parameters;
-	bool m_bBadFunction;
+	std::list<parameter_entity> parameters_;
 
-	friend std::ostream& operator<< ( std::ostream& os, FunctionObject& funcs );
+public:
+	function_entity(class_entity* pContainer, library_entity* pLibrary);
+	function_entity(const function_entity& other) = default;
+	function_entity& operator = (const function_entity& other) = default;
+
+	function_type get_type() const {return type_;}
+	void set_type(function_type type){type_ = type;}
+
+	std::string get_return_type() const {return return_type_;}
+	void set_return_type(std::string type){return_type_ = type;}
+
+	bool is_pure_virtual() const {return pure_virtual_;}
+	void set_pure_virtual(bool pv){pure_virtual_ = pv;}
+
+	size_t get_array_size() const {return array_size_;}
+	void set_array_size(size_t size){array_size_ = size;}
+
+	const std::list<parameter_entity>& get_parameters() const {return parameters_;}
+	void set_parameters(std::list<parameter_entity> parameters){parameters_ = parameters;}
+	void add_parameter(parameter_entity parameter){parameters_.push_back(parameter);}
+
+	const std::list<std::string>& get_raises() const {return raises_;}
+	void set_raises(std::list<std::string> raisess){raises_ = raisess;}
+	void add_raises(std::string raises){raises_.push_back(raises);}
 };
-std::ostream& operator<< ( std::ostream& os, FunctionObject& funcs );
 
 enum interface_spec
 {
@@ -183,88 +198,97 @@ enum interface_spec
 	edl
 };
 
-struct ClassObject : objectBase
+class class_entity : public entity
 {
-	ClassObject(ClassObject* pContainer, Library* pLibrary, const std::string& ns, bool is_include, interface_spec spec = header);
-	ClassObject(const ClassObject& other);
+	std::weak_ptr<class_entity> owner_;
+	std::string unidentified_owner_name_;
+	entity_type type_;
+	std::list<function_entity> functions_;
+	std::list<std::shared_ptr<class_entity> > classes_;
+	std::list<template_param> template_params_;
+	bool recurseImport = true;
+	bool recurseImportLib = true;
+	interface_spec interface_spec_;
 
-	std::string parentName;
-	ObjectType type;
-	std::list<FunctionObject> functions;
-	std::list<std::string> m_ownedClasses;
-	std::list<templateParam> m_templateParams;
-	bool m_is_include;
+	bool find_class(const std::vector<std::string>& type, std::shared_ptr<class_entity>& obj) const;
 
-	void AddClass(std::shared_ptr<ClassObject> classObject);
-	void operator = (const ClassObject& other);
-	friend std::ostream& operator<< ( std::ostream& os, ClassObject& objs );
-	std::shared_ptr<ClassObject> ParseSequence(const char*& pData, attributes& attribs, const std::string& ns, bool is_include);
-	void ParseUnion(const char*& pData, attributes& attribs);
-	bool ObjectHasTypeDefs(const char* pData);
-	std::shared_ptr<ClassObject> ParseTypedef(const char*& pData, attributes& attribs, const std::string& ns, const char* type, bool is_include);
-	bool ExtractClass(const char*& pData, attributes& attribs, std::shared_ptr<ClassObject>& obj, const std::string& ns, bool handleTypeDefs, bool is_include);
-	FunctionObject GetFunction(const char*& pData, attributes& attribs, bool bFunctionIsInterface);
-	void GetVariable(const char*& pData);
-	std::shared_ptr<ClassObject> GetInterface(const char*& pData, const ObjectType type, const attributes& attr, const std::string& ns, bool is_include);
-	void ExtractTemplate(const char*& pData, std::list<templateParam>& templateParams);
-	void GetNamespaceData(const char*& pData, const std::string& ns, bool is_include);
-	void GetStructure(const char*& pData, const std::string& ns, bool bInCurlyBrackets, bool is_include);
-	bool Load(const char* file, bool is_include = false);
-	void ParseAndLoad(const char*& pData, const char* file, bool is_include);
-	bool GetFileData(const char*& pData, const char* file, bool is_include);
+public:
+
+	class_entity(class_entity* pContainer, library_entity* pLibrary, bool is_include, interface_spec spec = header);
+	class_entity(const class_entity& other) = default;
+	class_entity& operator = (const class_entity& other) = default;
+
+	entity_type get_type() const {return type_;}
+	void set_type(entity_type type){type_ = type;}
+
+	std::weak_ptr<class_entity> get_owner() const {return owner_;}
+	void set_owner(std::weak_ptr<class_entity> owner){owner_ = owner;}
+
+	std::string get_unidentified_owner_name() const {return unidentified_owner_name_;}
+	void set_unidentified_owner_name(std::string name) {unidentified_owner_name_ = name;}
+
+	const std::list<function_entity>& get_functions() const {return functions_;}
+	void set_functions(std::list<function_entity> raisess){functions_ = raisess;}
+	void add_function(function_entity raises){functions_.push_back(raises);}
+
+	void add_class(std::shared_ptr<class_entity> classObject);
+	const std::list<std::shared_ptr<class_entity> >& get_classes() const {return classes_;}
+	
+
+	//std::shared_ptr<class_entity> parse_sequence(const char*& pData, attributes& attribs, bool is_include);
+	void parse_union(const char*& pData, attributes& attribs);
+	bool has_typedefs(const char* pData);
+	std::shared_ptr<class_entity> parse_typedef(const char*& pData, attributes& attribs, const char* type, bool is_include);
+	bool parse_class(const char*& pData, attributes& attribs, std::shared_ptr<class_entity>& obj, bool handleTypeDefs, bool is_include);
+	function_entity parse_function(const char*& pData, attributes& attribs, bool bFunctionIsInterface);
+	void parse_variable(const char*& pData);
+	std::shared_ptr<class_entity> parse_interface(const char*& pData, const entity_type type, const attributes& attr, bool is_include);
+	void parse_template(const char*& pData, std::list<template_param>& templateParams);
+	void parse_namespace(const char*& pData, bool is_include);
+	void parse_structure(const char*& pData, bool bInCurlyBrackets, bool is_include);
+
+	bool load(const char* file, bool is_include = false);
+	void extract_path_and_load(const char*& pData, const char* file, bool is_include);
+	bool parse_include(const char*& pData, const char* file, bool is_include);
+
+	bool find_class(std::string type, std::shared_ptr<class_entity>& obj) const;
 
 #ifdef USE_COM
 	CComBSTR GetInterfaceName(ITypeInfo* typeInfo);
-	void GetInterfaceAttributes(ClassObject& theClass, ITypeInfoPtr& typeInfo, unsigned short& functionCount, unsigned short& variableCount, unsigned short& implTypes);
+	void GetInterfaceAttributes(class_entity& theClass, ITypeInfoPtr& typeInfo, unsigned short& functionCount, unsigned short& variableCount, unsigned short& implTypes);
 	std::string GenerateTypeString(TYPEDESC& typedesc, ITypeInfo* typeInfo);
-	void GetVariables(ClassObject& theClass, unsigned variableCount, ITypeInfo* typeInfo);
-	void GetCoclassInterfaces(TYPEATTR* pTypeAttr, ClassObject& obj, ITypeInfo* typeInfo);
-	void GetInterfaceFunctions(TYPEATTR* pTypeAttr, ClassObject& obj, ITypeInfo* typeInfo);
-	void GetInterfaceProperties(TYPEATTR* pTypeAttr, ClassObject& obj, ITypeInfo* typeInfo);
+	void GetVariables(class_entity& theClass, unsigned variableCount, ITypeInfo* typeInfo);
+	void GetCoclassInterfaces(TYPEATTR* pTypeAttr, class_entity& obj, ITypeInfo* typeInfo);
+	void GetInterfaceFunctions(TYPEATTR* pTypeAttr, class_entity& obj, ITypeInfo* typeInfo);
+	void GetInterfaceProperties(TYPEATTR* pTypeAttr, class_entity& obj, ITypeInfo* typeInfo);
 #endif
-	std::string m_namespace;
-	bool recurseImport;
-	bool recurseImportLib;
-	interface_spec m_interface_spec;
 };
 
-std::ostream& operator<< ( std::ostream& os, ClassObject& objs );
-
-struct Library : ClassObject//objectBase
+class library_entity : public class_entity
 {
-	Library() : ClassObject(this, this, std::string(), false)
+public:
+	library_entity() : class_entity(this, this, false)
 	{}
-	~Library()
+	~library_entity()
 	{
 	}
-	friend std::ostream& operator<< ( std::ostream& os, Library& objs );
 
-	bool FindClassObject(const std::string& type, const ClassObject*& obj) const;
-	std::list<std::shared_ptr<ClassObject> > m_classes;
-	void AddClass(std::shared_ptr<ClassObject> classObject)
-	{
-//		m_classes.insert(std::unordered_map<std::string, ClassObject>::value_type(classObject.name,classObject));
-		m_classes.push_back(classObject);
-	}
+
 };
-extern std::set<std::string> loadedFiles;
-
-//bool CheckFor(const char*& pData, char* keyword);
-std::ostream& operator<< ( std::ostream& os, Library& objs );
 
 extern std::stringstream verboseStream;
-extern int isHashImport;
+extern int is_hash_import;
 
 struct typeInfo
 {
-	typeInfo() : type(ObjectTypeNull), pObj(NULL)
+	typeInfo() : type(entity_type::TYPE_NULL), pObj(NULL)
 	{}
-	ObjectType type;
+	entity_type type;
 	std::string prefix;
 	std::string name;
 	std::string suffix;
-	const ClassObject* pObj;
+	const class_entity* pObj;
 };
 
-std::string expandTypeString(const char* type, const Library& lib);
-void getTypeStringInfo(const char* type, typeInfo& info, const Library& lib);
+//std::string expandTypeString(const char* type, const library_entity& lib);
+//void getTypeStringInfo(const char* type, typeInfo& info, const library_entity& lib);

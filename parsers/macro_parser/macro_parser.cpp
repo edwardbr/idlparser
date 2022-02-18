@@ -73,7 +73,7 @@ std::string macro_parser::ExtractExpression(const char*& pData, const paths& inc
 
 		std::string tempString;
 		
-		if(IsWord(pData,"defined"))
+		if(is_word(pData,"defined"))
 		{
 			pData += 7;
 
@@ -89,7 +89,7 @@ std::string macro_parser::ExtractExpression(const char*& pData, const paths& inc
 			while(*pData == ' ')
 				pData++;
 			
-			if(!ExtractWord(pData, tempString))
+			if(!extract_word(pData, tempString))
 			{
 				std::cerr << "expected a word insde the brackets of the defined keyword\n";
 				tempString = "";
@@ -271,17 +271,17 @@ bool macro_parser::ProcessIf(const char*& pData, std::ostream& dest, const paths
 
 	if_status status = ifdef;
 
-	if(IsPreprocEat(pData,"ifdef"))			
+	if(is_preproc_eat(pData,"ifdef"))			
 	{
 		status = ifdef;
 		bInTheMiddleOfWord = false;
 	}
-	else if(IsPreprocEat(pData,"ifndef"))			
+	else if(is_preproc_eat(pData,"ifndef"))			
 	{
 		status = ifndef;
 		bInTheMiddleOfWord = false;
 	}
-	else if(IsPreprocEat(pData,"if"))			
+	else if(is_preproc_eat(pData,"if"))			
 	{
 		status = hash_if;
 		bInTheMiddleOfWord = false;
@@ -357,16 +357,16 @@ bool macro_parser::ProcessIf(const char*& pData, std::ostream& dest, const paths
 			ignoreText++;
 		}
 
-		if(IsPreprocEat(pData,"endif"))
+		if(is_preproc_eat(pData,"endif"))
 		{
 			break;
 		}
-		else if(IsPreprocEat(pData,"else"))
+		else if(is_preproc_eat(pData,"else"))
 		{
 			processExpression = false;
 			current_expression_true = !expressionFound;
 		}
-		else if(IsPreprocEat(pData,"elif"))
+		else if(is_preproc_eat(pData,"elif"))
 		{
 			status = hash_if;
 		}
@@ -384,7 +384,7 @@ bool macro_parser::ProcessIf(const char*& pData, std::ostream& dest, const paths
 
 bool macro_parser::ParseInclude(const char*& pData, int ignoreText, std::ostream& dest, const paths& includeDirectories, std::vector<std::string>& loaded_includes)
 {
-	if(!IsPreprocEat(pData,"include"))			
+	if(!is_preproc_eat(pData,"include"))			
 		return false;
 
 	while(*pData == ' ')
@@ -413,7 +413,7 @@ bool macro_parser::ParseInclude(const char*& pData, int ignoreText, std::ostream
 	}
 	else
 	{
-		ExtractWord(pData, var);
+		extract_word(pData, var);
 		auto item = defines.find(var);
 		if(item == defines.end())
 		{
@@ -426,7 +426,7 @@ bool macro_parser::ParseInclude(const char*& pData, int ignoreText, std::ostream
 		var = item->second.m_substitutionString;
 	}
 
-	ParseAndLoad(ignoreText, dest, includeDirectories, var.data(), loaded_includes);
+	extract_path_and_load(ignoreText, dest, includeDirectories, var.data(), loaded_includes);
 	return true;
 }
 
@@ -439,7 +439,7 @@ void macro_parser::CleanBuffer(const char*& pData, std::ostream& dest, const pat
 	{
 		if(inIfDef != 0)
 		{
-			if(IsPreproc(pData,"endif") || IsPreproc(pData,"else") || IsPreproc(pData,"elif"))
+			if(is_preproc(pData,"endif") || is_preproc(pData,"else") || is_preproc(pData,"elif"))
 			{
 				return;
 			}
@@ -449,7 +449,7 @@ void macro_parser::CleanBuffer(const char*& pData, std::ostream& dest, const pat
 		{
 			bInTheMiddleOfWord = false;
 		}
-/*		else if(IsWord(pData,"importlib"))			
+/*		else if(is_word(pData,"importlib"))			
 		{
 			bInTheMiddleOfWord = false;
 
@@ -504,11 +504,11 @@ void macro_parser::CleanBuffer(const char*& pData, std::ostream& dest, const pat
 			pData++;
 
 			std::stringstream includeStream;
-			Load(includeStream, var.data());
+			load(includeStream, var.data());
 			includeStream << std::ends;
 			output << includeStream.str();
 		}*/
-		else if(IsPreprocEat(pData,"import"))			
+		else if(is_preproc_eat(pData,"import"))			
 		{
 			bInTheMiddleOfWord = false;
 
@@ -549,14 +549,14 @@ void macro_parser::CleanBuffer(const char*& pData, std::ostream& dest, const pat
 				pData++;
 			}
 
-			var = toLower(var);
+			var = to_lower(var);
 			if(openedImports.find(var) == openedImports.end())
 			{
 				openedImports.insert(var);
-				ParseAndLoad(ignoreText, dest, includeDirectories, var.data(), loaded_includes);
+				extract_path_and_load(ignoreText, dest, includeDirectories, var.data(), loaded_includes);
 			}
 		}
-		else if(IsPreprocEat(pData,"define"))			
+		else if(is_preproc_eat(pData,"define"))			
 		{
 			bInTheMiddleOfWord = false;
 
@@ -573,7 +573,7 @@ void macro_parser::CleanBuffer(const char*& pData, std::ostream& dest, const pat
 			while(*pData == '\n')
 				pData++;
 		}
-		else if(IsPreprocEat(pData,"undef"))			
+		else if(is_preproc_eat(pData,"undef"))			
 		{
 			bInTheMiddleOfWord = false;
 			while(*pData == ' ')
@@ -587,7 +587,7 @@ void macro_parser::CleanBuffer(const char*& pData, std::ostream& dest, const pat
 				UnDefine(var);
 		}
 
-		else if(IsPreproc(pData,"ifdef") || IsPreproc(pData,"ifndef") || IsPreproc(pData,"if"))			
+		else if(is_preproc(pData,"ifdef") || is_preproc(pData,"ifndef") || is_preproc(pData,"if"))			
 		{
 			ProcessIf(pData, dest, includeDirectories, inIfDef, ignoreText, bInTheMiddleOfWord, loaded_includes);
 		}
@@ -832,7 +832,7 @@ bool macro_parser::IsOperator(const char* pData, std::string& operatorString)
 {
 	for(int i = 0; i < operators.size();i++)
 	{
-		if(BeginsWith(pData,operators[i]))
+		if(begins_with(pData,operators[i]))
 		{
 			operatorString = operators[i];
 			return true;
@@ -916,7 +916,7 @@ std::string macro_parser::ReduceExpression(const char*& pData, const paths& incl
 			pData += operatorString.length();
 			continue;
 		}
-		if(!ExtractWord(pData,temp))
+		if(!extract_word(pData,temp))
 		{
 			assert(false);
 			return "";
@@ -991,7 +991,7 @@ bool macro_parser::SubstituteMacro(int ignoreText, const char*& pData, std::ostr
 	{
 		//first pickle out the potential name of the definition
 		std::string macroName;
-		if(!ExtractWord(tempdata,macroName))
+		if(!extract_word(tempdata,macroName))
 			return false;
 
 		//find if it exists in the macros map
@@ -1253,7 +1253,7 @@ bool macro_parser::FindDefString(std::string& var)
 	return true;
 }
 
-bool macro_parser::Load(std::ostream& output_file, const std::string& file, const paths& includeDirectories, std::vector<std::string>& loaded_includes)
+bool macro_parser::load(std::ostream& output_file, const std::string& file, const paths& includeDirectories, std::vector<std::string>& loaded_includes)
 {
 	if(std::find(loaded_includes.begin(), loaded_includes.end(), file) == loaded_includes.end())
 	{
@@ -1277,7 +1277,7 @@ bool macro_parser::LoadUsingEnv(std::ostream& stream, const std::string& file, c
 {
 	if(std::filesystem::exists(file))
 	{
-		return Load(stream, file, includeDirectories, loaded_includes);
+		return load(stream, file, includeDirectories, loaded_includes);
 	}
 
 	if(includeDirectories.empty())
@@ -1296,14 +1296,14 @@ bool macro_parser::LoadUsingEnv(std::ostream& stream, const std::string& file, c
 			std::ifstream pathstream(modified_file_name);
 			if(std::filesystem::exists(modified_file_name))
 			{
-				return Load(stream, modified_file_name, includeDirectories, loaded_includes);
+				return load(stream, modified_file_name, includeDirectories, loaded_includes);
 			}
 		}
 	}
 	return false;
 }
 
-void macro_parser::ParseAndLoad(int ignoreText, std::ostream& stream, const paths& includeDirectories, const char* file, std::vector<std::string>& loaded_includes)
+void macro_parser::extract_path_and_load(int ignoreText, std::ostream& stream, const paths& includeDirectories, const char* file, std::vector<std::string>& loaded_includes)
 {
 	if(ignoreText)
 	{
@@ -1354,7 +1354,7 @@ void DeleteRestofLine(const char*& pData)
 
 void DeleteCommentBlock(const char*& pData)
 {
-	while(*pData != 0 && !BeginsWith(pData,"*/"))
+	while(*pData != 0 && !begins_with(pData,"*/"))
 		pData++;
 	pData += 2;
 }
@@ -1371,7 +1371,7 @@ void CleanBufferOfComments(const char*& pData)
 		changed = false;
 		while(*pData != 0)
 		{
-			if(IsPreproc(pData,"pragma"))
+			if(is_preproc(pData,"pragma"))
 			{
 				while(*pData != 0 && *pData != '\n')
 				{
@@ -1383,7 +1383,7 @@ void CleanBufferOfComments(const char*& pData)
 				}
 			}
 			//#defines and conditional statements need special handling and are characterised by being terminated by a charage return 
-			else if(IsPreproc(pData,"define") || IsPreproc(pData,"ifdef") || IsPreproc(pData,"ifndef") || IsPreproc(pData,"if") || IsPreproc(pData,"elif") || IsPreproc(pData,"endif")  || IsPreproc(pData,"error") || IsWord(pData,"cpp_quote"))			
+			else if(is_preproc(pData,"define") || is_preproc(pData,"ifdef") || is_preproc(pData,"ifndef") || is_preproc(pData,"if") || is_preproc(pData,"elif") || is_preproc(pData,"endif")  || is_preproc(pData,"error") || is_word(pData,"cpp_quote"))			
 			{
 				if(oldBufPos != pData)
 				{
@@ -1420,7 +1420,7 @@ void CleanBufferOfComments(const char*& pData)
 							*oldBufPos++ = *pData++;
 						}
 					}
-					else if(BeginsWith(pData,"//"))			
+					else if(begins_with(pData,"//"))			
 					{
 						DeleteRestofLine(pData);
 						*oldBufPos = ' ';
@@ -1428,7 +1428,7 @@ void CleanBufferOfComments(const char*& pData)
 						changed = true;
 						continue;
 					}
-					else if(BeginsWith(pData,"/*"))			
+					else if(begins_with(pData,"/*"))			
 					{
 						DeleteCommentBlock(pData);
 						changed = true;
@@ -1448,7 +1448,7 @@ void CleanBufferOfComments(const char*& pData)
 				pData++;
 				continue;
 			}
-			/*else if(IfIsWordEat(pData,"cpp_quote") || IsPreprocEat(pData,"pragma"))
+			/*else if(if_is_word_eat(pData,"cpp_quote") || is_preproc_eat(pData,"pragma"))
 			{
 				changed = true;
 				int bracketCount = 0;
@@ -1457,9 +1457,9 @@ void CleanBufferOfComments(const char*& pData)
 				{
 					if(bInComments)
 					{
-						if(IsWord(pData,"\\\\"))
+						if(is_word(pData,"\\\\"))
 							pData++;
-						else if(IsWord(pData,"\\\""))
+						else if(is_word(pData,"\\\""))
 							pData++;
 						else if(*pData == '\"')
 							bInComments = false;
@@ -1483,7 +1483,7 @@ void CleanBufferOfComments(const char*& pData)
 				}
 				continue;
 			}*/
-			else if(BeginsWith(pData,"//"))			
+			else if(begins_with(pData,"//"))			
 			{
 				DeleteRestofLine(pData);
 				*oldBufPos = ' ';
@@ -1491,13 +1491,13 @@ void CleanBufferOfComments(const char*& pData)
 				changed = true;
 				continue;
 			}
-			else if(BeginsWith(pData,"/*"))			
+			else if(begins_with(pData,"/*"))			
 			{
 				DeleteCommentBlock(pData);
 				changed = true;
 				continue;
 			}
-			else if(BeginsWith(pData,"\\"))
+			else if(begins_with(pData,"\\"))
 			{
 				const char* pTempData = ++pData;
 				while(*pTempData != 0 && *pTempData == ' ')
@@ -1513,13 +1513,13 @@ void CleanBufferOfComments(const char*& pData)
 				}
 				continue;
 			}
-			else if(IsWord(pData,"  "))			
+			else if(is_word(pData,"  "))			
 			{
 				changed = true;
 				do
 				{
 					pData++;
-				}while(IsWord(pData,"  "));
+				}while(is_word(pData,"  "));
 
 				continue;
 			}

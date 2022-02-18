@@ -10,2078 +10,2075 @@
 
 #include "coreclasses.h"
 
-//special attribute flags:
-//pointer to indicate that a typedef is of type pointer
-//switch for unions to indicate that the particular member of a union or struct is control member
+#define EAT_SPACES(data)                                                                                               \
+    while (*data == ' ')                                                                                               \
+        data++;
+#define EAT_PAST_SEMICOLON(data)                                                                                       \
+    while (*data != ';' && *data != '\0')                                                                              \
+        data++;                                                                                                        \
+    if (*data == ';')                                                                                                  \
+        data++;
 
-#define EAT_SPACES(data) while(*data == ' ')data++;
-#define EAT_PAST_SEMICOLON(data) while(*data != ';' && *data != '\0') data++;if(*data == ';')data++;
+std::set<std::string> loaded_files;
+static int is_hash_import = 0;
 
 attributes GetAttributes(const char*& pData)
 {
-	attributes attribs;
-	if(*pData == '[')
-	{
-		pData++;
+    attributes attribs;
+    if (*pData == '[')
+    {
+        pData++;
 
-		EAT_SPACES(pData)
+        EAT_SPACES(pData)
 
-		verboseStream << "[";;
-		bool bInAttribute = false;
-		std::string property;
-		int inBracket = 0;
-		for(;*pData!=0;pData++)
-		{
+        ;
+        bool bInAttribute = false;
+        std::string property;
+        int inBracket = 0;
+        for (; *pData != 0; pData++)
+        {
 
-			if(!bInAttribute && *pData == ' ')
-				continue;
-			if(bInAttribute && !inBracket && *pData == ',')
-			{
-				attribs.push_back(property);
-				verboseStream << property.data() << ",";
-				property = "";
-				bInAttribute = false;
-			}
-			else if(*pData == ']')
-			{
-				if(bInAttribute)
-					attribs.push_back(property);
-				verboseStream << property.data();
-				pData++;
-				break;
-			}
-			else
-			{
-				if(*pData == '(')
-					inBracket++;
-				else if(*pData == ')')
-					inBracket--;
-				bInAttribute = true;
-				property += *pData;
-			}
-		}	
-		verboseStream << "] ";
-
-		EAT_SPACES(pData)
-	}
-	return attribs;
+            if (!bInAttribute && *pData == ' ')
+                continue;
+            if (bInAttribute && !inBracket && *pData == ',')
+            {
+                attribs.push_back(property);
+                property = "";
+                bInAttribute = false;
+            }
+            else if (*pData == ']')
+            {
+                if (bInAttribute)
+                    attribs.push_back(property);
+                pData++;
+                break;
+            }
+            else
+            {
+                if (*pData == '(')
+                    inBracket++;
+                else if (*pData == ')')
+                    inBracket--;
+                bInAttribute = true;
+                property += *pData;
+            }
+        }
+        EAT_SPACES(pData)
+    }
+    return attribs;
 }
 
-FunctionObject ClassObject::GetFunction(const char*& pData, attributes& attribs, bool bFunctionIsInterface)
+function_entity class_entity::parse_function(const char*& pData, attributes& attribs, bool bFunctionIsInterface)
 {
-	FunctionObject func(this, &GetLibrary());
-	func.m_attributes = attribs;
-
-	bool bFunctionIsProperty = true;
-	bool bConstant = false;
-
-	EAT_SPACES(pData)
-
-	while(*pData)
-	{
-		while(*pData != ' ' && *pData != '(' && *pData != ')' && *pData != ';' && *pData != '[' && *pData != 0)
-			func.name += *pData++;
-
-		verboseStream << func.name.data() << " ";
-
-		if(func.name == "const") //CORBA types
-			bConstant = true;
-
-		if(func.name == "const" || 
-		func.name == "unsigned"  || 
-		func.name == "signed" || 
-		(m_interface_spec == corba && func.name == "inout") || //CORBA types
-		(
-			(m_interface_spec == corba || m_interface_spec == com) && 
-			(func.name == "in" || func.name == "out")
-		) ||
-		(m_interface_spec == edl && func.name == "public")
-		)
-		{
-			if(func.name == "inout")
-			{
-				func.m_attributes.push_back("in");
-				func.m_attributes.push_back("out");
-			}
-			else
-				func.m_attributes.push_back(func.name);
-			func.name = "";
-			continue;
-		}
-
-		EAT_SPACES(pData)
-
-		if(*pData == '(')
-		{
-			verboseStream << '(';
-
-			if(func.name[0] == '&' || func.name[0] == '*')
-			{
-				func.returnType += func.name[0];
-				func.name = &func.name.data()[1];
-			}
-			pData++;
-			bFunctionIsProperty = false;
-			break;
-		}
-		else if(*pData == '[')
-		{
-			auto count = 0;
-			std::string buf;
-			do
-			{
-				if(*pData == '[')
-					count++;
-				else if(*pData == ']')
-					count--;
-				else
-					buf += *pData;
-				pData++;
-			} while (count && *pData);
-			func.array_size = std::stoul(buf);
-		}
-		else if(*pData == 0 || *pData == ';' || *pData == ')')
-		{
-			break;
-		}
-		else
-		{
-			if(func.returnType.length())
-				func.returnType += ' ';
-
-/*			const ClassObject* obj;
-			if(FindClassObject(func.name, *pObjects, obj))
-			{
-				if(obj->type == ObjectTypedef)
-				{
-					func.name = obj->parentName;
-					break;
-				}
-			}*/
-			func.returnType += func.name;
-			func.name = "";
-		}
-	}
-
-	if(bFunctionIsInterface)
-		;//no processing
-	else if(bFunctionIsProperty)
-	{
-/*		if(bConstant == false)
-			func.type = FunctionTypePropertyPut;
-	//		func.m_bIsPutProperty = true;
-	//	func.m_bIsGetProperty = true;*/
-		func.type = FunctionTypeVariable;
-	}
-	else
-	{
-		while(*pData != 0 && *pData != ')' && *pData != ';')
-		{
-			ParameterObject parameter(this, &GetLibrary());
-			bool b_nullParam = false;
-
-			EAT_SPACES(pData)
-
-			parameter.m_attributes = GetAttributes(pData);
-
-			while(*pData != 0)
-			{
-				//deal with call back functions
-				if(*pData == '(')
-				{
-					pData++;
-					parameter.type += '(';
-
-					std::string temp;
-					while(*pData != ')' && *pData != 0)
-					{
-						if(ExtractWord(pData,temp))
-							parameter.type += temp;
-						else
-							parameter.type += *pData++;
-					}
-					assert(*pData == ')');
-					if(*pData == ')')
-						pData++;
-					
-					parameter.type += ')';
-
-					parameter.name = temp;
-
-					while(*pData != ')' && *pData != 0)
-						parameter.type += *pData++;
-					assert(*pData == ')');
-					if(*pData == ')')
-					{
-						pData++;
-						parameter.type += ')';
-						parameter.m_bIsCallBack = true;
-					}
-					else 
-						std::cerr << "not a call back as expected";
-				}				
-				else if(*pData == '[')
-				{
-					auto count = 0;
-					std::string buf;
-					do
-					{
-						if(*pData == '[')
-							count++;
-						else if(*pData == ']')
-							count--;
-						else
-							buf += *pData;
-						pData++;
-					} while (count && *pData);
-					parameter.array_size = std::stoul(buf);
-				}
-				else
-				{
-					while(*pData != 0 && *pData != ' ' && *pData != ',' && *pData != '[' && *pData != '*' && *pData != ')')
-						parameter.name += *pData++;
-				}
-				EAT_SPACES(pData)
-				while(*pData == '*' || *pData == '&')
-				{
-					parameter.name += *pData++;
-					EAT_SPACES(pData)
-				}
-				while(*pData == '[')
-				{
-					std::string suffix;
-					if(parameter.name.length())
-					{
-						while(*pData != ']' && *pData != '\0')
-						{
-							EAT_SPACES(pData)
-							suffix += *pData++;
-							EAT_SPACES(pData)
-						}
-						suffix += *pData++;
-						EAT_SPACES(pData)
-						parameter.m_arraySuffix.push_back(suffix);
-					}
-					else
-						parameter.m_attributes.merge(GetAttributes(pData));
-				}
-
-				verboseStream << parameter.name.data() << " ";
-
-				EAT_SPACES(pData)
-
-				if(parameter.name == "const" || parameter.name == "unsigned"  || parameter.name == "signed" || (m_interface_spec == corba && parameter.name == "inout") || ((m_interface_spec == corba || m_interface_spec == com) && (parameter.name == "in" || parameter.name == "out"))) //CORBA types
-				{
-					if(parameter.name == "inout")
-					{
-						parameter.m_attributes.push_back("in");
-						parameter.m_attributes.push_back("out");
-					}
-					else
-						parameter.m_attributes.push_back(parameter.name);
-					parameter.name = "";
-					continue;
-				}
-
-				//gsoap yuckyness
-				if(*pData == '0' || *pData == '1')
-				{
-					pData++;
-					EAT_SPACES(pData)
-				}
-
-				if(*pData == ',' || *pData == ')')
-				{
-					if(parameter.name == "void")
-					{
-						b_nullParam = true;
-						break;
-					}
-
-					if(*pData == ',')
-						verboseStream << ", ";
-
-					if(parameter.name[0] == '&' || parameter.name[0] == '*')
-					{
-						parameter.type += parameter.name[0];
-						parameter.name = &parameter.name.data()[1];
-					}
-					break;
-				}
-				else
-				{
-					if(parameter.type.length())
-						parameter.type += ' ';
-
-/*					const ClassObject* obj;
-					if(GetLibrary().FindClassObject(parameter.name, obj))
-						if(obj->type == ObjectTypedef)
-							parameter.name = obj->parentName;
-
-//#############this code was commented out doing so will break the com/corba bridge							
-					for(std::list<ClassObject*, ClassObjectAllocator>::iterator it = pObjects->m_classes->begin();it != pObjects->m_classes->end();it++)
-					{
-						if((*it).name == parameter.name)
-						{
-							if((*it).type == ObjectTypedef)
-							{
-								parameter.name = (*it).parentName;
-								break;
-							}
-						}
-					}*/
-
-					parameter.type += parameter.name;
-					parameter.name = "";
-				}
-			}
-			//eat comma
-			if(*pData == ',')
-				pData++;
-
-			EAT_SPACES(pData)
-
-			if(b_nullParam != true)
-				func.parameters.push_back(parameter);
-		}
-	}
-
-	if(*pData == ')')
-	{
-		pData++;
-		verboseStream << ")";
-	}
-
-	while(!bFunctionIsProperty && *pData != 0 && *pData != ';')
-	{
-		EAT_SPACES(pData)
-
-		if(*pData == '{')
-		{
-			pData++;
-			func.hasImpl = true;
-			EAT_SPACES(pData)
-			if(*pData != '}')
-				std::cerr << "function implementations not supported";
-			else
-				pData++;
-			break;
-		}
-		else if(func.name == name && *pData == ':')//this is for constructor initialisers
-		{
-			pData++;
-			while(1)
-			{
-				EAT_SPACES(pData)
-				while(*pData++ != '(')
-					continue;
-				while(*pData++ != ')')
-					continue;
-				EAT_SPACES(pData)
-				if(*pData != ',')
-					break;
-			}			
-		}
-		else if(!Strcmp2(&*pData,"raises"))
-		{
-			pData += 6; //strlen "raises"
-
-			EAT_SPACES(pData)
-
-			if(*pData != '(')
-				continue;
-			pData++;
-			
-			EAT_SPACES(pData)
-
-			std::string exception;
-			while(*pData != ')' && *pData != 0)
-			{
-				if(*pData == ',')
-				{
-					func.raises.push_back(exception);
-					exception.clear();
-				}
-				else
-					exception += *pData;
-				
-				pData++;
-
-				EAT_SPACES(pData)
-			}
-			func.raises.push_back(exception);
-			if(*pData == 0)
-			{
-				break;
-			}
-		}
-		else if(*pData == '=')
-		{
-			pData++;
-			EAT_SPACES(pData)
-			if(pData,'0')
-			{
-				func.pure_virtual = true;
-				pData++;
-			}
-			else
-			{
-				break;
-			}
-		}
-		else
-		{
-			break;
-		}
-//		pData++;
-	}
-
-//	pData++;
-	if(func.HasValue("propput") || func.HasValue("propputref"))
-	{
-//		func.m_bIsPutProperty = true;
-		func.type = FunctionTypePropertyPut;
-	}
-	else if(func.HasValue("propget"))
-	{
-//		func.m_bIsPutProperty = true;
-		func.type = FunctionTypePropertyGet;
-	}
-	return func;
-}
-
-bool isFunction(const char* pData)
-{
-	while(*pData != '\0' && *pData != ';')
-	{
-		if(*pData == '(')
-			return true;
-		if(*pData == '=')
-			return false;
-
-		pData++;
-	}
-	return false;
-}
-
-void advancePassStatement(const char*& pData)
-{
-	while(*pData != '\0' && *pData != ';')
-	{
-		if(*pData == '\"')
-		{
-			pData++;
-			while(*pData && *pData != '\"')
-			{
-				if(BeginsWith(pData,"\\\""))
-					pData++;
-				pData++;
-			}
-		}
-
-		pData++;
-	}
-	if(*pData == ';')
-		pData++;
-}
-
-void splitVariable(const std::string& phrase, std::string& name, std::string& type)
-{
-	size_t j = phrase.length() - 1;
-	while(phrase[j] == ' ' && j > 0)
-	{
-		j--;
-	}
-	size_t end_pos = j;
-	for(;j > 0;j--)
-	{
-		char it = phrase[j];
-		if(!((it >= '0' && it <= '9') || (it >= 'A' && it <= 'Z') || (it >= 'a' && it <= 'z') || (it == '_')))
-			break;
-	}
-	size_t start_pos = j;
-	while(phrase[j] == ' ' && j > 0)
-	{
-		j--;
-	}
-
-	name = phrase.substr(start_pos + 1, end_pos);
-	type = phrase.substr(0,j + 1);
-}
-
-void ClassObject::GetVariable(const char*& pData)
-{
-	std::string phrase;
-	for(;*pData != 0 && *pData != ';' ;pData++)
-	{
-		phrase += *pData;
-	}
-
-	FunctionObject fn(this, &GetLibrary());
-	splitVariable(phrase, fn.name, fn.returnType);
-	//strip out yucky gsoap limiters
-	if(fn.name == "0" || fn.name == "1")
-	{
-		splitVariable(fn.returnType, fn.name, fn.returnType);
-	}
-	fn.type = FunctionTypeVariable;
-	functions.push_back(fn);
-
-	if(*pData == ';')
-		pData++;
-}
-
-void ClassObject::GetNamespaceData(const char*& pData, const std::string& ns, bool is_include)
-{
-	EAT_SPACES(pData)
-
-	std::string nameSpace;
-	ExtractWord(pData, nameSpace);
-
-	if(ns.length() != 0)
-	{
-		nameSpace = ns + "::" + nameSpace;
-	}
-
-	EAT_SPACES(pData)
-
-	if(*pData != '{')
-	{
-		std::stringstream err;
-		err << "Error expected character '}'";
-		err << std::ends;
-		std::string errString(err.str());
-		throw errString;
-	}
-	GetStructure(pData, nameSpace, false, is_include);
-}
-
-std::shared_ptr<ClassObject> ClassObject::GetInterface(
-	const char*& pData, 
-	const ObjectType typ, 
-	const attributes& attr, 
-	const std::string& ns, 
-	bool is_include)
-{
-	std::shared_ptr<ClassObject> cls(new ClassObject(this, &GetLibrary(), ns, is_include));
-	cls->type = typ;
-	cls->m_attributes = attr;
-
-	cls->GetStructure(pData, ns, false, is_include);
-	return cls;
-}
-
-void ClassObject::GetStructure(const char*& pData, const std::string& ns, bool bInCurlyBrackets, bool is_include)
-{
-	bool bHasName = false;
-	while(*pData != 0)
-	{
-		EAT_SPACES(pData)
-
-		if(*pData == 0)
-		{
-			break;
-		}
-		
-		if(bInCurlyBrackets)
-		{
-			if(*pData == '}')
-			{
-				verboseStream << "\n};\n";
-				pData++;
-
-				break;
-			}
-			else
-			{
-				EAT_SPACES(pData)
-
-				if(GetFileData(pData, NULL, is_include))
-				{}
-				else if(IfIsWordEat(pData,"namespace"))
-				{
-					GetNamespaceData(pData, ns, is_include);
-					continue;
-				}
-				else if(m_interface_spec == edl && (IsWord(pData,"enclave") || IsWord(pData,"trusted") || IsWord(pData,"untrusted")))
-				{
-					GetNamespaceData(pData, ns, is_include);
-					EAT_SPACES(pData)
-					if(*pData == ';')
-						pData++;
-					continue;
-				}
-				else
-				{
-
-					attributes attribs(GetAttributes(pData));
-					std::shared_ptr<ClassObject> obj(new ClassObject(this, &GetLibrary(), ns, is_include));
-					if(type == ObjectCoclass)
-					{
-						functions.push_back(GetFunction(pData, attribs, true));
-						EAT_SPACES(pData);
-						assert(*pData == ';');
-						if(*pData == ';')
-							pData++;
-					}
-					else if(ExtractClass(pData,attribs,obj, ns, true, is_include))
-					{
-	//					assert(*pData == ';');
-						if(*pData == ';')
-							pData++;
-					}
-
-					else if(type == ObjectUnion)
-					{
-						if(IfIsWordEat(pData,"case"))
-						{
-							EAT_SPACES(pData);
-
-							std::string caseName("case(");
-							ExtractWord(pData, caseName);
-							caseName += ')';
-
-							attribs.push_back(caseName);
-
-							EAT_SPACES(pData);
-							assert(*pData == ':');
-							pData++;
-
-							EAT_SPACES(pData);
-						}
-
-						if(IfIsWordEat(pData,"default"))
-						{
-							attribs.push_back(std::string("default"));
-
-							EAT_SPACES(pData);
-							assert(*pData == ':');
-							pData++;
-
-							EAT_SPACES(pData);
-						}
-
-						attribs.merge(GetAttributes(pData));
-
-						functions.push_back(GetFunction(pData, attribs, false));
-						EAT_SPACES(pData);
-						assert(*pData == ';');
-						if(*pData == ';')
-							pData++;
-					}
-
-					else if(type == ObjectEnum)
-					{
-						std::string elemname;
-						while(ExtractWord(pData, elemname))
-						{
-							EAT_SPACES(pData);
-							std::string elemValue;
-							if(*pData == '=')
-							{
-								pData++;
-
-								EAT_SPACES(pData);
-
-								if(*pData != ',' && *pData != '}' && *pData != '\0')
-								{
-									while(*pData != 0 && *pData != ' ' && *pData != '}' && *pData != ',' && *pData != '{' && *pData != ';' && *pData != ':')
-										elemValue += *pData++;
-
-									EAT_SPACES(pData);
-								}
-							}
-
-							FunctionObject fn(this, &GetLibrary());
-							fn.name = elemname;
-							fn.returnType = elemValue;
-							functions.push_back(fn);
-
-
-							elemname = "";
-
-							if(*pData == ',')
-								pData++;
-
-							EAT_SPACES(pData);
-						}
-					}
-					else if(type == ObjectStruct)
-					{
-						FunctionObject func(GetFunction(pData, attribs, false));
-						EAT_SPACES(pData);
-						if(func.hasImpl == false)
-						{
-							assert(*pData == ';');
-							if(*pData == ';')
-								pData++;
-						}
-						functions.push_back(func);
-					}
-					else if(type == ObjectTypeDispInterface)
-					{
-						if(IfIsWordEat(pData,"properties:"))
-							;
-						else if(IfIsWordEat(pData,"methods:"))
-							;
-						else if(isFunction(pData))
-						{
-							
-							functions.push_back(GetFunction(pData, attribs, false));
-							EAT_SPACES(pData);
-							assert(*pData == ';');
-							if(*pData == ';')
-								pData++;
-						}
-						else 
-							assert(0);
-					}
-					else if(IfIsWordEat(pData,"public:"))
-					{}
-					else if(IfIsWordEat(pData,"private:"))
-					{}
-					else if(IfIsWordEat(pData,"protected:"))
-					{}
-					else if(isFunction(pData))
-					{
-						FunctionObject func(GetFunction(pData, attribs, type == ObjectCoclass));
-						EAT_SPACES(pData);
-						if(func.hasImpl == false)
-						{
-							assert(*pData == ';');
-							if(*pData == ';')
-								pData++;
-						}
-						functions.push_back(func);
-					}
-					else 
-					{
-						GetVariable(pData);
-//							advancePassStatement(pData);
-					}
-				}
-			}
-		}
-		else
-		{
-			//get name
-			if(!bHasName)
-			{
-				while(*pData != 0 && *pData != ' ' && *pData != '{' && *pData != ';' && *pData != ':')
-					name += *pData++;
-				bHasName = true;
-
-				EAT_SPACES(pData)
-			}
-
-			if(type == ObjectUnion)
-			{
-				if(IfIsWordEat(pData,"switch"))
-				{
-					EAT_SPACES(pData)
-					if(*pData != '(')
-						assert(0);
-					pData++;
-
-					attributes attribs(GetAttributes(pData));
-					attribs.push_back(std::string("switch"));
-					GetFunction(pData, attribs, false);
-	
-					EAT_SPACES(pData)
-					
-					ExtractWord(pData, parentName);
-				}
-				EAT_SPACES(pData)
-			}
-
-			//get the parent name
-			if(*pData == ':')
-			{
-				pData++;
-
-				EAT_SPACES(pData)
-
-				while(*pData != 0 && *pData != ' ' && *pData != '{' && *pData != ';' && *pData != ':')
-				{
-					parentName += *pData;
-					pData++;
-				}
-
-				EAT_SPACES(pData)
-
-				if(parentName == "public" || parentName == "protected" || parentName == "private")
-				{
-					parentName = "";
-					while(*pData != 0 && *pData != ' ' && *pData != '{' && *pData != ';' && *pData != ':')
-					{
-						parentName += *pData;
-						pData++;
-					}
-				}
-
-				EAT_SPACES(pData)
-			}
-
-			if(*pData == '{')
-			{
-				verboseStream << ' ' << name.data() << "\n";
-				verboseStream << "{";
-		
-				bInCurlyBrackets = true;
-				pData++;
-
-				EAT_SPACES(pData)
-			}
-			else 
-				pData++;
-		}
-		EAT_SPACES(pData)
-	}
-	if(type == ObjectTypeDispInterface)
-	{
-		parentName = "IDispatch";
-		type = ObjectTypeInterface;
-	}
-
-}
-
-std::shared_ptr<ClassObject> ClassObject::ParseSequence(const char*& pData, attributes& attribs, const std::string& ns, bool is_include)
-{
-	std::shared_ptr<ClassObject> newInterface(new ClassObject(this, &GetLibrary(), ns, is_include));
-
-	EAT_SPACES(pData)
-
-	while(*pData != ' ' && *pData != '>' && *pData != 0)
-	{
-		newInterface->parentName += *pData;
-		pData++;
-	}
-
-	if(*pData == 0)
-	{
-		assert(0);
-		return newInterface;
-	}
-	pData++;
-
-	EAT_SPACES(pData)
-
-	while(*pData != ';' && *pData != 0)
-		newInterface->name += *pData++;
-
-	verboseStream << "sequence<" << newInterface->parentName.data() << "> " << newInterface->name.data() << ";\n";
-	
-	newInterface->type = ObjectSequence;
-	newInterface->m_attributes = attribs;
-
-	EAT_PAST_SEMICOLON(pData)
-	return newInterface;
-}
-
-std::shared_ptr<ClassObject> ClassObject::ParseTypedef(const char*& pData, attributes& attribs, const std::string& ns, const char* type, bool is_include)
-{
-	std::shared_ptr<ClassObject> object(new ClassObject(this, &GetLibrary(), ns, is_include));
-
-	object->type = ObjectTypedef;
-
-	attribs.merge(GetAttributes(pData));
-
-	std::shared_ptr<ClassObject> obj(new ClassObject(object.get(), &object->GetLibrary(), ns, is_include));
-	if(type == NULL && object->ExtractClass(pData, attribs,obj, ns,false, is_include))
-	{
-		object->parentName = obj->name;
-		bool firstPass = true;
-		do
-		{
-			std::shared_ptr<ClassObject> source(object);
-			if(object->parentName == "")
-			{
-				source = obj;
-			}
-			std::shared_ptr<ClassObject> temp(new ClassObject(*source));
-
-			//loop around to extract the names
-			EAT_SPACES(pData)
-
-			if(!firstPass)
-			{
-				pData++;//strip out the comma
-				EAT_SPACES(pData)
-			}
-
-			bool ispointer = *pData == '*';
-			if(ispointer)
-			{
-				pData++;
-				EAT_SPACES(pData)
-			}
-
-			while(*pData != 0 && *pData != ';' && *pData != '[' && *pData != ',' && *pData != '{')
-			{
-				temp->name += *pData;
-				pData++;
-			}
-			if(ispointer)
-				temp->m_attributes.push_back(std::string("pointer"));
-			if(firstPass)
-			{
-				firstPass = false;
-				object->name = temp->name;
-			}
-			
-			AddClass(temp);
-
-			EAT_SPACES(pData)
-		} while(*pData == ',');
-//		assert(*pData == ';');
-	}
-	else
-	{
-		if(type != NULL)
-			object->parentName = type;
-		while(*pData != 0 && *pData != ';')
-		{
-			if(object->parentName.length())
-				object->parentName += ' ';
-
-			object->parentName += object->name;
-			object->name = "";
-
-			EAT_SPACES(pData)
-		
-			while(*pData != 0 && *pData != ' ' && *pData != '*' && *pData != ';' && *pData != '{' && *pData != ',')
-			{
-				object->name += *pData;
-				pData++;
-			}
-			if(*pData != 0 && *pData == '*' )
-			{
-				object->name += *pData;
-				pData++;
-			}
-			//check for multiple definitions
-			if(*pData == ',')
-			{
-				pData++;
-				EAT_SPACES(pData)
-				std::string& name = object->parentName;
-				std::string type;
-				for(size_t i = 0;i < name.length();i++)	
-				{
-					if(name[i] != '&' && name[i] != '*' && name[i] != '[')
-						type += name[i];
-					else
-						break;
-				}
-				ParseTypedef(pData, attribs, ns, type.data(), is_include);
-			}
-
-			//removing any nasty member structures, perhaps I'll do some thing intellegent with it one day...
-			if(*pData == '{')
-			{
-				pData++;
-				int braketCount = 1;
-				while(braketCount)
-				{
-					if(*pData == '\0')
-						break;
-
-					if(*pData == '{')
-						braketCount++;
-
-					if(*pData == '}')
-						braketCount--;
-					pData++;
-				}
-			}
-		}
-		AddClass(object);
-		assert(*pData == ';');
-//		pData++;
-	}
-	
-	verboseStream << "typedef " << object->name.data() << " " << object->name.data() << "\n";
-
-//	object.m_attributes = attribs;
-	return object;
-}
-
-void ClassObject::ParseUnion(const char*& pData, attributes& attribs)
-{
-	verboseStream << "skipping past a union\n";
-	while(*pData && *pData != ';')
-	{
-		if(*pData == '{')
-		{
-			pData++;
-			int braketCount = 1;
-			while(braketCount)
-			{
-				if(*pData == '\0')
-					break;
-
-				if(*pData == '{')
-					braketCount++;
-
-				if(*pData == '}')
-				{
-					braketCount--;
-					if(!braketCount)
-					{
-						pData++;
-						return;
-					}
-				}
-				pData++;
-			}
-		}
-		pData++;
-	}
-	while(*pData && *pData != ';')
-		pData++;
-	
-//	if(*pData == ';')
-//		pData++;
-}
-
-bool ClassObject::ObjectHasTypeDefs(const char* pData)
-{
-	int braketCount = -1;
-	while(*pData && *pData != ';')
-	{
-		if(*pData == '{')
-		{
-			pData++;
-			braketCount = 1;
-			while(braketCount)
-			{
-				if(*pData == '\0')
-					break;
-
-				if(*pData == '{')
-					braketCount++;
-
-				if(*pData == '}')
-				{
-					braketCount--;
-					if(!braketCount)
-					{
-						pData++;
-						break;
-					}
-				}
-				pData++;
-			}
-		}
-		if(!braketCount)
-			break;
-		pData++;
-	}
-	EAT_SPACES(pData)
-	
-	if(	*pData == ';' || 
-		*pData == '[' || 
-		*pData == '\0' ||
-		IsWord(pData,"struct") || 
-		IsWord(pData,"interface") || 
-		IsWord(pData,"class") || 
-		IsWord(pData,"namespace") || 
-		IsWord(pData,"dispinterface") || 
-		IsWord(pData,"exception") || 
-		IsWord(pData,"enum") || 
-		IsWord(pData,"union") || 
-		IsWord(pData,"typedef") || 
-		IsWord(pData,"library") || 
-		IsWord(pData,"#include") || 
-		IsWord(pData,"import")
-	  )
-	  return false;
-
-	return true;
-}
-
-void ClassObject::ExtractTemplate(const char*& pData, std::list<templateParam>& templateParams)
-{
-	EAT_SPACES(pData)
-
-	if(*pData != '<')
-	{
-		std::stringstream err;
-		err << "Error expected character '<'";
-		err << std::ends;
-		std::string errString(err.str());
-		throw errString;
-	}
-	pData++;
-	
-	std::string phrase;
-	for(;*pData != 0 && *pData != '>' ;pData++)
-	{
-		if(*pData == ',')
-		{
-			templateParam tpl;
-			splitVariable(phrase, tpl.name, tpl.type);
-			templateParams.push_back(tpl);
-			phrase.clear();
-		}
-		else
-		{
-			phrase += *pData;
-		}
-	}
-
-	templateParam tpl;
-	splitVariable(phrase, tpl.name, tpl.type);
-	templateParams.push_back(tpl);
-
-	pData++;
-}
-
-bool ClassObject::ExtractClass(const char*& pData, attributes& attribs, std::shared_ptr<ClassObject>& obj, const std::string& ns, bool handleTypeDefs, bool is_include)
-{
-	bool bUseTypeDef = false;
-
-	bool is_variable = false;
-
-	if(	IsWord(pData,"struct") || 
-		IsWord(pData,"interface") || 
-		IsWord(pData,"class") || 
-		IsWord(pData,"template") || 
-		IsWord(pData,"dispinterface") || 
-		IsWord(pData,"exception") || 
-		IsWord(pData,"enum") || 
-		IsWord(pData,"union")
-	  )
-	{
-		//continue if this is only a forward declarantion
-		const char* curlyPos = strchr(&*pData,'{');
-		const char* semicolonPos = strchr(&*pData,';');
-		if(curlyPos == NULL || curlyPos > semicolonPos)
-		{
-			if(obj->GetContainer() == NULL || (obj->GetContainer()->type != ObjectClass && obj->GetContainer()->type != ObjectStruct))
-			{
-				EAT_PAST_SEMICOLON(pData)
-				return true;
-			}
-			is_variable = true;
-		}
-
-		if(handleTypeDefs && ObjectHasTypeDefs(pData))
-			bUseTypeDef = true;
-	}
-
-	if(bUseTypeDef || IfIsWordEat(pData,"typedef"))
-		obj = ParseTypedef(pData, attribs, ns, NULL, is_include);
-
-	else if(IfIsWordEat(pData,"library"))
-	{
-		if(isHashImport)
-		{
-			std::cerr << "encountered a library inside a #import\n";
-			Library lib;
-			lib.GetInterface(pData,ObjectLibrary,attribs, ns, is_include);
-		}
-		else
-		{
-			verboseStream << "library ";
-
-			obj = GetInterface(pData,ObjectLibrary,attribs, ns, is_include);
-			AddClass(obj);
-		}
-
-		verboseStream << "\n";
-	}
-	else if(IfIsWordEat(pData,"coclass"))
-	{
-		if(isHashImport)
-			std::cerr << "encountered a coclass inside a #import\n";
-
-		verboseStream << "coclass ";
-		
-		obj = GetInterface(pData,ObjectCoclass,attribs, ns, is_include);
-		AddClass(obj);
-
-		verboseStream << "\n";
-	}
-
-	else if(is_variable == false && IfIsWordEat(pData,"struct"))
-	{
-		verboseStream << "struct ";
-		
-		obj = GetInterface(pData,ObjectStruct,attribs, ns, is_include);
-		AddClass(obj);
-
-		verboseStream << "\n";
-	}
-
-	else if(IfIsWordEat(pData,"union"))
-	{
-		verboseStream << "union ";
-		
-		obj = GetInterface(pData,ObjectUnion,attribs, ns, is_include);
-		AddClass(obj);
-
-		//ParseUnion(pData, attribs);//not implemented
-		verboseStream << "\n";
-		return false;
-	}
-
-	else if(is_variable == false && IfIsWordEat(pData,"enum"))
-	{
-		verboseStream << "enum ";
-		
-		obj = GetInterface(pData,ObjectEnum,attribs, ns, is_include);
-		AddClass(obj);
-
-		verboseStream << "\n";
-	}
-
-	else if(IfIsWordEat(pData,"typedef sequence<"))
-	{
-		verboseStream << "typedef sequence<";
-		
-		obj = ParseSequence(pData, attribs, ns, is_include);
-		AddClass(obj);
-		
-		verboseStream << "\n";
-	}
-
-	else if(IfIsWordEat(pData,"exception"))
-	{
-		verboseStream << "exception ";
-		
-		obj = GetInterface(pData,ObjectException,attribs, ns, is_include);
-		AddClass(obj);
-
-		verboseStream << "\n";
-	}
-
-	else if(IfIsWordEat(pData,"interface"))
-	{
-		verboseStream << "interface ";
-		
-		obj = GetInterface(pData,ObjectTypeInterface,attribs, ns, is_include);
-		AddClass(obj);
-
-		verboseStream << "\n";
-	}
-
-	else if(IfIsWordEat(pData,"class"))
-	{
-		verboseStream << "class ";
-		
-		obj = GetInterface(pData,ObjectClass,attribs, ns, is_include);
-		AddClass(obj);
-
-		verboseStream << "\n";
-	}
-	else if(IfIsWordEat(pData,"template"))
-	{
-		verboseStream << "template ";
-		EAT_SPACES(pData)
-
-		std::list<templateParam> templateParams;
-		ExtractTemplate(pData, templateParams);
-
-		EAT_SPACES(pData)
-
-		if(IfIsWordEat(pData,"class"))
-		{
-			EAT_SPACES(pData)
-			obj = GetInterface(pData,ObjectClass,attribs, ns, is_include);
-			obj->m_templateParams = templateParams;
-			AddClass(obj);
-		}
-		else
-		{
+    function_entity func(this, &GetLibrary());
+    func.set_attributes(attribs);
+
+    bool bFunctionIsProperty = true;
+    bool bConstant = false;
+
+    EAT_SPACES(pData)
+
+	std::string func_name;
+	std::string return_type;
+	int array_size = 0;
+
+    while (*pData)
+    {
+        while (*pData != ' ' && *pData != '(' && *pData != ')' && *pData != ';' && *pData != '[' && *pData != 0)
+            func_name += *pData++;
+
+        if (func_name == "const") // CORBA types
+            bConstant = true;
+
+        if (func_name == "const" || func_name == "unsigned" || func_name == "signed"
+            || (interface_spec_ == corba && func_name == "inout") || // CORBA types
+            ((interface_spec_ == corba || interface_spec_ == com) && (func_name == "in" || func_name == "out"))
+            || (interface_spec_ == edl && func_name == "public"))
+        {
+            if (func_name == "inout")
+            {
+                func.add_attribute("in");
+                func.add_attribute("out");
+            }
+            else
+                func.add_attribute(func_name);
+            func_name = "";
+            continue;
+        }
+
+        EAT_SPACES(pData)
+
+        if (*pData == '(')
+        {
+            if (func_name[0] == '&' || func_name[0] == '*')
+            {
+                return_type += func_name[0];
+                func_name = &func_name.data()[1];
+            }
+            pData++;
+            bFunctionIsProperty = false;
+            break;
+        }
+        else if (*pData == '[')
+        {
+            auto count = 0;
+            std::string buf;
+            do
+            {
+                if (*pData == '[')
+                    count++;
+                else if (*pData == ']')
+                    count--;
+                else
+                    buf += *pData;
+                pData++;
+            } while (count && *pData);
+            func.set_array_size(std::stoul(buf));
+        }
+        else if (*pData == 0 || *pData == ';' || *pData == ')')
+        {
+            break;
+        }
+        else
+        {
+            if (return_type.length())
+                return_type += ' ';
+
+            /*			const class_entity* obj;
+                                    if(find_class(func_name, *pObjects, obj))
+                                    {
+                                            if(obj->type == TYPEDEF)
+                                            {
+                                                    func_name = obj->parentName;
+                                                    break;
+                                            }
+                                    }*/
+            return_type += func_name;
+            func_name = "";
+        }
+    }
+
+    if (bFunctionIsInterface)
+        ; // no processing
+    else if (bFunctionIsProperty)
+    {
+        /*		if(bConstant == false)
+                                func.set_type(FunctionTypePropertyPut);
+                //		func.m_bIsPutProperty = true;
+                //	func.m_bIsGetProperty = true;*/
+        func.set_type(FunctionTypeVariable);
+    }
+    else
+    {
+        while (*pData != 0 && *pData != ')' && *pData != ';')
+        {
+            parameter_entity parameter(this, &GetLibrary());
+            bool b_nullParam = false;
+
+            EAT_SPACES(pData)
+
+            parameter.set_attributes(GetAttributes(pData));
+
+			std::string parameter_name;
+			std::string parameter_type;
+
+            while (*pData != 0)
+            {
+                // deal with call back functions
+                if (*pData == '(')
+                {
+                    pData++;
+                    parameter_type += '(';
+
+                    std::string temp;
+                    while (*pData != ')' && *pData != 0)
+                    {
+                        if (extract_word(pData, temp))
+                            parameter_type += temp;
+                        else
+                            parameter_type += *pData++;
+                    }
+                    assert(*pData == ')');
+                    if (*pData == ')')
+                        pData++;
+
+                    parameter_type += ')';
+
+                    parameter_name = temp;
+
+                    while (*pData != ')' && *pData != 0)
+                        parameter_type += *pData++;
+                    assert(*pData == ')');
+                    if (*pData == ')')
+                    {
+                        pData++;
+                        parameter_type += ')';
+                        parameter.set_callback(true);
+                    }
+                    else
+                        std::cerr << "not a call back as expected";
+                }
+                else if (*pData == '[')
+                {
+                    auto count = 0;
+                    std::string buf;
+                    do
+                    {
+                        if (*pData == '[')
+                            count++;
+                        else if (*pData == ']')
+                            count--;
+                        else
+                            buf += *pData;
+                        pData++;
+                    } while (count && *pData);
+                    parameter.set_array_size(std::stoul(buf));
+                }
+                else
+                {
+                    while (*pData != 0 && *pData != ' ' && *pData != ',' && *pData != '[' && *pData != '*'
+                           && *pData != ')')
+                        parameter_name += *pData++;
+                }
+                EAT_SPACES(pData)
+                while (*pData == '*' || *pData == '&')
+                {
+                    parameter_name += *pData++;
+                    EAT_SPACES(pData)
+                }
+                while (*pData == '[')
+                {
+                    std::string suffix;
+                    if (parameter_name.length())
+                    {
+                        while (*pData != ']' && *pData != '\0')
+                        {
+                            EAT_SPACES(pData)
+                            suffix += *pData++;
+                            EAT_SPACES(pData)
+                        }
+                        suffix += *pData++;
+                        EAT_SPACES(pData)
+                        parameter.add_array_suffix(suffix);
+                    }
+                    else
+                        parameter.merge_attributes(GetAttributes(pData));
+                }
+
+                EAT_SPACES(pData)
+
+                if (parameter_name == "const" || parameter_name == "unsigned" || parameter_name == "signed"
+                    || (interface_spec_ == corba && parameter_name == "inout")
+                    || ((interface_spec_ == corba || interface_spec_ == com)
+                        && (parameter_name == "in" || parameter_name == "out"))) // CORBA types
+                {
+                    if (parameter_name == "inout")
+                    {
+                        parameter.add_attribute("in");
+                        parameter.add_attribute("out");
+                    }
+                    else
+                        parameter.add_attribute(parameter_name);
+                    parameter_name = "";
+                    continue;
+                }
+
+                // gsoap yuckyness
+                if (*pData == '0' || *pData == '1')
+                {
+                    pData++;
+                    EAT_SPACES(pData)
+                }
+
+                if (*pData == ',' || *pData == ')')
+                {
+                    if (parameter_name == "void")
+                    {
+                        b_nullParam = true;
+                        break;
+                    }
+
+                    if (parameter_name[0] == '&' || parameter_name[0] == '*')
+                    {
+                        parameter_type += parameter_name[0];
+                        parameter_name = &parameter_name.data()[1];
+                    }
+                    break;
+                }
+                else
+                {
+                    if (parameter_type.length())
+                        parameter_type += ' ';
+
+                    /*					const class_entity* obj;
+                                                            if(GetLibrary().find_class(parameter_name, obj))
+                                                                    if(obj->type == TYPEDEF)
+                                                                            parameter_name = obj->parentName;
+
+                    //#############this code was commented out doing so will break the com/corba bridge
+                                                            for(std::list<class_entity*, ClassObjectAllocator>::iterator
+                    it = pObjects->m_classes->begin();it != pObjects->m_classes->end();it++)
+                                                            {
+                                                                    if((*it).name == parameter_name)
+                                                                    {
+                                                                            if((*it).type == TYPEDEF)
+                                                                            {
+                                                                                    parameter_name = (*it).parentName;
+                                                                                    break;
+                                                                            }
+                                                                    }
+                                                            }*/
+
+                    parameter_type += parameter_name;
+                    parameter_name = "";
+                }
+            }
+			parameter.set_name(parameter_name);
+			parameter.set_type(parameter_type);
+            // eat comma
+            if (*pData == ',')
+                pData++;
+
+            EAT_SPACES(pData)
+
+            if (b_nullParam != true)
+                func.add_parameter(parameter);
+        }
+    }
+
+    if (*pData == ')')
+    {
+        pData++;
+    }
+
+    while (!bFunctionIsProperty && *pData != 0 && *pData != ';')
+    {
+        EAT_SPACES(pData)
+
+        if (*pData == '{')
+        {
 			std::stringstream err;
-			err << "Error expected 'class'";
+			err << "function implementations are not supported";
 			err << std::ends;
 			std::string errString(err.str());
 			throw errString;
 		}
-		verboseStream << "\n";
-	}
+        else if (func_name == get_name() && *pData == ':') // this is for constructor initialisers
+        {
+            pData++;
+            while (1)
+            {
+                EAT_SPACES(pData)
+                while (*pData++ != '(')
+                    continue;
+                while (*pData++ != ')')
+                    continue;
+                EAT_SPACES(pData)
+                if (*pData != ',')
+                    break;
+            }
+        }
+        else if (!strcmp2(&*pData, "raises"))
+        {
+            pData += 6; // strlen "raises"
 
+            EAT_SPACES(pData)
 
-	else if(IfIsWordEat(pData,"dispinterface"))
-	{
-		verboseStream << "dispinterface ";
-		obj = GetInterface(pData,ObjectTypeDispInterface,attribs, ns, is_include);
-		AddClass(obj);
-		verboseStream << "\n";
-	}
-	else
-		return false;
+            if (*pData != '(')
+                continue;
+            pData++;
 
-	EAT_SPACES(pData)
-	return true;
+            EAT_SPACES(pData)
+
+            std::string exception;
+            while (*pData != ')' && *pData != 0)
+            {
+                if (*pData == ',')
+                {
+                    func.add_raises(exception);
+                    exception.clear();
+                }
+                else
+                    exception += *pData;
+
+                pData++;
+
+                EAT_SPACES(pData)
+            }
+            func.add_raises(exception);
+            if (*pData == 0)
+            {
+                break;
+            }
+        }
+        else if (*pData == '=')
+        {
+            pData++;
+            EAT_SPACES(pData)
+            if (pData, '0')
+            {
+                func.set_pure_virtual(true);
+                pData++;
+            }
+            else
+            {
+                break;
+            }
+        }
+        else
+        {
+            break;
+        }
+        //		pData++;
+    }
+
+    //	pData++;
+    if (func.has_value("propput") || func.has_value("propputref"))
+    {
+        //		func.m_bIsPutProperty = true;
+        func.set_type(FunctionTypePropertyPut);
+    }
+    else if (func.has_value("propget"))
+    {
+        //		func.m_bIsPutProperty = true;
+        func.set_type(FunctionTypePropertyGet);
+    }
+
+	func.set_name(func_name);
+	func.set_return_type(return_type);
+    return func;
 }
 
-/*bool ClassObject::LoadUsingEnv(const std::string& file)
+bool isFunction(const char* pData)
 {
-	const char* includes = includeDirectories.data();
-	if(!includes)
-		return false;
+    while (*pData != '\0' && *pData != ';')
+    {
+        if (*pData == '(')
+            return true;
+        if (*pData == '=')
+            return false;
 
-#ifdef USE_COM
-	USES_CONVERSION;
-#endif
+        pData++;
+    }
+    return false;
+}
 
-	while(*includes)
-	{
-		std::string path;
-		while(*includes && *includes != ';')
-			path += *includes++;
-		path += '\\' + file;
+void advancePassStatement(const char*& pData)
+{
+    while (*pData != '\0' && *pData != ';')
+    {
+        if (*pData == '\"')
+        {
+            pData++;
+            while (*pData && *pData != '\"')
+            {
+                if (begins_with(pData, "\\\""))
+                    pData++;
+                pData++;
+            }
+        }
 
-#ifdef USE_COM
-		ITypeLibPtr typeLib;
-		HRESULT hr = LoadTypeLib(A2CW(path.data()),&typeLib);
+        pData++;
+    }
+    if (*pData == ';')
+        pData++;
+}
 
-		if(SUCCEEDED(hr))
-		{
-			UINT count = typeLib->GetTypeInfoCount();
-			for(int i = 0;i < count;i++)
-			{
-			    ITypeInfoPtr typeInfo;
-				hr = typeLib->GetTypeInfo(i, &typeInfo);  
-				if (SUCCEEDED(hr))
-				{
-					TYPEKIND typekind;
-					hr = typeLib->GetTypeInfoType(i, &typekind);
-					if (SUCCEEDED(hr))
+void splitVariable(const std::string& phrase, std::string& name, std::string type)
+{
+    size_t j = phrase.length() - 1;
+    while (phrase[j] == ' ' && j > 0)
+    {
+        j--;
+    }
+    size_t end_pos = j;
+    for (; j > 0; j--)
+    {
+        char it = phrase[j];
+        if (!((it >= '0' && it <= '9') || (it >= 'A' && it <= 'Z') || (it >= 'a' && it <= 'z') || (it == '_')))
+            break;
+    }
+    size_t start_pos = j;
+    while (phrase[j] == ' ' && j > 0)
+    {
+        j--;
+    }
+
+    name = phrase.substr(start_pos + 1, end_pos);
+    type = phrase.substr(0, j + 1);
+}
+
+void class_entity::parse_variable(const char*& pData)
+{
+    std::string phrase;
+    for (; *pData != 0 && *pData != ';'; pData++)
+    {
+        phrase += *pData;
+    }
+
+    function_entity fn(this, &GetLibrary());
+	std::string fn_name;
+	std::string fn_return_type;
+    splitVariable(phrase, fn_name, fn_return_type);
+    // strip out yucky gsoap limiters
+    if (fn_name == "0" || fn_name == "1")
+    {
+        splitVariable(fn_return_type, fn_name, fn_return_type);
+    }
+	fn.set_name(fn_name);
+	fn.set_return_type(fn_return_type);
+    fn.set_type(FunctionTypeVariable);
+    functions_.push_back(fn);
+
+    if (*pData == ';')
+        pData++;
+}
+
+void class_entity::parse_namespace(const char*& pData,  bool is_include)
+{
+    EAT_SPACES(pData)
+
+    std::string nameSpace;
+    extract_word(pData, nameSpace);
+
+    /*if (ns.length() != 0)
+    {
+        nameSpace = ns + "::" + nameSpace;
+    }*/
+
+    EAT_SPACES(pData)
+
+    if (*pData != '{')
+    {
+        std::stringstream err;
+        err << "Error expected character '}'";
+        err << std::ends;
+        std::string errString(err.str());
+        throw errString;
+    }
+    parse_structure(pData, false, is_include);
+}
+
+std::shared_ptr<class_entity> class_entity::parse_interface(const char*& pData, const entity_type typ,
+                                                         const attributes& attr, bool is_include)
+{
+    std::shared_ptr<class_entity> cls(new class_entity(this, &GetLibrary(), is_include));
+    cls->set_type(typ);
+    cls->set_attributes(attr);
+
+    cls->parse_structure(pData, false, is_include);
+    return cls;
+}
+
+void class_entity::parse_structure(const char*& pData, bool bInCurlyBrackets, bool is_include)
+{
+    bool bHasName = false;
+    while (*pData != 0)
+    {
+        EAT_SPACES(pData)
+
+        if (*pData == 0)
+        {
+            break;
+        }
+
+        if (bInCurlyBrackets)
+        {
+            if (*pData == '}')
+            {
+                pData++;
+
+                break;
+            }
+            else
+            {
+                EAT_SPACES(pData)
+
+                attributes attribs(GetAttributes(pData));
+                if (parse_include(pData, NULL, is_include))
+                {
+                    continue;
+                }
+                else if (if_is_word_eat(pData, "namespace"))
+                {
+
+                    std::string nameSpace;
+                    extract_word(pData, nameSpace);
+                    std::shared_ptr<class_entity> obj(new class_entity(this, &GetLibrary(), is_include));
+                    obj->set_name(nameSpace);
+                    obj->parse_structure(pData, false, is_include);
+                    add_class(obj);
+                }
+                else if (interface_spec_ == edl
+                         && (is_word(pData, "enclave") || is_word(pData, "trusted") || is_word(pData, "untrusted")))
+                {
+                    parse_namespace(pData, is_include);
+                    EAT_SPACES(pData)
+                    if (*pData == ';')
+                        pData++;
+                    continue;
+                }
+                else
+                {
+
+                    std::shared_ptr<class_entity> obj(new class_entity(this, &GetLibrary(), is_include));
+                    if (get_type() == entity_type::COCLASS)
+                    {
+                        functions_.push_back(parse_function(pData, attribs, true));
+                        EAT_SPACES(pData);
+                        assert(*pData == ';');
+                        if (*pData == ';')
+                            pData++;
+                    }
+                    else if (parse_class(pData, attribs, obj, true, is_include))
+                    {
+                        //					assert(*pData == ';');
+                        if (*pData == ';')
+                            pData++;
+                    }
+
+                    else if (get_type() == entity_type::UNION)
+                    {
+                        if (if_is_word_eat(pData, "case"))
+                        {
+                            EAT_SPACES(pData);
+
+                            std::string caseName("case(");
+                            extract_word(pData, caseName);
+                            caseName += ')';
+
+                            attribs.push_back(caseName);
+
+                            EAT_SPACES(pData);
+                            assert(*pData == ':');
+                            pData++;
+
+                            EAT_SPACES(pData);
+                        }
+
+                        if (if_is_word_eat(pData, "default"))
+                        {
+                            attribs.push_back(std::string("default"));
+
+                            EAT_SPACES(pData);
+                            assert(*pData == ':');
+                            pData++;
+
+                            EAT_SPACES(pData);
+                        }
+
+                        attribs.merge(GetAttributes(pData));
+
+                        functions_.push_back(parse_function(pData, attribs, false));
+                        EAT_SPACES(pData);
+                        assert(*pData == ';');
+                        if (*pData == ';')
+                            pData++;
+                    }
+
+                    else if (get_type() == entity_type::ENUM)
+                    {
+                        std::string elemname;
+                        while (extract_word(pData, elemname))
+                        {
+                            EAT_SPACES(pData);
+                            std::string elemValue;
+                            if (*pData == '=')
+                            {
+                                pData++;
+
+                                EAT_SPACES(pData);
+
+                                if (*pData != ',' && *pData != '}' && *pData != '\0')
+                                {
+                                    while (*pData != 0 && *pData != ' ' && *pData != '}' && *pData != ','
+                                           && *pData != '{' && *pData != ';' && *pData != ':')
+                                        elemValue += *pData++;
+
+                                    EAT_SPACES(pData);
+                                }
+                            }
+
+                            function_entity fn(this, &GetLibrary());
+                            fn.set_name(elemname);
+                            fn.set_return_type(elemValue);
+                            functions_.push_back(fn);
+
+                            elemname = "";
+
+                            if (*pData == ',')
+                                pData++;
+
+                            EAT_SPACES(pData);
+                        }
+                    }
+                    else if (get_type() == entity_type::STRUCT)
+                    {
+                        function_entity func(parse_function(pData, attribs, false));
+                        EAT_SPACES(pData);
+						assert(*pData == ';');
+						if (*pData == ';')
+							pData++;
+                        functions_.push_back(func);
+                    }
+                    else if (get_type() == entity_type::DISPATCH_INTERFACE)
+                    {
+                        if (if_is_word_eat(pData, "properties:"))
+                            ;
+                        else if (if_is_word_eat(pData, "methods:"))
+                            ;
+                        else if (isFunction(pData))
+                        {
+
+                            functions_.push_back(parse_function(pData, attribs, false));
+                            EAT_SPACES(pData);
+                            assert(*pData == ';');
+                            if (*pData == ';')
+                                pData++;
+                        }
+                        else
+                            assert(0);
+                    }
+                    else if (if_is_word_eat(pData, "public:"))
+                    {
+                    }
+                    else if (if_is_word_eat(pData, "private:"))
+                    {
+                    }
+                    else if (if_is_word_eat(pData, "protected:"))
+                    {
+                    }
+                    else if (isFunction(pData))
+                    {
+                        function_entity func(parse_function(pData, attribs, get_type() == entity_type::COCLASS));
+                        EAT_SPACES(pData);
+						assert(*pData == ';');
+						if (*pData == ';')
+							pData++;
+                        functions_.push_back(func);
+                    }
+                    else
+                    {
+                        parse_variable(pData);
+                        //							advancePassStatement(pData);
+                    }
+                }
+            }
+        }
+        else
+        {
+            // get name
+            if (!bHasName)
+            {
+				std::string name;
+                while (*pData != 0 && *pData != ' ' && *pData != '{' && *pData != ';' && *pData != ':')
+                    name += *pData++;
+				set_name(name);
+                bHasName = true;
+
+                EAT_SPACES(pData)
+            }
+
+            if (get_type() == entity_type::UNION)
+            {
+                if (if_is_word_eat(pData, "switch"))
+                {
+                    EAT_SPACES(pData)
+                    if (*pData != '(')
+                        assert(0);
+                    pData++;
+
+                    attributes attribs(GetAttributes(pData));
+                    attribs.push_back(std::string("switch"));
+                    parse_function(pData, attribs, false);
+
+                    EAT_SPACES(pData)
+
+					std::string parent_name;
+                    extract_word(pData, parent_name);
+					std::shared_ptr<class_entity> pObj;
+					if(!find_class(parent_name, pObj))
 					{
-						bool addClass = true;
-						std::shared_ptr<ClassObject> obj(new ClassObject(this,&GetLibrary(), std::string()));
-
-						obj->name = W2CA(GetInterfaceName(typeInfo));
-
-						TYPEATTR* pTypeAttr;
-						HRESULT hr = typeInfo->GetTypeAttr(&pTypeAttr);
-
-					
-						if(memcmp(&pTypeAttr->guid, &GUID_NULL, sizeof(GUID)))
-						{
-							wchar_t buf[] = L"uuid(xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx)   ";
-							hr = StringFromGUID2(pTypeAttr->guid,&buf[4],40);
-							if(SUCCEEDED(hr))
-							{
-								buf[4] = '(';
-								buf[41] = ')';
-								obj->m_attributes.push_back(W2CA(buf));
-							}
-						}
-
-						{
-							char buf[45];
-							sprintf(buf,"lcid(%d)",pTypeAttr->lcid);
-							obj->m_attributes.push_back(buf);
-						}
-
-						{
-							char buf[45];
-							sprintf(buf,"version(%d.%d)",pTypeAttr->wMajorVerNum,pTypeAttr->wMinorVerNum);
-							obj->m_attributes.push_back(buf);
-						}
-
-						bool isDispatch = false;
-
-						switch (typekind)
-						{
-							case TKIND_DISPATCH:
-								{
-									//we are a dispinterface
-									isDispatch = true;
-
-									obj->parentName = "IDispatch";
-									obj->type = ObjectTypeInterface;
-
-									//if we get past these two functions then we are a dual interface therefore treat as a custom interface
-									HREFTYPE refType;
-									hr = typeInfo->GetRefTypeOfImplType(-1, &refType);
-									if (SUCCEEDED(hr))
-									{
-										ITypeInfoPtr dualTypeInfo;
-										hr = typeInfo->GetRefTypeInfo(refType, &dualTypeInfo);
-										if (SUCCEEDED(hr))
-										{
-											//we have now got the alter ego don't break but go onto the next block
-											typeInfo = dualTypeInfo;
-											obj->name = W2CA(GetInterfaceName(typeInfo));
-										}
-										else
-										{
-											GetInterfaceFunctions(pTypeAttr, obj, typeInfo);
-											GetInterfaceProperties(pTypeAttr, obj, typeInfo);
-											break;
-										}
-									}
-									else
-									{
-										GetInterfaceFunctions(pTypeAttr, obj, typeInfo);
-										GetInterfaceProperties(pTypeAttr, obj, typeInfo);
-										break;
-									}
-								}
-							case TKIND_INTERFACE:
-								{
-									obj->type = ObjectTypeInterface;
-									
-									if(!isDispatch)
-										GetInterfaceFunctions(pTypeAttr, obj, typeInfo);
-
-									//get the base class's name
-									HREFTYPE hreftype;
-									hr = typeInfo->GetRefTypeOfImplType(0, &hreftype);
-									if (FAILED(hr))
-										break;
-							
-									ITypeInfoPtr baseTypeInfo;
-									hr = typeInfo->GetRefTypeInfo(hreftype, &baseTypeInfo);
-									if (FAILED(hr))
-										break;
-
-									obj->parentName = W2CA(GetInterfaceName(baseTypeInfo));
-
-								}
-
-								break;
-
-
-							case TKIND_MODULE:
-								//we are a module
-								//NOT IMPLEMENTED
-								break;
-
-							case TKIND_COCLASS:
-								//we are a coclass
-								obj->type = ObjectCoclass;
-								addClass = false;
-								//an interesting excercise but when we are loading a type library we don't need to load 
-								//coclass's of other type libraries just their defined types such as unions and interfaces
-//								GetCoclassInterfaces(pTypeAttr, obj, typeInfo);
-								break; 
-
-							case TKIND_ENUM:
-								//we are a enum
-								obj->type = ObjectEnum;
-								GetVariables(obj, pTypeAttr->cVars, typeInfo);
-								break;  
-
-							case TKIND_ALIAS:
-								obj->type = ObjectTypedef;
-								obj->parentName = GenerateTypeString(pTypeAttr->tdescAlias, typeInfo);
-								break; 
-
-							case TKIND_RECORD:
-								obj->type = ObjectStruct;
-								GetVariables(obj, pTypeAttr->cVars, typeInfo);
-								break;
-
-							case TKIND_UNION:
-								obj->type = ObjectUnion;
-								GetVariables(obj, pTypeAttr->cVars, typeInfo);
-								break; 
-
-							default:       
-								break;
-						}
-
-						typeInfo->ReleaseTypeAttr(pTypeAttr);
-						if(addClass)
-							AddClass(obj);
+						std::stringstream err;
+						err << "type " << parent_name << " not known";
+						err << std::ends;
+						std::string errString(err.str());
+						throw errString;
 					}
+					set_owner(pObj);
+                }
+                EAT_SPACES(pData)
+            }
+
+            // get the parent name
+            if (*pData == ':')
+            {
+                pData++;
+
+                EAT_SPACES(pData)
+
+				std::string parent_name;
+                while (*pData != 0 && *pData != ' ' && *pData != '{' && *pData != ';' && *pData != ':')
+                {
+                    parent_name += *pData;
+                    pData++;
+                }
+
+                EAT_SPACES(pData)
+
+                if (parent_name == "public" || parent_name == "protected" || parent_name == "private")
+                {
+                    parent_name = "";
+                    while (*pData != 0 && *pData != ' ' && *pData != '{' && *pData != ';' && *pData != ':')
+                    {
+                        parent_name += *pData;
+                        pData++;
+                    }
+                }
+
+                EAT_SPACES(pData)
+
+				std::shared_ptr<class_entity> pObj;
+				if(!find_class(parent_name, pObj))
+				{
+					std::stringstream err;
+					err << "type " << parent_name << " not known";
+					err << std::ends;
+					std::string errString(err.str());
+					throw errString;
 				}
+				set_owner(pObj);
+            }
+
+            if (*pData == '{')
+            {
+                bInCurlyBrackets = true;
+                pData++;
+
+                EAT_SPACES(pData)
+            }
+            else
+                pData++;
+        }
+        EAT_SPACES(pData)
+    }
+    if (get_type() == entity_type::DISPATCH_INTERFACE)
+    {
+		std::shared_ptr<class_entity> pObj;
+		if(!find_class("IDispatch", pObj))
+		{
+			std::stringstream err;
+			err << "type " << "IDispatch" << " not known";
+			err << std::ends;
+			std::string errString(err.str());
+			throw errString;
+		}
+		set_owner(pObj);
+        set_type(entity_type::INTERFACE);
+    }
+}
+
+/*std::shared_ptr<class_entity> class_entity::parse_sequence(const char*& pData, attributes& attribs,
+                                                           bool is_include)
+{
+    std::shared_ptr<class_entity> newInterface(new class_entity(this, &GetLibrary(), is_include));
+
+    EAT_SPACES(pData)
+
+	std::string parent_name;
+    while (*pData != ' ' && *pData != '>' && *pData != 0)
+    {
+        parent_name += *pData;
+        pData++;
+    }
+	newInterface->set_parent_name(parent_name);
+
+    if (*pData == 0)
+    {
+        assert(0);
+        return newInterface;
+    }
+    pData++;
+
+    EAT_SPACES(pData)
+
+	std::string name;
+    while (*pData != ';' && *pData != 0)
+        name += *pData++;
+
+	newInterface->set_name(name);
+
+    newInterface->set_type(entity_type::SEQUENCE);
+    newInterface->set_attributes(attribs);
+
+    EAT_PAST_SEMICOLON(pData)
+    return newInterface;
+}*/
+
+std::shared_ptr<class_entity> class_entity::parse_typedef(const char*& pData, attributes& attribs, 
+                                                         const char* type, bool is_include)
+{
+    std::shared_ptr<class_entity> object(new class_entity(this, &GetLibrary(), is_include));
+
+    object->set_type(entity_type::TYPEDEF);
+
+    attribs.merge(GetAttributes(pData));
+
+    std::shared_ptr<class_entity> obj(new class_entity(object.get(), &object->GetLibrary(), is_include));
+    if (type == NULL && object->parse_class(pData, attribs, obj, false, is_include))
+    {
+		std::shared_ptr<class_entity> pObj;
+		if(!find_class(obj->get_name(), pObj))
+		{
+			std::stringstream err;
+			err << "type " << obj->get_name() << " not known";
+			err << std::ends;
+			std::string errString(err.str());
+			throw errString;
+		}
+		object->set_owner(pObj);
+
+        bool firstPass = true;
+        do
+        {
+            std::shared_ptr<class_entity> source(object);
+            if (object->get_owner().lock() == nullptr)
+            {
+                source = obj;
+            }
+            std::shared_ptr<class_entity> temp(new class_entity(*source));
+
+            // loop around to extract the names
+            EAT_SPACES(pData)
+
+            if (!firstPass)
+            {
+                pData++; // strip out the comma
+                EAT_SPACES(pData)
+            }
+
+            bool ispointer = *pData == '*';
+            if (ispointer)
+            {
+                pData++;
+                EAT_SPACES(pData)
+            }
+
+			std::string name;
+            while (*pData != 0 && *pData != ';' && *pData != '[' && *pData != ',' && *pData != '{')
+            {
+                name += *pData;
+                pData++;
+            }
+			temp->set_name(name);
+            if (ispointer)
+                temp->add_attribute(std::string("pointer"));
+
+            if (firstPass)
+            {
+                firstPass = false;
+                object->set_name(temp->get_name());
+            }
+
+            add_class(temp);
+
+            EAT_SPACES(pData)
+        } while (*pData == ',');
+        //		assert(*pData == ';');
+    }
+    else
+    {
+		std::string parent_name;
+		{
+			auto owner = object->get_owner().lock();
+			if(owner)
+			{
+				parent_name= owner->get_name();
 			}
 		}
-		else 
+
+		std::string object_name = object->get_name();
+        if (type != NULL)
+            parent_name = type;
+        while (*pData != 0 && *pData != ';')
+        {
+            if (parent_name.length())
+                parent_name += ' ';
+
+            parent_name += object_name;
+            object_name = "";
+
+            EAT_SPACES(pData)
+
+            while (*pData != 0 && *pData != ' ' && *pData != '*' && *pData != ';' && *pData != '{' && *pData != ',')
+            {
+                object_name += *pData;
+                pData++;
+            }
+            if (*pData != 0 && *pData == '*')
+            {
+                object_name += *pData;
+                pData++;
+            }
+            // check for multiple definitions
+            if (*pData == ',')
+            {
+                pData++;
+                EAT_SPACES(pData)
+                std::string& name = parent_name;
+                std::string type;
+                for (size_t i = 0; i < name.length(); i++)
+                {
+                    if (name[i] != '&' && name[i] != '*' && name[i] != '[')
+                        type += name[i];
+                    else
+                        break;
+                }
+                parse_typedef(pData, attribs, type.data(), is_include);
+            }
+
+            // removing any nasty member structures, perhaps I'll do some thing intellegent with it one day...
+            if (*pData == '{')
+            {
+                pData++;
+                int braketCount = 1;
+                while (braketCount)
+                {
+                    if (*pData == '\0')
+                        break;
+
+                    if (*pData == '{')
+                        braketCount++;
+
+                    if (*pData == '}')
+                        braketCount--;
+                    pData++;
+                }
+            }
+        }
+		object->set_name(object_name);
+		std::shared_ptr<class_entity> pObj;
+		if(find_class(parent_name, pObj))
+		{
+			object->set_owner(pObj);
+		}
+		else
+		{
+			object->set_unidentified_owner_name(parent_name);
+		}
+        add_class(object);
+        assert(*pData == ';');
+    }
+
+    return object;
+}
+
+void class_entity::parse_union(const char*& pData, attributes& attribs)
+{
+    while (*pData && *pData != ';')
+    {
+        if (*pData == '{')
+        {
+            pData++;
+            int braketCount = 1;
+            while (braketCount)
+            {
+                if (*pData == '\0')
+                    break;
+
+                if (*pData == '{')
+                    braketCount++;
+
+                if (*pData == '}')
+                {
+                    braketCount--;
+                    if (!braketCount)
+                    {
+                        pData++;
+                        return;
+                    }
+                }
+                pData++;
+            }
+        }
+        pData++;
+    }
+    while (*pData && *pData != ';')
+        pData++;
+
+    //	if(*pData == ';')
+    //		pData++;
+}
+
+bool class_entity::has_typedefs(const char* pData)
+{
+    int braketCount = -1;
+    while (*pData && *pData != ';')
+    {
+        if (*pData == '{')
+        {
+            pData++;
+            braketCount = 1;
+            while (braketCount)
+            {
+                if (*pData == '\0')
+                    break;
+
+                if (*pData == '{')
+                    braketCount++;
+
+                if (*pData == '}')
+                {
+                    braketCount--;
+                    if (!braketCount)
+                    {
+                        pData++;
+                        break;
+                    }
+                }
+                pData++;
+            }
+        }
+        if (!braketCount)
+            break;
+        pData++;
+    }
+    EAT_SPACES(pData)
+
+    if (*pData == ';' || *pData == '[' || *pData == '\0' || is_word(pData, "struct") || is_word(pData, "interface")
+        || is_word(pData, "class") || is_word(pData, "namespace") || is_word(pData, "dispinterface")
+        || is_word(pData, "exception") || is_word(pData, "enum") || is_word(pData, "union") || is_word(pData, "typedef")
+        || is_word(pData, "library") || is_word(pData, "#include") || is_word(pData, "import"))
+        return false;
+
+    return true;
+}
+
+void class_entity::parse_template(const char*& pData, std::list<template_param>& templateParams)
+{
+    EAT_SPACES(pData)
+
+    if (*pData != '<')
+    {
+        std::stringstream err;
+        err << "Error expected character '<'";
+        err << std::ends;
+        std::string errString(err.str());
+        throw errString;
+    }
+    pData++;
+
+    std::string phrase;
+    for (; *pData != 0 && *pData != '>'; pData++)
+    {
+        if (*pData == ',')
+        {
+            template_param tpl;
+            splitVariable(phrase, tpl.name, tpl.type);
+            templateParams.push_back(tpl);
+            phrase.clear();
+        }
+        else
+        {
+            phrase += *pData;
+        }
+    }
+
+    template_param tpl;
+    splitVariable(phrase, tpl.name, tpl.type);
+    templateParams.push_back(tpl);
+
+    pData++;
+}
+
+bool class_entity::parse_class(const char*& pData, attributes& attribs, std::shared_ptr<class_entity>& obj,
+                                bool handleTypeDefs, bool is_include)
+{
+    bool bUseTypeDef = false;
+
+    bool is_variable = false;
+
+    if (is_word(pData, "struct") || is_word(pData, "interface") || is_word(pData, "class") || is_word(pData, "template")
+        || is_word(pData, "dispinterface") || is_word(pData, "exception") || is_word(pData, "enum")
+        || is_word(pData, "union"))
+    {
+        // continue if this is only a forward declarantion
+        const char* curlyPos = strchr(&*pData, '{');
+        const char* semicolonPos = strchr(&*pData, ';');
+        if (curlyPos == NULL || curlyPos > semicolonPos)
+        {
+            if (obj->GetContainer() == NULL
+                || (obj->GetContainer()->get_type() != entity_type::CLASS 
+					&& obj->GetContainer()->get_type() != entity_type::STRUCT
+					)
+				)
+            {
+                EAT_PAST_SEMICOLON(pData)
+                return true;
+            }
+            is_variable = true;
+        }
+
+        if (handleTypeDefs && has_typedefs(pData))
+            bUseTypeDef = true;
+    }
+
+    if (bUseTypeDef || if_is_word_eat(pData, "typedef"))
+        obj = parse_typedef(pData, attribs, NULL, is_include);
+
+    else if (if_is_word_eat(pData, "library"))
+    {
+        if (is_hash_import)
+        {
+            std::cerr << "encountered a library inside a #import\n";
+            library_entity lib;
+            lib.parse_interface(pData, entity_type::LIBRARY, attribs, is_include);
+        }
+        else
+        {
+
+            obj = parse_interface(pData, entity_type::LIBRARY, attribs, is_include);
+            add_class(obj);
+        }
+    }
+    else if (if_is_word_eat(pData, "coclass"))
+    {
+        if (is_hash_import)
+            std::cerr << "encountered a coclass inside a #import\n";
+
+        obj = parse_interface(pData, entity_type::COCLASS, attribs, is_include);
+        add_class(obj);
+    }
+    else if (is_variable == false && if_is_word_eat(pData, "struct"))
+    {
+        obj = parse_interface(pData, entity_type::STRUCT, attribs, is_include);
+        add_class(obj);
+    }
+    else if (if_is_word_eat(pData, "union"))
+    {
+        obj = parse_interface(pData, entity_type::UNION, attribs, is_include);
+        add_class(obj);
+		return false;
+    }
+    else if (is_variable == false && if_is_word_eat(pData, "enum"))
+    {
+        obj = parse_interface(pData, entity_type::ENUM, attribs, is_include);
+        add_class(obj);
+    }
+    /*else if (if_is_word_eat(pData, "typedef sequence<"))
+    {
+        obj = parse_sequence(pData, attribs, is_include);
+        add_class(obj);
+    }*/
+    else if (if_is_word_eat(pData, "exception"))
+    {
+        obj = parse_interface(pData, entity_type::EXCEPTION, attribs, is_include);
+        add_class(obj);
+    }
+    else if (if_is_word_eat(pData, "interface"))
+    {
+        obj = parse_interface(pData, entity_type::INTERFACE, attribs, is_include);
+        add_class(obj);
+    }
+    else if (if_is_word_eat(pData, "class"))
+    {
+        obj = parse_interface(pData, entity_type::CLASS, attribs, is_include);
+        add_class(obj);
+    }
+    else if (if_is_word_eat(pData, "template"))
+    {
+        EAT_SPACES(pData)
+
+        std::list<template_param> templateParams;
+        parse_template(pData, templateParams);
+
+        EAT_SPACES(pData)
+
+        if (if_is_word_eat(pData, "class"))
+        {
+            EAT_SPACES(pData)
+            obj = parse_interface(pData, entity_type::CLASS, attribs, is_include);
+            obj->template_params_ = templateParams;
+            add_class(obj);
+        }
+        else
+        {
+            std::stringstream err;
+            err << "Error expected 'class'";
+            err << std::ends;
+            std::string errString(err.str());
+            throw errString;
+        }
+    }
+
+    else if (if_is_word_eat(pData, "dispinterface"))
+    {
+        obj = parse_interface(pData, entity_type::DISPATCH_INTERFACE, attribs, is_include);
+        add_class(obj);
+    }
+    else
+        return false;
+
+    EAT_SPACES(pData)
+    return true;
+}
+
+/*bool class_entity::LoadUsingEnv(const std::string& file)
+{
+        const char* includes = includeDirectories.data();
+        if(!includes)
+                return false;
+
+#ifdef USE_COM
+        USES_CONVERSION;
 #endif
-			if(Load(path.data()))
-			return true;
-		if(*includes == ';')
-			includes++;
-	}
-	return false;
+
+        while(*includes)
+        {
+                std::string path;
+                while(*includes && *includes != ';')
+                        path += *includes++;
+                path += '\\' + file;
+
+#ifdef USE_COM
+                ITypeLibPtr typeLib;
+                HRESULT hr = LoadTypeLib(A2CW(path.data()),&typeLib);
+
+                if(SUCCEEDED(hr))
+                {
+                        UINT count = typeLib->GetTypeInfoCount();
+                        for(int i = 0;i < count;i++)
+                        {
+                            ITypeInfoPtr typeInfo;
+                                hr = typeLib->GetTypeInfo(i, &typeInfo);
+                                if (SUCCEEDED(hr))
+                                {
+                                        TYPEKIND typekind;
+                                        hr = typeLib->GetTypeInfoType(i, &typekind);
+                                        if (SUCCEEDED(hr))
+                                        {
+                                                bool addClass = true;
+                                                std::shared_ptr<class_entity> obj(new class_entity(this,&GetLibrary(),
+std::string()));
+
+                                                obj->name = W2CA(GetInterfaceName(typeInfo));
+
+                                                TYPEATTR* pTypeAttr;
+                                                HRESULT hr = typeInfo->GetTypeAttr(&pTypeAttr);
+
+
+                                                if(memcmp(&pTypeAttr->guid, &GUID_NULL, sizeof(GUID)))
+                                                {
+                                                        wchar_t buf[] = L"uuid(xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx) ";
+                                                        hr = StringFromGUID2(pTypeAttr->guid,&buf[4],40);
+                                                        if(SUCCEEDED(hr))
+                                                        {
+                                                                buf[4] = '(';
+                                                                buf[41] = ')';
+                                                                obj->add_attribute(W2CA(buf));
+                                                        }
+                                                }
+
+                                                {
+                                                        char buf[45];
+                                                        sprintf(buf,"lcid(%d)",pTypeAttr->lcid);
+                                                        obj->add_attribute(buf);
+                                                }
+
+                                                {
+                                                        char buf[45];
+                                                        sprintf(buf,"version(%d.%d)",pTypeAttr->wMajorVerNum,pTypeAttr->wMinorVerNum);
+                                                        obj->add_attribute(buf);
+                                                }
+
+                                                bool isDispatch = false;
+
+                                                switch (typekind)
+                                                {
+                                                        case TKIND_DISPATCH:
+                                                                {
+                                                                        //we are a dispinterface
+                                                                        isDispatch = true;
+
+                                                                        obj->parentName = "IDispatch";
+                                                                        obj->type = entity_type::INTERFACE;
+
+                                                                        //if we get past these two functions then we are
+a dual interface therefore treat as a custom interface HREFTYPE refType; hr = typeInfo->GetRefTypeOfImplType(-1,
+&refType); if (SUCCEEDED(hr))
+                                                                        {
+                                                                                ITypeInfoPtr dualTypeInfo;
+                                                                                hr = typeInfo->GetRefTypeInfo(refType,
+&dualTypeInfo); if (SUCCEEDED(hr))
+                                                                                {
+                                                                                        //we have now got the alter ego
+don't break but go onto the next block typeInfo = dualTypeInfo; obj->name = W2CA(GetInterfaceName(typeInfo));
+                                                                                }
+                                                                                else
+                                                                                {
+                                                                                        GetInterfaceFunctions(pTypeAttr,
+obj, typeInfo); GetInterfaceProperties(pTypeAttr, obj, typeInfo); break;
+                                                                                }
+                                                                        }
+                                                                        else
+                                                                        {
+                                                                                GetInterfaceFunctions(pTypeAttr, obj,
+typeInfo); GetInterfaceProperties(pTypeAttr, obj, typeInfo); break;
+                                                                        }
+                                                                }
+                                                        case TKIND_INTERFACE:
+                                                                {
+                                                                        obj->type = entity_type::INTERFACE;
+
+                                                                        if(!isDispatch)
+                                                                                GetInterfaceFunctions(pTypeAttr, obj,
+typeInfo);
+
+                                                                        //get the base class's name
+                                                                        HREFTYPE hreftype;
+                                                                        hr = typeInfo->GetRefTypeOfImplType(0,
+&hreftype); if (FAILED(hr)) break;
+
+                                                                        ITypeInfoPtr baseTypeInfo;
+                                                                        hr = typeInfo->GetRefTypeInfo(hreftype,
+&baseTypeInfo); if (FAILED(hr)) break;
+
+                                                                        obj->parentName =
+W2CA(GetInterfaceName(baseTypeInfo));
+
+                                                                }
+
+                                                                break;
+
+
+                                                        case TKIND_MODULE:
+                                                                //we are a module
+                                                                //NOT IMPLEMENTED
+                                                                break;
+
+                                                        case TKIND_COCLASS:
+                                                                //we are a coclass
+                                                                obj->type = entity_type::COCLASS;
+                                                                addClass = false;
+                                                                //an interesting excercise but when we are loading a
+type library we don't need to load
+                                                                //coclass's of other type libraries just their defined
+types such as unions and interfaces
+//								GetCoclassInterfaces(pTypeAttr, obj, typeInfo);
+                                                                break;
+
+                                                        case TKIND_ENUM:
+                                                                //we are a enum
+                                                                obj->type = entity_type::ENUM;
+                                                                GetVariables(obj, pTypeAttr->cVars, typeInfo);
+                                                                break;
+
+                                                        case TKIND_ALIAS:
+                                                                obj->type = TYPEDEF;
+                                                                obj->parentName =
+GenerateTypeString(pTypeAttr->tdescAlias, typeInfo); break;
+
+                                                        case TKIND_RECORD:
+                                                                obj->type = entity_type::STRUCT;
+                                                                GetVariables(obj, pTypeAttr->cVars, typeInfo);
+                                                                break;
+
+                                                        case TKIND_UNION:
+                                                                obj->type = entity_type::UNION;
+                                                                GetVariables(obj, pTypeAttr->cVars, typeInfo);
+                                                                break;
+
+                                                        default:
+                                                                break;
+                                                }
+
+                                                typeInfo->ReleaseTypeAttr(pTypeAttr);
+                                                if(addClass)
+                                                        add_class(obj);
+                                        }
+                                }
+                        }
+                }
+                else
+#endif
+                        if(load(path.data()))
+                        return true;
+                if(*includes == ';')
+                        includes++;
+        }
+        return false;
 }*/
 
 #ifdef USE_COM
-void ClassObject::GetInterfaceProperties(TYPEATTR* pTypeAttr, ClassObject& obj, ITypeInfo* typeInfo)
+void class_entity::GetInterfaceProperties(TYPEATTR* pTypeAttr, class_entity& obj, ITypeInfo* typeInfo)
 {
-	USES_CONVERSION;
-    // Enumerate methods and return a collection of these.    
-    for (unsigned int n=0; n<pTypeAttr->cVars; n++)
-    {                
-		LPVARDESC pvardesc = NULL;   
-        HRESULT hr = typeInfo->GetVarDesc(n, &pvardesc);   
+    USES_CONVERSION;
+    // Enumerate methods and return a collection of these.
+    for (unsigned int n = 0; n < pTypeAttr->cVars; n++)
+    {
+        LPVARDESC pvardesc = NULL;
+        HRESULT hr = typeInfo->GetVarDesc(n, &pvardesc);
         if (FAILED(hr))
             break;
 
-		FunctionObject fn(&obj,&obj.GetLibrary());
-		fn.type = FunctionTypePropertyGet;
+        function_entity fn(&obj, &obj.GetLibrary());
+        fn.type = FunctionTypePropertyGet;
 
-		char buf[256];
-		sprintf(buf,"id(%d)",pvardesc->memid);
-		fn.m_attributes.push_back(buf);
+        char buf[256];
+        sprintf(buf, "id(%d)", pvardesc->memid);
+        fn.add_attribute(buf);
 
-		fn.returnType = GenerateTypeString(pvardesc->elemdescVar.tdesc, typeInfo);
+        fn.return_type = GenerateTypeString(pvardesc->elemdescVar.tdesc, typeInfo);
 
-		CComBSTR name;
-		unsigned int cNames = 0;
-		hr = typeInfo->GetNames(pvardesc->memid, &name, 1, &cNames);    
-		if(SUCCEEDED(hr))
-			fn.name = W2CA(name.m_str);
+        CComBSTR name;
+        unsigned int cNames = 0;
+        hr = typeInfo->GetNames(pvardesc->memid, &name, 1, &cNames);
+        if (SUCCEEDED(hr))
+            fn.name = W2CA(name.m_str);
 
-		if(pvardesc->elemdescVar.paramdesc.wParamFlags & PARAMFLAG_FIN)
-			fn.m_attributes.push_back("in");
-		if(pvardesc->elemdescVar.paramdesc.wParamFlags & PARAMFLAG_FOUT)
-			fn.m_attributes.push_back("out");
-		if(pvardesc->elemdescVar.paramdesc.wParamFlags & PARAMFLAG_FLCID)
-			fn.m_attributes.push_back("lcid");
-		if(pvardesc->elemdescVar.paramdesc.wParamFlags & PARAMFLAG_FRETVAL)
-			fn.m_attributes.push_back("retval");
-		if(pvardesc->elemdescVar.paramdesc.wParamFlags & PARAMFLAG_FLCID)
-			fn.m_attributes.push_back("lcid");
-		if(pvardesc->elemdescVar.paramdesc.wParamFlags & PARAMFLAG_FOPT)
-			fn.m_attributes.push_back("optional");
+        if (pvardesc->elemdescVar.paramdesc.wParamFlags & PARAMFLAG_FIN)
+            fn.add_attribute("in");
+        if (pvardesc->elemdescVar.paramdesc.wParamFlags & PARAMFLAG_FOUT)
+            fn.add_attribute("out");
+        if (pvardesc->elemdescVar.paramdesc.wParamFlags & PARAMFLAG_FLCID)
+            fn.add_attribute("lcid");
+        if (pvardesc->elemdescVar.paramdesc.wParamFlags & PARAMFLAG_FRETVAL)
+            fn.add_attribute("retval");
+        if (pvardesc->elemdescVar.paramdesc.wParamFlags & PARAMFLAG_FLCID)
+            fn.add_attribute("lcid");
+        if (pvardesc->elemdescVar.paramdesc.wParamFlags & PARAMFLAG_FOPT)
+            fn.add_attribute("optional");
 
-		if(pvardesc->elemdescVar.paramdesc.wParamFlags & (PARAMFLAG_FOPT|PARAMFLAG_FHASDEFAULT))
-		{
-			CComVariant var(pvardesc->elemdescVar.paramdesc.pparamdescex->varDefaultValue);
-			var.ChangeType(VT_BSTR);
-			std::string defaultValue = "defaultvalue(\"";
-			defaultValue += W2CA(var.bstrVal);
-			defaultValue += "\")";
-			fn.m_attributes.push_back(defaultValue);
-		}
+        if (pvardesc->elemdescVar.paramdesc.wParamFlags & (PARAMFLAG_FOPT | PARAMFLAG_FHASDEFAULT))
+        {
+            CComVariant var(pvardesc->elemdescVar.paramdesc.pparamdescex->varDefaultValue);
+            var.ChangeType(VT_BSTR);
+            std::string defaultValue = "defaultvalue(\"";
+            defaultValue += W2CA(var.bstrVal);
+            defaultValue += "\")";
+            fn.add_attribute(defaultValue);
+        }
 
-		if(pvardesc->varkind == VAR_PERINSTANCE)
-			fn.m_attributes.push_back("VAR_PERINSTANCE");
-		else if(pvardesc->varkind == VAR_STATIC)
-			fn.m_attributes.push_back("VAR_STATIC");
-		else if(pvardesc->varkind == VAR_CONST)
-			fn.m_attributes.push_back("VAR_CONST");
-		else if(pvardesc->varkind == VAR_DISPATCH)
-			fn.m_attributes.push_back("VAR_DISPATCH");
+        if (pvardesc->varkind == VAR_PERINSTANCE)
+            fn.add_attribute("VAR_PERINSTANCE");
+        else if (pvardesc->varkind == VAR_STATIC)
+            fn.add_attribute("VAR_STATIC");
+        else if (pvardesc->varkind == VAR_CONST)
+            fn.add_attribute("VAR_CONST");
+        else if (pvardesc->varkind == VAR_DISPATCH)
+            fn.add_attribute("VAR_DISPATCH");
 
+        if (pvardesc->wVarFlags & VARFLAG_FSOURCE)
+            fn.add_attribute("VARFLAG_FSOURCE");
+        if (pvardesc->wVarFlags & VARFLAG_FBINDABLE)
+            fn.add_attribute("bindable");
+        if (pvardesc->wVarFlags & VARFLAG_FREQUESTEDIT)
+            fn.add_attribute("requestedit");
+        if (pvardesc->wVarFlags & VARFLAG_FDISPLAYBIND)
+            fn.add_attribute("displaybind");
+        if (pvardesc->wVarFlags & VARFLAG_FDEFAULTBIND)
+            fn.add_attribute("defaultbind");
+        if (pvardesc->wVarFlags & VARFLAG_FHIDDEN)
+            fn.add_attribute("hidden");
+        if (pvardesc->wVarFlags & VARFLAG_FRESTRICTED)
+            fn.add_attribute("restricted");
+        if (pvardesc->wVarFlags & VARFLAG_FDEFAULTCOLLELEM)
+            fn.add_attribute("defaultcollelem");
+        if (pvardesc->wVarFlags & VARFLAG_FUIDEFAULT)
+            fn.add_attribute("uidefault");
+        if (pvardesc->wVarFlags & VARFLAG_FNONBROWSABLE)
+            fn.add_attribute("nonbrowsable");
+        if (pvardesc->wVarFlags & VARFLAG_FREPLACEABLE)
+            fn.add_attribute("replaceable");
+        if (pvardesc->wVarFlags & VARFLAG_FIMMEDIATEBIND)
+            fn.add_attribute("immediatebind");
 
-		if(pvardesc->wVarFlags & VARFLAG_FSOURCE)
-			fn.m_attributes.push_back("VARFLAG_FSOURCE");
-		if(pvardesc->wVarFlags & VARFLAG_FBINDABLE)
-			fn.m_attributes.push_back("bindable");
-		if(pvardesc->wVarFlags & VARFLAG_FREQUESTEDIT)
-			fn.m_attributes.push_back("requestedit");
-		if(pvardesc->wVarFlags & VARFLAG_FDISPLAYBIND)
-			fn.m_attributes.push_back("displaybind");
-		if(pvardesc->wVarFlags & VARFLAG_FDEFAULTBIND)
-			fn.m_attributes.push_back("defaultbind");
-		if(pvardesc->wVarFlags & VARFLAG_FHIDDEN)
-			fn.m_attributes.push_back("hidden");
-		if(pvardesc->wVarFlags & VARFLAG_FRESTRICTED)
-			fn.m_attributes.push_back("restricted");
-		if(pvardesc->wVarFlags & VARFLAG_FDEFAULTCOLLELEM)
-			fn.m_attributes.push_back("defaultcollelem");
-		if(pvardesc->wVarFlags & VARFLAG_FUIDEFAULT)
-			fn.m_attributes.push_back("uidefault");
-		if(pvardesc->wVarFlags & VARFLAG_FNONBROWSABLE)
-			fn.m_attributes.push_back("nonbrowsable");
-		if(pvardesc->wVarFlags & VARFLAG_FREPLACEABLE)
-			fn.m_attributes.push_back("replaceable");
-		if(pvardesc->wVarFlags & VARFLAG_FIMMEDIATEBIND)
-			fn.m_attributes.push_back("immediatebind");
+        obj.functions_.push_back(fn);
 
-		obj.functions.push_back(fn);
+        if (!(pvardesc->wVarFlags & VARFLAG_FREADONLY))
+        {
+            fn.type = FunctionTypePropertyPut;
 
-		if(!(pvardesc->wVarFlags & VARFLAG_FREADONLY))
-		{
-			fn.type = FunctionTypePropertyPut;
+            obj.functions_.push_back(fn);
+        }
 
-			obj.functions.push_back(fn);
-		}
-
-		typeInfo->ReleaseVarDesc(pvardesc); 
+        typeInfo->ReleaseVarDesc(pvardesc);
         pvardesc = NULL;
     }
 }
 
-void ClassObject::GetInterfaceFunctions(TYPEATTR* pTypeAttr, ClassObject& obj, ITypeInfo* typeInfo)
+void class_entity::GetInterfaceFunctions(TYPEATTR* pTypeAttr, class_entity& obj, ITypeInfo* typeInfo)
 {
-	USES_CONVERSION;
-    for (unsigned int n=0; n<pTypeAttr->cFuncs; n++)
-    {                
-		FUNCDESC* desc = NULL;
-	    HRESULT hr = typeInfo->GetFuncDesc(n, &desc);   
-		if(SUCCEEDED(hr))
-		{
-			FunctionObject fn(&obj,&obj.GetLibrary());
-			
-			CComBSTR name;
-		    HRESULT hr = typeInfo->GetDocumentation(desc->memid, &name, NULL,NULL, NULL); 
-			if(SUCCEEDED(hr))
-				fn.name = W2CA(name.m_str);
+    USES_CONVERSION;
+    for (unsigned int n = 0; n < pTypeAttr->cFuncs; n++)
+    {
+        FUNCDESC* desc = NULL;
+        HRESULT hr = typeInfo->GetFuncDesc(n, &desc);
+        if (SUCCEEDED(hr))
+        {
+            function_entity fn(&obj, &obj.GetLibrary());
 
-			char buf[256];
-			sprintf(buf,"id(%d)",desc->memid);
-			fn.m_attributes.push_back(buf);
+            CComBSTR name;
+            HRESULT hr = typeInfo->GetDocumentation(desc->memid, &name, NULL, NULL, NULL);
+            if (SUCCEEDED(hr))
+                fn.name = W2CA(name.m_str);
 
-			switch(desc->invkind)
-			{
-			case INVOKE_FUNC:
-				fn.type = FunctionTypeMethod;
-				break;
-			case INVOKE_PROPERTYGET:
-				fn.type = FunctionTypePropertyGet;
-				fn.m_attributes.push_back("propget");
-				break;
-			case INVOKE_PROPERTYPUT:
-				fn.type = FunctionTypePropertyPut;
-				fn.m_attributes.push_back("propput");
-				break;
-			case INVOKE_PROPERTYPUTREF:
-				fn.type = FunctionTypePropertyPut;
-				fn.m_attributes.push_back("propputref");
-				break;
-			default:
-				return;
-			}
-	
-			fn.returnType = GenerateTypeString(desc->elemdescFunc.tdesc, typeInfo);
-	
-			if(desc->wFuncFlags & FUNCFLAG_FRESTRICTED)
-				fn.m_attributes.push_back("restricted");
-			if(desc->wFuncFlags & FUNCFLAG_FSOURCE)
-				fn.m_attributes.push_back("FUNCFLAG_FSOURCE");
-			if(desc->wFuncFlags & FUNCFLAG_FBINDABLE)
-				fn.m_attributes.push_back("bindable");
-			if(desc->wFuncFlags & FUNCFLAG_FREQUESTEDIT)
-				fn.m_attributes.push_back("requestedit");
-			if(desc->wFuncFlags & FUNCFLAG_FDISPLAYBIND)
-				fn.m_attributes.push_back("displaybind");
-			if(desc->wFuncFlags & FUNCFLAG_FDEFAULTBIND)
-				fn.m_attributes.push_back("defaultbind");
-			if(desc->wFuncFlags & FUNCFLAG_FHIDDEN)
-				fn.m_attributes.push_back("hidden");
-			if(desc->wFuncFlags & FUNCFLAG_FUSESGETLASTERROR)
-				fn.m_attributes.push_back("FUNCFLAG_FUSESGETLASTERROR");
-			if(desc->wFuncFlags & FUNCFLAG_FDEFAULTCOLLELEM)
-				fn.m_attributes.push_back("defaultcollelem");
-			if(desc->wFuncFlags & FUNCFLAG_FUIDEFAULT)
-				fn.m_attributes.push_back("uidefault");
-			if(desc->wFuncFlags & FUNCFLAG_FNONBROWSABLE)
-				fn.m_attributes.push_back("nonbrowsable");
-			if(desc->wFuncFlags & FUNCFLAG_FREPLACEABLE)
-				fn.m_attributes.push_back("replaceable");
-			if(desc->wFuncFlags & FUNCFLAG_FIMMEDIATEBIND)
-				fn.m_attributes.push_back("immediatebind");
-			
-			BSTR* rgbstrNames = (BSTR*) _alloca(sizeof(BSTR) * (desc->cParams + 1));
-			memset(rgbstrNames,0,sizeof(BSTR*)*(desc->cParams+1));
+            char buf[256];
+            sprintf(buf, "id(%d)", desc->memid);
+            fn.add_attribute(buf);
 
-			unsigned int pcNames = 0;
-			hr = typeInfo->GetNames(desc->memid,rgbstrNames,desc->cParams+1,&pcNames);
-			if(SUCCEEDED(hr))
-			{
-				for(int p = 1; p < desc->cParams;p++)
-				{
-					ParameterObject param(&obj,&obj.GetLibrary());
-					param.name = W2CA(rgbstrNames[p]);
-					param.type = GenerateTypeString(desc->lprgelemdescParam[p].tdesc, typeInfo);
+            switch (desc->invkind)
+            {
+            case INVOKE_FUNC:
+                fn.type = FunctionTypeMethod;
+                break;
+            case INVOKE_PROPERTYGET:
+                fn.type = FunctionTypePropertyGet;
+                fn.add_attribute("propget");
+                break;
+            case INVOKE_PROPERTYPUT:
+                fn.type = FunctionTypePropertyPut;
+                fn.add_attribute("propput");
+                break;
+            case INVOKE_PROPERTYPUTREF:
+                fn.type = FunctionTypePropertyPut;
+                fn.add_attribute("propputref");
+                break;
+            default:
+                return;
+            }
 
-					if(desc->lprgelemdescParam[p].paramdesc.wParamFlags & PARAMFLAG_FIN)
-						param.m_attributes.push_back("in");
+            fn.return_type = GenerateTypeString(desc->elemdescFunc.tdesc, typeInfo);
 
-					if(desc->lprgelemdescParam[p].paramdesc.wParamFlags & PARAMFLAG_FOUT)
-						param.m_attributes.push_back("out");
+            if (desc->wFuncFlags & FUNCFLAG_FRESTRICTED)
+                fn.add_attribute("restricted");
+            if (desc->wFuncFlags & FUNCFLAG_FSOURCE)
+                fn.add_attribute("FUNCFLAG_FSOURCE");
+            if (desc->wFuncFlags & FUNCFLAG_FBINDABLE)
+                fn.add_attribute("bindable");
+            if (desc->wFuncFlags & FUNCFLAG_FREQUESTEDIT)
+                fn.add_attribute("requestedit");
+            if (desc->wFuncFlags & FUNCFLAG_FDISPLAYBIND)
+                fn.add_attribute("displaybind");
+            if (desc->wFuncFlags & FUNCFLAG_FDEFAULTBIND)
+                fn.add_attribute("defaultbind");
+            if (desc->wFuncFlags & FUNCFLAG_FHIDDEN)
+                fn.add_attribute("hidden");
+            if (desc->wFuncFlags & FUNCFLAG_FUSESGETLASTERROR)
+                fn.add_attribute("FUNCFLAG_FUSESGETLASTERROR");
+            if (desc->wFuncFlags & FUNCFLAG_FDEFAULTCOLLELEM)
+                fn.add_attribute("defaultcollelem");
+            if (desc->wFuncFlags & FUNCFLAG_FUIDEFAULT)
+                fn.add_attribute("uidefault");
+            if (desc->wFuncFlags & FUNCFLAG_FNONBROWSABLE)
+                fn.add_attribute("nonbrowsable");
+            if (desc->wFuncFlags & FUNCFLAG_FREPLACEABLE)
+                fn.add_attribute("replaceable");
+            if (desc->wFuncFlags & FUNCFLAG_FIMMEDIATEBIND)
+                fn.add_attribute("immediatebind");
 
-					if(desc->lprgelemdescParam[p].paramdesc.wParamFlags & PARAMFLAG_FLCID)
-						param.m_attributes.push_back("lcid");
+            BSTR* rgbstrNames = (BSTR*)_alloca(sizeof(BSTR) * (desc->cParams + 1));
+            memset(rgbstrNames, 0, sizeof(BSTR*) * (desc->cParams + 1));
 
-					if(desc->lprgelemdescParam[p].paramdesc.wParamFlags & PARAMFLAG_FRETVAL)
-						param.m_attributes.push_back("retval");
+            unsigned int pcNames = 0;
+            hr = typeInfo->GetNames(desc->memid, rgbstrNames, desc->cParams + 1, &pcNames);
+            if (SUCCEEDED(hr))
+            {
+                for (int p = 1; p < desc->cParams; p++)
+                {
+                    parameter_entity param(&obj, &obj.GetLibrary());
+                    param.name = W2CA(rgbstrNames[p]);
+                    param.type = GenerateTypeString(desc->lprgelemdescParam[p].tdesc, typeInfo);
 
-					if(desc->lprgelemdescParam[p].paramdesc.wParamFlags & PARAMFLAG_FLCID)
-						param.m_attributes.push_back("lcid");
+                    if (desc->lprgelemdescParam[p].paramdesc.wParamFlags & PARAMFLAG_FIN)
+                        param.add_attribute("in");
 
-					if(desc->lprgelemdescParam[p].paramdesc.wParamFlags & PARAMFLAG_FOPT)
-						param.m_attributes.push_back("optional");
+                    if (desc->lprgelemdescParam[p].paramdesc.wParamFlags & PARAMFLAG_FOUT)
+                        param.add_attribute("out");
 
-					if(desc->lprgelemdescParam[p].paramdesc.wParamFlags & (PARAMFLAG_FOPT|PARAMFLAG_FHASDEFAULT))
-					{
-						CComVariant var(desc->lprgelemdescParam[p].paramdesc.pparamdescex->varDefaultValue);
-						var.ChangeType(VT_BSTR);
-						std::string defaultValue = "defaultvalue(\"";
-						defaultValue += W2CA(var.bstrVal);
-						defaultValue += "\")";
-						fn.m_attributes.push_back(defaultValue);
-					}
-					fn.parameters.push_back(param);
-				}
-			}
+                    if (desc->lprgelemdescParam[p].paramdesc.wParamFlags & PARAMFLAG_FLCID)
+                        param.add_attribute("lcid");
 
-			for(int p = 0; p < desc->cParams;p++)
-				SysFreeString(rgbstrNames[p]);
+                    if (desc->lprgelemdescParam[p].paramdesc.wParamFlags & PARAMFLAG_FRETVAL)
+                        param.add_attribute("retval");
 
-			typeInfo->ReleaseFuncDesc(desc);
-		
-			obj.functions.push_back(fn);
-		}
+                    if (desc->lprgelemdescParam[p].paramdesc.wParamFlags & PARAMFLAG_FLCID)
+                        param.add_attribute("lcid");
+
+                    if (desc->lprgelemdescParam[p].paramdesc.wParamFlags & PARAMFLAG_FOPT)
+                        param.add_attribute("optional");
+
+                    if (desc->lprgelemdescParam[p].paramdesc.wParamFlags & (PARAMFLAG_FOPT | PARAMFLAG_FHASDEFAULT))
+                    {
+                        CComVariant var(desc->lprgelemdescParam[p].paramdesc.pparamdescex->varDefaultValue);
+                        var.ChangeType(VT_BSTR);
+                        std::string defaultValue = "defaultvalue(\"";
+                        defaultValue += W2CA(var.bstrVal);
+                        defaultValue += "\")";
+                        fn.add_attribute(defaultValue);
+                    }
+                    fn.parameters.push_back(param);
+                }
+            }
+
+            for (int p = 0; p < desc->cParams; p++)
+                SysFreeString(rgbstrNames[p]);
+
+            typeInfo->ReleaseFuncDesc(desc);
+
+            obj.functions_.push_back(fn);
+        }
     }
 }
 
-void ClassObject::GetCoclassInterfaces(TYPEATTR* pTypeAttr, ClassObject& obj, ITypeInfo* typeInfo)
+void class_entity::GetCoclassInterfaces(TYPEATTR* pTypeAttr, class_entity& obj, ITypeInfo* typeInfo)
 {
-	USES_CONVERSION;
-	// Enumerate interfaces/dispinterfaces in coclass and return a collection of these.
-	for (unsigned int n=0; n<pTypeAttr->cImplTypes; n++)
-	{       
-		FunctionObject fn(&obj,&obj.GetLibrary());
+    USES_CONVERSION;
+    // Enumerate interfaces/dispinterfaces in coclass and return a collection of these.
+    for (unsigned int n = 0; n < pTypeAttr->cImplTypes; n++)
+    {
+        function_entity fn(&obj, &obj.GetLibrary());
 
-		int flags = 0;
-		HRESULT hr = typeInfo->GetImplTypeFlags(n,&flags);
-		if(flags & IMPLTYPEFLAG_FDEFAULT)
-			fn.m_attributes.push_back("default");
-		if(flags & IMPLTYPEFLAG_FSOURCE)
-			fn.m_attributes.push_back("source");
-		if(flags & IMPLTYPEFLAG_FRESTRICTED)
-			fn.m_attributes.push_back("restricted");
-		if(flags & IMPLTYPEFLAG_FDEFAULTVTABLE)
-			fn.m_attributes.push_back("defaultvtable");
+        int flags = 0;
+        HRESULT hr = typeInfo->GetImplTypeFlags(n, &flags);
+        if (flags & IMPLTYPEFLAG_FDEFAULT)
+            fn.add_attribute("default");
+        if (flags & IMPLTYPEFLAG_FSOURCE)
+            fn.add_attribute("source");
+        if (flags & IMPLTYPEFLAG_FRESTRICTED)
+            fn.add_attribute("restricted");
+        if (flags & IMPLTYPEFLAG_FDEFAULTVTABLE)
+            fn.add_attribute("defaultvtable");
 
-		HREFTYPE hreftype;
-		hr = typeInfo->GetRefTypeOfImplType(n, &hreftype);  
-		if(SUCCEEDED(hr))
-		{
-			ITypeInfoPtr ifTypeInfo;
-			hr = typeInfo->GetRefTypeInfo(hreftype, &ifTypeInfo);   
-			if(SUCCEEDED(hr))
-				fn.name = W2CA(GetInterfaceName(ifTypeInfo));
-		}
-		obj.functions.push_back(fn);
-	}
+        HREFTYPE hreftype;
+        hr = typeInfo->GetRefTypeOfImplType(n, &hreftype);
+        if (SUCCEEDED(hr))
+        {
+            ITypeInfoPtr ifTypeInfo;
+            hr = typeInfo->GetRefTypeInfo(hreftype, &ifTypeInfo);
+            if (SUCCEEDED(hr))
+                fn.name = W2CA(GetInterfaceName(ifTypeInfo));
+        }
+        obj.functions_.push_back(fn);
+    }
 }
 
-void ClassObject::GetVariables(ClassObject& theClass, unsigned variableCount, ITypeInfo* typeInfo)
+void class_entity::GetVariables(class_entity& theClass, unsigned variableCount, ITypeInfo* typeInfo)
 {
-	USES_CONVERSION;
-	for(unsigned int n=0; n<variableCount; n++)
-	{
-		LPVARDESC pvardesc = NULL;   
-		HRESULT hr = typeInfo->GetVarDesc(n, &pvardesc);   
-		if (SUCCEEDED(hr))
-		{
-			FunctionObject fn(&theClass,&theClass.GetLibrary());
-			char buf[256];
-			sprintf(buf,"id(%d)",pvardesc->memid);
-			fn.m_attributes.push_back(buf);
+    USES_CONVERSION;
+    for (unsigned int n = 0; n < variableCount; n++)
+    {
+        LPVARDESC pvardesc = NULL;
+        HRESULT hr = typeInfo->GetVarDesc(n, &pvardesc);
+        if (SUCCEEDED(hr))
+        {
+            function_entity fn(&theClass, &theClass.GetLibrary());
+            char buf[256];
+            sprintf(buf, "id(%d)", pvardesc->memid);
+            fn.add_attribute(buf);
 
-			CComBSTR name;
-			unsigned int cNames = 0; //not used
-			typeInfo->GetNames(pvardesc->memid, &name, 1, &cNames);   
-			fn.name = W2CA(name);
+            CComBSTR name;
+            unsigned int cNames = 0; // not used
+            typeInfo->GetNames(pvardesc->memid, &name, 1, &cNames);
+            fn.name = W2CA(name);
 
-			fn.returnType = GenerateTypeString(pvardesc->elemdescVar.tdesc, typeInfo);
-		
-			typeInfo->ReleaseVarDesc(pvardesc); 
-			
-			theClass.functions.push_back(fn);
-		}
-	}
-}								
+            fn.return_type = GenerateTypeString(pvardesc->elemdescVar.tdesc, typeInfo);
 
+            typeInfo->ReleaseVarDesc(pvardesc);
 
-std::string ClassObject::GenerateTypeString(TYPEDESC& typedesc, ITypeInfo* typeInfo)
-{
-	USES_CONVERSION;
-	if (typedesc.vt == VT_USERDEFINED)
-	{
-		ITypeInfoPtr userTypeInfo;
-		HRESULT hr = typeInfo->GetRefTypeInfo(typedesc.hreftype, &userTypeInfo); 
-		if (SUCCEEDED(hr))
-			return std::string(W2CA(GetInterfaceName(userTypeInfo)));
-	}
-	
-	if (typedesc.vt == VT_CARRAY)
-	{
-		std::string ret(GenerateTypeString(typedesc.lpadesc->tdescElem, typeInfo));
-		for(int i = 0; i < typedesc.lpadesc->cDims;i++)
-		{
-			SAFEARRAYBOUND& arrayBound = typedesc.lpadesc->rgbounds[i];
-			char buf[20];
-			sprintf(buf,"[%d..%d]",arrayBound.lLbound, arrayBound.lLbound + arrayBound.cElements - 1);
-			ret += buf;
-		}
-		return ret;
-	}	
-	if (typedesc.vt == VT_PTR || typedesc.vt == VT_SAFEARRAY)
-		return std::string(GenerateTypeString(*typedesc.lptdesc, typeInfo) + "*");
-
-	std::string ret;
-	switch((typedesc.vt ^ VT_ARRAY) & (typedesc.vt ^ VT_BYREF))
-	{
-	case VT_NULL:
-		ret = "NULL";
-		break;
-	case VT_I2:
-		ret = "short";
-		break;
-	case VT_I4:
-		ret = "long";
-		break;
-	case VT_R4:
-		ret = "float";
-		break;
-	case VT_R8:
-		ret = "double";
-		break;
-	case VT_CY:
-		ret = "CURRENCY";
-		break;
-	case VT_DATE:
-		ret = "DATE";
-		break;
-	case VT_BSTR:
-		ret = "BSTR";
-		break;
-	case VT_DISPATCH:
-		ret = "IDispatch*";
-		break;
-	case VT_ERROR:
-		ret = "SCODE";
-		break;
-	case VT_BOOL:
-		ret = "BOOL";
-		break;
-	case VT_VARIANT:
-		ret = "VARIANT";
-		break;
-	case VT_UNKNOWN:
-		ret = "IUnknown*";
-		break;
-	case VT_I1:
-		ret = "char";
-		break;
-	case VT_UI1:
-		ret = "unsigned char";
-		break;
-	case VT_UI2:
-		ret = "unsigned int";
-		break;
-	case VT_UI4:
-		ret = "unsigned long";
-		break;
-	case VT_I8:
-		ret = "__int64";
-		break;
-	case VT_UI8:
-		ret = "unsigned __int64";
-		break;
-	case VT_INT:
-		ret = "int";
-		break;
-	case VT_UINT:
-		ret = "unsigned int";
-		break;
-	case VT_VOID:
-		ret = "void";
-		break;
-	case VT_HRESULT:
-		ret = "HRESULT";
-		break;
-	case VT_LPSTR:
-		ret = "char*";
-		break;
-	case VT_LPWSTR:
-		ret = "WCHAR*";
-		break;
-
-/*	case VT_DECIMAL:
-		ret = "DECIMAL";
-		break;
-	case VT_FILETIME:
-		ret = "FILETIME";
-		break;
-	case VT_BLOB:
-		ret = "BLOB";
-		break;
-	case VT_STREAM:
-		ret = "STREAM";
-		break;
-	case VT_STORAGE:
-		ret = "STORAGE";
-		break;
-	case VT_STREAMED_OBJECT:
-		ret = "STREAMED_OBJECT";
-		break;
-	case VT_STORED_OBJECT:
-		ret = "STORED_OBJECT";
-		break;
-	case VT_BLOB_OBJECT:
-		ret = "BLOB_OBJECT";
-		break;
-	case VT_CF:
-		ret = "CF";
-		break;
-	case VT_CLSID:
-		ret = "CLSID";
-		break;*/
-	default:
-		ret = "UNKNOWN_TYPE";
-	}
-	if(typedesc.vt & VT_ARRAY)
-		ret += "[]";
-	if(typedesc.vt & VT_BYREF)
-		ret += "*";
-	return ret;
+            theClass.functions_.push_back(fn);
+        }
+    }
 }
 
-CComBSTR ClassObject::GetInterfaceName(ITypeInfo* typeInfo)
+std::string class_entity::GenerateTypeString(TYPEDESC& typedesc, ITypeInfo* typeInfo)
 {
-	CComBSTR ret;
-	ITypeLibPtr tempTypeLib;
-	unsigned int nIndex; 
-	HRESULT hr = typeInfo->GetContainingTypeLib(&tempTypeLib, &nIndex);
-	if (FAILED(hr))
-		return ret;
+    USES_CONVERSION;
+    if (typedesc.vt == VT_USERDEFINED)
+    {
+        ITypeInfoPtr userTypeInfo;
+        HRESULT hr = typeInfo->GetRefTypeInfo(typedesc.hreftype, &userTypeInfo);
+        if (SUCCEEDED(hr))
+            return std::string(W2CA(GetInterfaceName(userTypeInfo)));
+    }
 
-	tempTypeLib->GetDocumentation(nIndex, &ret, NULL, NULL, NULL);  
+    if (typedesc.vt == VT_CARRAY)
+    {
+        std::string ret(GenerateTypeString(typedesc.lpadesc->tdescElem, typeInfo));
+        for (int i = 0; i < typedesc.lpadesc->cDims; i++)
+        {
+            SAFEARRAYBOUND& arrayBound = typedesc.lpadesc->rgbounds[i];
+            char buf[20];
+            sprintf(buf, "[%d..%d]", arrayBound.lLbound, arrayBound.lLbound + arrayBound.cElements - 1);
+            ret += buf;
+        }
+        return ret;
+    }
+    if (typedesc.vt == VT_PTR || typedesc.vt == VT_SAFEARRAY)
+        return std::string(GenerateTypeString(*typedesc.lptdesc, typeInfo) + "*");
 
-	return ret;
+    std::string ret;
+    switch ((typedesc.vt ^ VT_ARRAY) & (typedesc.vt ^ VT_BYREF))
+    {
+    case VT_NULL:
+        ret = "NULL";
+        break;
+    case VT_I2:
+        ret = "short";
+        break;
+    case VT_I4:
+        ret = "long";
+        break;
+    case VT_R4:
+        ret = "float";
+        break;
+    case VT_R8:
+        ret = "double";
+        break;
+    case VT_CY:
+        ret = "CURRENCY";
+        break;
+    case VT_DATE:
+        ret = "DATE";
+        break;
+    case VT_BSTR:
+        ret = "BSTR";
+        break;
+    case VT_DISPATCH:
+        ret = "IDispatch*";
+        break;
+    case VT_ERROR:
+        ret = "SCODE";
+        break;
+    case VT_BOOL:
+        ret = "BOOL";
+        break;
+    case VT_VARIANT:
+        ret = "VARIANT";
+        break;
+    case VT_UNKNOWN:
+        ret = "IUnknown*";
+        break;
+    case VT_I1:
+        ret = "char";
+        break;
+    case VT_UI1:
+        ret = "unsigned char";
+        break;
+    case VT_UI2:
+        ret = "unsigned int";
+        break;
+    case VT_UI4:
+        ret = "unsigned long";
+        break;
+    case VT_I8:
+        ret = "__int64";
+        break;
+    case VT_UI8:
+        ret = "unsigned __int64";
+        break;
+    case VT_INT:
+        ret = "int";
+        break;
+    case VT_UINT:
+        ret = "unsigned int";
+        break;
+    case VT_VOID:
+        ret = "void";
+        break;
+    case VT_HRESULT:
+        ret = "HRESULT";
+        break;
+    case VT_LPSTR:
+        ret = "char*";
+        break;
+    case VT_LPWSTR:
+        ret = "WCHAR*";
+        break;
+
+        /*	case VT_DECIMAL:
+                        ret = "DECIMAL";
+                        break;
+                case VT_FILETIME:
+                        ret = "FILETIME";
+                        break;
+                case VT_BLOB:
+                        ret = "BLOB";
+                        break;
+                case VT_STREAM:
+                        ret = "STREAM";
+                        break;
+                case VT_STORAGE:
+                        ret = "STORAGE";
+                        break;
+                case VT_STREAMED_OBJECT:
+                        ret = "STREAMED_OBJECT";
+                        break;
+                case VT_STORED_OBJECT:
+                        ret = "STORED_OBJECT";
+                        break;
+                case VT_BLOB_OBJECT:
+                        ret = "BLOB_OBJECT";
+                        break;
+                case VT_CF:
+                        ret = "CF";
+                        break;
+                case VT_CLSID:
+                        ret = "CLSID";
+                        break;*/
+    default:
+        ret = "UNKNOWN_TYPE";
+    }
+    if (typedesc.vt & VT_ARRAY)
+        ret += "[]";
+    if (typedesc.vt & VT_BYREF)
+        ret += "*";
+    return ret;
+}
+
+CComBSTR class_entity::GetInterfaceName(ITypeInfo* typeInfo)
+{
+    CComBSTR ret;
+    ITypeLibPtr tempTypeLib;
+    unsigned int nIndex;
+    HRESULT hr = typeInfo->GetContainingTypeLib(&tempTypeLib, &nIndex);
+    if (FAILED(hr))
+        return ret;
+
+    tempTypeLib->GetDocumentation(nIndex, &ret, NULL, NULL, NULL);
+
+    return ret;
 }
 #endif
 
-void ClassObject::ParseAndLoad(const char*& pData, const char* file, bool is_include)
+void class_entity::extract_path_and_load(const char*& pData, const char* file, bool is_include)
 {
-	EAT_SPACES(pData)
+    EAT_SPACES(pData)
 
-	assert(*pData == '\"' || *pData == '<');
+    assert(*pData == '\"' || *pData == '<');
 
-	pData++;
+    pData++;
 
-	char path[1024];
-	std::string temp;
-	while(*pData)
-	{
-		if(*pData == '\"' || *pData == '>')
-		{
-			pData++;
+    char path[1024];
+    std::string temp;
+    while (*pData)
+    {
+        if (*pData == '\"' || *pData == '>')
+        {
+            pData++;
 
+            const char* fname_ext = std::max(strrchr(temp.data(), '\\'), strrchr(temp.data(), '/'));
+            if (fname_ext != NULL)
+            {
+                if (!load(temp.data(), is_include))
+                    //					if(!LoadUsingEnv(temp))
+                    std::cerr << "failed to load " << temp << "\n";
+            }
+            else
+            {
+                const char* fname_ext = std::max(strrchr(file, '\\'), strrchr(file, '/'));
+                if (fname_ext != NULL)
+                {
+                    strncpy(path, file, fname_ext - file + 1);
+                    strcat(path, temp.data());
+                }
+                else
+                {
+                    strcpy(path, temp.data());
+                }
+                if (!load(path, is_include))
+                {
+                    //					if(!LoadUsingEnv(temp))
+                    std::cerr << "failed to load " << path << "\n";
+                }
+            }
+            return;
+        }
 
-			const char* fname_ext = std::max(strrchr( temp.data(), '\\'), strrchr( temp.data(), '/'));
-			if(fname_ext != NULL)
-			{
-				if(!Load(temp.data(), is_include))
-//					if(!LoadUsingEnv(temp))
-						std::cerr << "failed to load " << temp << "\n";
-			}
-			else
-			{
-				const char* fname_ext = std::max(strrchr( file, '\\'), strrchr( file, '/'));
-				if(fname_ext != NULL)
-				{
-					strncpy(path, file, fname_ext - file + 1);
-					strcat(path, temp.data());
-				}
-				else
-				{
-					strcpy(path, temp.data());
-				}
-				if(!Load(path, is_include))
-				{
-//					if(!LoadUsingEnv(temp))
-					std::cerr << "failed to load " << path << "\n";
-				}
-			}
-			return;
-		}
-
-		temp += *pData++;
-	}
+        temp += *pData++;
+    }
 }
-void MovePastComments(const char*& pData)
+void move_past_comments(const char*& pData)
 {
-	int count = 0;
-	while(*pData != NULL)
-	{
-		if(*pData == '\"')
-		{
-			count++;
-			pData++;
-			if(count == 2)
-				break;
-		}
-		else
-			pData++;
-	}
-}
-
-bool ClassObject::GetFileData(const char*& pData, const char* file, bool is_include)
-{
-	if(IfIsWordEat(pData,"#include"))
-	{
-		if(recurseImportLib)
-			ParseAndLoad(pData, file, true);
-		else
-			MovePastComments(pData);
-		return true;
-	}
-	if(IfIsWordEat(pData,"importlib"))
-	{
-		isHashImport++;
-		pData++; //get past (
-		EAT_SPACES(pData)
-		if(recurseImportLib)
-			ParseAndLoad(pData, file, is_include);
-		else
-			MovePastComments(pData);
-		EAT_SPACES(pData)
-		pData++; //get past )
-		EAT_SPACES(pData)
-		assert(*pData == ';');
-		if(*pData == ';')
-			pData++;
-		isHashImport--;
-		return true;
-	}
-	if(IfIsWordEat(pData,"import" ))
-	{
-		isHashImport++;
-		if(recurseImport)
-			ParseAndLoad(pData, file, is_include);
-		else
-			MovePastComments(pData);
-		EAT_SPACES(pData)
-		assert(*pData == ';');
-		if(*pData == ';')
-			pData++;
-		isHashImport--;
-		return true;
-	}
-	return false;
+    int count = 0;
+    while (*pData != NULL)
+    {
+        if (*pData == '\"')
+        {
+            count++;
+            pData++;
+            if (count == 2)
+                break;
+        }
+        else
+            pData++;
+    }
 }
 
-bool ClassObject::Load(const char* file, bool is_include)
+bool class_entity::parse_include(const char*& pData, const char* file, bool is_include)
 {
-	if(loadedFiles.find(file) != loadedFiles.end())
-		return true;
-
-	loadedFiles.insert(file);
-	std::error_code ec;
-	std::string path(std::filesystem::canonical(file, ec).string());
-
-
-	std::ifstream preproc_stream(path);
-	if(preproc_stream.is_open() == false)
-	{
-		return 0;
-	}
-	std::string preproc_data;
-	std::getline(preproc_stream, preproc_data, '\0');
-
-	const char* tmp = preproc_data.data();
-	GetStructure(tmp, std::string(), true, is_include);
-		
-	return true;
+    if (if_is_word_eat(pData, "#include"))
+    {
+        if (recurseImportLib)
+            extract_path_and_load(pData, file, true);
+        else
+            move_past_comments(pData);
+        return true;
+    }
+    if (if_is_word_eat(pData, "importlib"))
+    {
+        is_hash_import++;
+        pData++; // get past (
+        EAT_SPACES(pData)
+        if (recurseImportLib)
+            extract_path_and_load(pData, file, is_include);
+        else
+            move_past_comments(pData);
+        EAT_SPACES(pData)
+        pData++; // get past )
+        EAT_SPACES(pData)
+        assert(*pData == ';');
+        if (*pData == ';')
+            pData++;
+        is_hash_import--;
+        return true;
+    }
+    if (if_is_word_eat(pData, "import"))
+    {
+        is_hash_import++;
+        if (recurseImport)
+            extract_path_and_load(pData, file, is_include);
+        else
+            move_past_comments(pData);
+        EAT_SPACES(pData)
+        assert(*pData == ';');
+        if (*pData == ';')
+            pData++;
+        is_hash_import--;
+        return true;
+    }
+    return false;
 }
 
-std::set<std::string> loadedFiles;
-static int isHashImport = 0;
+bool class_entity::load(const char* file, bool is_include)
+{
+    if (loaded_files.find(file) != loaded_files.end())
+        return true;
+
+    loaded_files.insert(file);
+    std::error_code ec;
+    std::string path(std::filesystem::canonical(file, ec).string());
+
+    std::ifstream preproc_stream(path);
+    if (preproc_stream.is_open() == false)
+    {
+        return 0;
+    }
+    std::string preproc_data;
+    std::getline(preproc_stream, preproc_data, '\0');
+
+    const char* tmp = preproc_data.data();
+    parse_structure(tmp, true, is_include);
+
+    return true;
+}

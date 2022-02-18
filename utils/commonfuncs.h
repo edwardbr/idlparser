@@ -5,17 +5,17 @@
 #include <iostream>
 #include <algorithm>
 
-int Strcmp2(const char *string1, const char *string2);
-bool BeginsWith(const char *string1, const char *string2);
-bool IsWord(const char *string1, const char *string2);
-bool IfIsWordEat(const char*& string1, const char *string2);
-bool IsPreproc(const char *string1, const char *string2);
-bool IsPreprocEat(const char*& string1, const char *string2);
+int strcmp2(const char *string1, const char *string2);
+bool begins_with(const char *string1, const char *string2);
+bool is_word(const char *string1, const char *string2);
+bool if_is_word_eat(const char*& string1, const char *string2);
+bool is_preproc(const char *string1, const char *string2);
+bool is_preproc_eat(const char*& string1, const char *string2);
 
 
-bool ExtractWord(const char*& pData, std::string& retval);
+bool extract_word(const char*& pData, std::string& retval);
 
-std::vector<std::string> &split(const std::string &s, char delim, std::vector<std::string> &elems);
+std::vector<std::string> split(const std::string &s, char delim);
 
 inline std::ostream& operator << (std::ostream& _O, const std::string& _X)
 {
@@ -23,5 +23,5 @@ inline std::ostream& operator << (std::ostream& _O, const std::string& _X)
     return _O; 
 }
 
-std::string toLower(std::string s);
-std::string toUpper(std::string s);
+std::string to_lower(std::string s);
+std::string to_upper(std::string s);

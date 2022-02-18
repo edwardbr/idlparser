@@ -4,7 +4,7 @@
 
 #include "commonfuncs.h"
 
-int Strcmp2(const char *string1, const char *string2)
+int strcmp2(const char *string1, const char *string2)
 {
 	while(*string2)
 	{
@@ -16,12 +16,12 @@ int Strcmp2(const char *string1, const char *string2)
 	return 0;
 }
 
-bool BeginsWith(const char *string1, const char *string2)
+bool begins_with(const char *string1, const char *string2)
 {
-	return !Strcmp2(string1, string2);
+	return !strcmp2(string1, string2);
 }
 
-bool IsWord(const char *string1, const char *string2)
+bool is_word(const char *string1, const char *string2)
 {
 	while(*string2)
 	{
@@ -35,7 +35,7 @@ bool IsWord(const char *string1, const char *string2)
 	return true;
 }
 
-bool IsPreproc(const char* string1, const char *string2)
+bool is_preproc(const char* string1, const char *string2)
 {
 	if(*string1 != '#')
 	{
@@ -47,10 +47,10 @@ bool IsPreproc(const char* string1, const char *string2)
 	{
 		string1++;
 	}
-	return IsWord(string1, string2);
+	return is_word(string1, string2);
 }
 
-bool IsPreprocEat(const char*& string1, const char *string2)
+bool is_preproc_eat(const char*& string1, const char *string2)
 {
 	const char* tmp = string1;
 	if(*tmp++ != '#')
@@ -62,7 +62,7 @@ bool IsPreprocEat(const char*& string1, const char *string2)
 	{
 		tmp++;
 	}
-	if(IfIsWordEat(tmp, string2) == true)
+	if(if_is_word_eat(tmp, string2) == true)
 	{
 		string1 = tmp;
 		return true;
@@ -72,9 +72,9 @@ bool IsPreprocEat(const char*& string1, const char *string2)
 
 
 
-bool IfIsWordEat(const char*& string1, const char *string2)
+bool if_is_word_eat(const char*& string1, const char *string2)
 {
-	if(IsWord(string1, string2))
+	if(is_word(string1, string2))
 	{
 		string1 += strlen(string2);
 
@@ -86,7 +86,7 @@ bool IfIsWordEat(const char*& string1, const char *string2)
 	return false;
 }
 
-bool ExtractWord(const char*& pData, std::string& retval)
+bool extract_word(const char*& pData, std::string& retval)
 {
 	std::string temp;
 	while((*pData >= '0' && *pData <= '9') || (*pData >= 'A' && *pData <= 'Z') || (*pData >= 'a' && *pData <= 'z') || (*pData == '_'))
@@ -99,17 +99,19 @@ bool ExtractWord(const char*& pData, std::string& retval)
 }
 
 
-std::vector<std::string> &split(const std::string &s, char delim, std::vector<std::string> &elems) {
+std::vector<std::string> split(const std::string &s, char delim) 
+{
+	std::vector<std::string> ret;
     std::stringstream ss(s);
     std::string item;
     while(std::getline(ss, item, delim)) {
-        elems.push_back(item);
+        ret.push_back(item);
     }
-    return elems;
+    return ret;
 }
 
 
-std::string toLower(std::string s) 
+std::string to_lower(std::string s) 
 {
     std::transform(s.begin(), s.end(), s.begin(),
        [](unsigned char c){ return std::tolower(c); }
@@ -117,7 +119,7 @@ std::string toLower(std::string s)
     return s;
 }
 
-std::string toUpper(std::string s) 
+std::string to_upper(std::string s) 
 {
     std::transform(s.begin(), s.end(), s.begin(),
        [](unsigned char c){ return std::toupper(c); }

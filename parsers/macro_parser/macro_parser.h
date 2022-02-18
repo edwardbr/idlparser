@@ -36,8 +36,8 @@ struct macro_parser
 	virtual [[nodiscard]] bool ProcessIf(const char*& pData, std::ostream& dest, const paths& includeDirectories, int& inIfDef, int& ignoreText, bool& bInTheMiddleOfWord, std::vector<std::string>& loaded_includes);
 	virtual void CleanBuffer(const char*& pData, std::ostream& dest, const paths& includeDirectories, int inIfDef, int ignoreText, std::vector<std::string>& loaded_includes);
 	virtual [[nodiscard]] std::string ReduceExpression(const char*& pData, const paths& includeDirectories, std::vector<std::string>& loaded_includes);
-	virtual [[nodiscard]] bool Load(std::ostream& output_file, const std::string& file, const paths& includeDirectories, std::vector<std::string>& loaded_includes);
-	virtual [[nodiscard]] void ParseAndLoad(int ignoreText, std::ostream& stream, const paths& includeDirectories, const char* file, std::vector<std::string>& loaded_includes);
+	virtual [[nodiscard]] bool load(std::ostream& output_file, const std::string& file, const paths& includeDirectories, std::vector<std::string>& loaded_includes);
+	virtual [[nodiscard]] void extract_path_and_load(int ignoreText, std::ostream& stream, const paths& includeDirectories, const char* file, std::vector<std::string>& loaded_includes);
 	virtual [[nodiscard]] bool LoadUsingEnv(std::ostream& stream, const std::string& file, const paths& includeDirectories, std::vector<std::string>& loaded_includes);
 	virtual [[nodiscard]] bool ParseInclude(const char*& pData, int ignoreText, std::ostream& stream, const paths& includeDirectories, std::vector<std::string>& loaded_includes);
 
