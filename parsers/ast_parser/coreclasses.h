@@ -211,6 +211,8 @@ public:
 
 	void add_class(std::shared_ptr<class_entity> classObject);
 	const std::list<std::shared_ptr<class_entity> >& get_classes() const {return classes_;}
+
+	const std::list<template_param>& get_template_params() const {return template_params_;}
 	
 	//std::shared_ptr<class_entity> parse_sequence(const char*& pData, attributes& attribs);
 	void parse_union(const char*& pData, attributes& attribs);

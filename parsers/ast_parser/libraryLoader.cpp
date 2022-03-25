@@ -236,9 +236,18 @@ function_entity class_entity::parse_function(const char*& pData, attributes& att
                 }
                 else
                 {
-                    while (*pData != 0 && *pData != ' ' && *pData != ',' && *pData != '[' && *pData != '*'
+                    int template_angle = 0;
+                    while (*pData != 0 && *pData != '[' && *pData != '*'
                            && *pData != ')')
+                    {
+                        if(*pData == '<')
+                            template_angle++;
+                        if(*pData == '>')
+                            template_angle--;
+                        if(template_angle == 0 && (*pData == ' ' || *pData == ','))
+                            break;
                         parameter_name += *pData++;
+                    }
                 }
                 EAT_SPACES(pData)
                 while (*pData == '*' || *pData == '&')
@@ -484,7 +493,7 @@ void advancePassStatement(const char*& pData)
         pData++;
 }
 
-void splitVariable(const std::string& phrase, std::string& name, std::string type)
+void splitVariable(const std::string& phrase, std::string& name, std::string& type)
 {
     size_t j = phrase.length() - 1;
     while (phrase[j] == ' ' && j > 0)
@@ -504,7 +513,7 @@ void splitVariable(const std::string& phrase, std::string& name, std::string typ
         j--;
     }
 
-    name = phrase.substr(start_pos + 1, end_pos);
+    name = phrase.substr(start_pos + 1, end_pos + 1);
     type = phrase.substr(0, j + 1);
 }
 
@@ -972,13 +981,13 @@ std::shared_ptr<class_entity> class_entity::parse_typedef(const char*& pData, at
     else
     {
         std::string parent_name;
-        {
+        /*{
             auto owner = object->get_owner();
             if (owner)
             {
                 parent_name = owner->get_name();
             }
-        }
+        }*/
 
         std::string object_name = object->get_name();
         if (type != NULL)
@@ -1155,6 +1164,8 @@ void class_entity::parse_template(const char*& pData, std::list<template_param>&
         }
         else
         {
+            if(phrase.empty())
+                EAT_SPACES(pData);
             phrase += *pData;
         }
     }
@@ -1275,10 +1286,16 @@ bool class_entity::parse_class(const char*& pData, attributes& attribs, std::sha
 
         EAT_SPACES(pData)
 
-        if (if_is_word_eat(pData, "class"))
+        entity_type type = entity_type::TYPE_NULL;
+        if(if_is_word_eat(pData, "class"))
+            type = entity_type::CLASS;
+        if(if_is_word_eat(pData, "struct"))
+            type = entity_type::STRUCT;
+
+        if (type != entity_type::TYPE_NULL)
         {
             EAT_SPACES(pData)
-            obj = parse_interface(pData, entity_type::CLASS, attribs);
+            obj = parse_interface(pData, type, attribs);
             obj->template_params_ = templateParams;
             add_class(obj);
         }
