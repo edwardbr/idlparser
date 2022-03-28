@@ -141,6 +141,9 @@ function_entity class_entity::parse_function(const char*& pData, attributes& att
         }
         else
         {
+            if(*pData == '=')
+                break;
+
             if (return_type.length())
                 return_type += ' ';
 
@@ -167,6 +170,19 @@ function_entity class_entity::parse_function(const char*& pData, attributes& att
                 //		func.m_bIsPutProperty = true;
                 //	func.m_bIsGetProperty = true;*/
         func.set_type(FunctionTypeVariable);
+        if(*pData == '=') //this may be a default value
+        {
+            pData++;
+
+            EAT_SPACES(pData)
+            
+            std::string default_value;
+            while (*pData != ';' && *pData != 0)
+                default_value += *pData++;            
+            func.set_default_value(default_value);
+            if(*pData != ';')
+                pData++;
+        }
     }
     else
     {
@@ -353,11 +369,11 @@ function_entity class_entity::parse_function(const char*& pData, attributes& att
             if (b_nullParam != true)
                 func.add_parameter(parameter);
         }
-    }
 
-    if (*pData == ')')
-    {
-        pData++;
+        if (*pData == ')')
+        {
+            pData++;
+        }
     }
 
     while (!bFunctionIsProperty && *pData != 0 && *pData != ';')

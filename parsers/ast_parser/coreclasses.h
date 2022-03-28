@@ -134,6 +134,7 @@ class function_entity : public entity
 	function_type type_ = FunctionTypeMethod;
 
 	std::list<parameter_entity> parameters_;
+	std::string default_value;
 
 public:
 	function_entity() = default;
@@ -159,6 +160,9 @@ public:
 	const std::list<std::string>& get_raises() const {return raises_;}
 	void set_raises(std::list<std::string> raisess){raises_ = raisess;}
 	void add_raises(std::string raises){raises_.push_back(raises);}
+
+	std::string get_default_value() const {return default_value;}
+	void set_default_value(std::string val) {default_value = val;}
 };
 
 enum interface_spec
