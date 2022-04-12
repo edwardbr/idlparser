@@ -2,6 +2,8 @@
 #include <set>
 #include <list>
 #include <cassert>
+#include <cstring>
+#include <memory>
 
 #ifdef WIN32
 #ifdef USE_COM
@@ -230,7 +232,7 @@ public:
 	void parse_namespace(const char*& pData);
 	void parse_structure(const char*& pData, bool bInCurlyBrackets);
 
-	bool load(const char* file = false);
+	bool load(const char* file = nullptr);
 	void extract_path_and_load(const char*& pData, const char* file);
 	bool parse_include(const char*& pData, const char* file);
 

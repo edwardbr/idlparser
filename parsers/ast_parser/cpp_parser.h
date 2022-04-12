@@ -1,4 +1,5 @@
-
+#include <vector>
+#include <string>
 class class_entity;
 class class_entity;
 

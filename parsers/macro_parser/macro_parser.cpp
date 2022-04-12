@@ -13,7 +13,7 @@
 macro_parser::macro_parser()
 {
 	operatorBehaviours.assign({
-		{"!",&macro_parser::not,true}, //Logical NOT   
+		{"!",&macro_parser::not_,true}, //Logical NOT   
 		{"~",&macro_parser::bnot,true}, //Bitwise NOT   
 		{"*",&macro_parser::mult,false}, //Multiply Left to right 
 		{"/",&macro_parser::div,false}, //Divide   
@@ -31,8 +31,8 @@ macro_parser::macro_parser()
 		{"&",&macro_parser::band,false}, //Bitwise AND Left to right 
 		{"^",&macro_parser::bxor,false}, //Bitwise exclusive OR Left to right 
 		{"|",&macro_parser::bor,false}, //Bitwise OR Left to right 
-		{"&&",&macro_parser::and,false}, //Logical AND Left to right 
-		{"||",&macro_parser::or,false} //Logical OR Left to right 
+		{"&&",&macro_parser::and_,false}, //Logical AND Left to right 
+		{"||",&macro_parser::or_,false} //Logical OR Left to right 
 	});
 	operators = {"reinterpret_cast", "dynamic_cast", "static_cast", "const_cast", "delete", "sizeof", "typeid", "new", "<<=", ">>=", "->*", "::", "++", "--", "->", ".*", "<<", ">>", "<=", ">=", "==", "!=", "&&", "||", "%=", "&=", "|=", "*=", "/=", "+=", "-=", "^=", "=", "!", "~", "*", "/", "%", "+", "-", "<", ">", "&", "^", "|", ",", ":", ".", ":", "[", "]", "(", ")", "!", "-", "+", "/"};
 }
@@ -266,7 +266,7 @@ enum if_status
 	hash_if
 };
 
-bool macro_parser::ProcessIf(const char*& pData, std::ostream& dest, const paths& includeDirectories, int& inIfDef, int& ignoreText, bool& bInTheMiddleOfWord, std::vector<std::string>& loaded_includes)
+void macro_parser::ProcessIf(const char*& pData, std::ostream& dest, const paths& includeDirectories, int& inIfDef, int& ignoreText, bool& bInTheMiddleOfWord, std::vector<std::string>& loaded_includes)
 {
 
 	if_status status = ifdef;
@@ -379,7 +379,6 @@ bool macro_parser::ProcessIf(const char*& pData, std::ostream& dest, const paths
 	{
 		dest << ' ';
 	}
-	return true;
 }
 
 bool macro_parser::ParseInclude(const char*& pData, int ignoreText, std::ostream& dest, const paths& includeDirectories, std::vector<std::string>& loaded_includes)
@@ -674,7 +673,7 @@ void macro_parser::CleanBuffer(const char*& pData, std::ostream& dest, const pat
 	return isLogicalExpression;
 }*/
 
-std::string macro_parser::not(const std::string val, const std::string)
+std::string macro_parser::not_(const std::string val, const std::string)
 {
 	if(val == "true")
 		return "false";
@@ -780,14 +779,14 @@ std::string macro_parser::eq(const std::string val1,const std::string val2)
 {
 	if(val1 == val2)
 		return "true";
-	return false;
+	return "false";
 };
 
 std::string macro_parser::neq(const std::string val1,const std::string val2)
 {
 	if(val1 != val2)
 		return "true";
-	return false;
+	return "false";
 };
 
 std::string macro_parser::band(const std::string val1,const std::string val2)
@@ -814,14 +813,14 @@ std::string macro_parser::bor(const std::string val1,const std::string val2)
 	return buf;
 };
 
-std::string macro_parser::and(const std::string val1,const std::string val2)
+std::string macro_parser::and_(const std::string val1,const std::string val2)
 {
 	if((val1 == "true" || atoi(val1.data())) && (val2 == "true" || atoi(val2.data())))
 		return "true";
 	return "false";
 };
 
-std::string macro_parser::or(const std::string val1,const std::string val2)
+std::string macro_parser::or_(const std::string val1,const std::string val2)
 {
 	if(val1 == "true" || atoi(val1.data()) || val2 == "true" || atoi(val2.data()))
 		return "true";
@@ -1544,5 +1543,4 @@ void CleanBufferOfComments(const char*& pData)
 		}
 		*oldBufPos = 0;
 	}
-	*oldBufPos;
 }

@@ -27,21 +27,22 @@ struct macro_parser
 	};
 
 	macro_parser();
-	virtual [[nodiscard]] bool FindDefString(std::string& var);
+	[[nodiscard]] virtual bool FindDefString(std::string& var);
 	virtual void UnDefine(std::string& var);
 	virtual void Define(std::string& var);
 	//virtual char IsLogicalExpression(const char* pData);
-	virtual [[nodiscard]] std::string ExtractExpression(const char*& pData, const paths& includeDirectories, std::vector<std::string>& loaded_includes);
-	virtual [[nodiscard]] bool SubstituteMacro(int ignoreText, const char*& pData, std::ostream& dest, const paths& includeDirectories, std::vector<std::string>& loaded_includes);
-	virtual [[nodiscard]] bool ProcessIf(const char*& pData, std::ostream& dest, const paths& includeDirectories, int& inIfDef, int& ignoreText, bool& bInTheMiddleOfWord, std::vector<std::string>& loaded_includes);
+	[[nodiscard]] virtual std::string ExtractExpression(const char*& pData, const paths& includeDirectories, std::vector<std::string>& loaded_includes);
+	[[nodiscard]] virtual bool SubstituteMacro(int ignoreText, const char*& pData, std::ostream& dest, const paths& includeDirectories, std::vector<std::string>& loaded_includes);
+	virtual void ProcessIf(const char*& pData, std::ostream& dest, const paths& includeDirectories, int& inIfDef, int& ignoreText, bool& bInTheMiddleOfWord, std::vector<std::string>& loaded_includes);
 	virtual void CleanBuffer(const char*& pData, std::ostream& dest, const paths& includeDirectories, int inIfDef, int ignoreText, std::vector<std::string>& loaded_includes);
-	virtual [[nodiscard]] std::string ReduceExpression(const char*& pData, const paths& includeDirectories, std::vector<std::string>& loaded_includes);
-	virtual [[nodiscard]] bool load(std::ostream& output_file, const std::string& file, const paths& includeDirectories, std::vector<std::string>& loaded_includes);
-	virtual [[nodiscard]] void extract_path_and_load(int ignoreText, std::ostream& stream, const paths& includeDirectories, const char* file, std::vector<std::string>& loaded_includes);
-	virtual [[nodiscard]] bool LoadUsingEnv(std::ostream& stream, const std::string& file, const paths& includeDirectories, std::vector<std::string>& loaded_includes);
-	virtual [[nodiscard]] bool ParseInclude(const char*& pData, int ignoreText, std::ostream& stream, const paths& includeDirectories, std::vector<std::string>& loaded_includes);
+	[[nodiscard]] virtual std::string ReduceExpression(const char*& pData, const paths& includeDirectories, std::vector<std::string>& loaded_includes);
+	[[nodiscard]] virtual bool load(std::ostream& output_file, const std::string& file, const paths& includeDirectories, std::vector<std::string>& loaded_includes);
+	[[nodiscard]] virtual void extract_path_and_load(int ignoreText, std::ostream& stream, const paths& includeDirectories, const char* file, std::vector<std::string>& loaded_includes);
+	[[nodiscard]] virtual bool LoadUsingEnv(std::ostream& stream, const std::string& file, const paths& includeDirectories, std::vector<std::string>& loaded_includes);
+	[[nodiscard]] virtual bool ParseInclude(const char*& pData, int ignoreText, std::ostream& stream, const paths& includeDirectories, std::vector<std::string>& loaded_includes);
 
-	virtual std::string not(const std::string val, const std::string);
+	// `not` `and` `or` are alternative tokens in clang, which implements the standard correctly
+	virtual std::string not_(const std::string val, const std::string);
 	virtual std::string bnot(const std::string val, const std::string);
 	virtual std::string mult(const std::string val1,const std::string val2);
 	virtual std::string div(const std::string val1,const std::string val2);
@@ -59,9 +60,9 @@ struct macro_parser
 	virtual std::string band(const std::string val1,const std::string val2);
 	virtual std::string bxor(const std::string val1,const std::string val2);
 	virtual std::string bor(const std::string val1,const std::string val2);
-	virtual std::string and(const std::string val1,const std::string val2);
-	virtual std::string or(const std::string val1,const std::string val2);
-	virtual [[nodiscard]] bool IsOperator(const char* pData, std::string& operatorString);
+	virtual std::string and_(const std::string val1,const std::string val2);
+	virtual std::string or_(const std::string val1,const std::string val2);
+	[[nodiscard]] virtual bool IsOperator(const char* pData, std::string& operatorString);
 
 	virtual void AddDefine(std::string name, definition value){defines[name] = value;}
 

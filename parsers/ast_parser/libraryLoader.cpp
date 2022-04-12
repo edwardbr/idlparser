@@ -20,7 +20,7 @@
         data++;
 
 std::set<std::string> loaded_files;
-static int is_hash_import = 0;
+int is_hash_import = 0;
 
 attributes GetAttributes(const char*& pData)
 {
@@ -440,7 +440,7 @@ function_entity class_entity::parse_function(const char*& pData, attributes& att
         {
             pData++;
             EAT_SPACES(pData)
-            if (pData, '0')
+            if (*pData == '0')
             {
                 func.set_pure_virtual(true);
                 pData++;
@@ -2017,7 +2017,7 @@ void class_entity::extract_path_and_load(const char*& pData, const char* file)
 void move_past_comments(const char*& pData)
 {
     int count = 0;
-    while (*pData != NULL)
+    while (*pData)
     {
         if (*pData == '\"')
         {
