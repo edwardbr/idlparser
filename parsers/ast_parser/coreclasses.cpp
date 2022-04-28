@@ -16,7 +16,26 @@ class_entity::class_entity(class_entity* owner, interface_spec spec) :
 {}
 
 void class_entity::add_class(std::shared_ptr<class_entity> classObject)
-{
+{	
+	if(!current_import.empty())
+		classObject->set_import_lib(current_import.top());
+
+	for(auto it = classes_.begin(); it != classes_.end(); ++it)
+	{
+		auto& cls = *it;
+		if(cls->get_name() == classObject->get_name())
+		{
+			if(cls->get_import_lib() == "")
+				return;
+			if(cls->get_import_lib() != "" && classObject->get_import_lib() == "")
+			{
+				//replace the imported definition with the included one
+				cls = classObject;
+				return;
+			}
+			return;
+		}
+	}
 	classes_.push_back(classObject);
 }
 

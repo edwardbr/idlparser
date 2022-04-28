@@ -4,6 +4,7 @@
 #include <cassert>
 #include <cstring>
 #include <memory>
+#include <stack>
 
 #ifdef WIN32
 #ifdef USE_COM
@@ -189,6 +190,7 @@ class class_entity :
 	bool recurseImport = true;
 	bool recurseImportLib = true;
 	interface_spec interface_spec_;
+	std::string import_lib_;
 
 	bool find_class(const std::vector<std::string>& type, std::shared_ptr<class_entity>& obj) const;
 
@@ -219,6 +221,9 @@ public:
 	const std::list<std::shared_ptr<class_entity> >& get_classes() const {return classes_;}
 
 	const std::list<template_param>& get_template_params() const {return template_params_;}
+
+	std::string get_import_lib() const {return import_lib_;}
+	void set_import_lib(std::string name) {import_lib_ = name;}
 	
 	//std::shared_ptr<class_entity> parse_sequence(const char*& pData, attributes& attribs);
 	void parse_union(const char*& pData, attributes& attribs);
@@ -250,7 +255,7 @@ public:
 };
 
 extern std::stringstream verboseStream;
-extern int is_hash_import;
+extern std::stack<std::string> current_import;
 
 struct typeInfo
 {

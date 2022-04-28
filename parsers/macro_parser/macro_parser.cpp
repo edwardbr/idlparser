@@ -549,10 +549,12 @@ void macro_parser::CleanBuffer(const char*& pData, std::ostream& dest, const pat
 			}
 
 			var = to_lower(var);
-			if(openedImports.find(var) == openedImports.end())
+			//if(openedImports.find(var) == openedImports.end())
 			{
-				openedImports.insert(var);
+				//openedImports.insert(var);
+				dest << "import \"" << var << "\" {";
 				extract_path_and_load(ignoreText, dest, includeDirectories, var.data(), loaded_includes);
+				dest << "}";
 			}
 		}
 		else if(is_preproc_eat(pData,"define"))			
@@ -1256,7 +1258,7 @@ bool macro_parser::load(std::ostream& output_file, const std::string& file, cons
 {
 	if(std::find(loaded_includes.begin(), loaded_includes.end(), file) == loaded_includes.end())
 	{
-		loaded_includes.push_back(file);
+		//loaded_includes.push_back(file);
 	}
 	
 	std::ifstream input_file(file);

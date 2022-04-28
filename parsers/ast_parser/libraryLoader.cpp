@@ -7,6 +7,7 @@
 #include <unordered_map>
 #include <fstream>
 #include <filesystem>
+#include <stack>
 
 #include "coreclasses.h"
 
@@ -20,7 +21,7 @@
         data++;
 
 std::set<std::string> loaded_files;
-int is_hash_import = 0;
+std::stack<std::string> current_import;
 
 attributes GetAttributes(const char*& pData)
 {
@@ -1230,25 +1231,11 @@ bool class_entity::parse_class(const char*& pData, attributes& attribs, std::sha
 
     else if (if_is_word_eat(pData, "library"))
     {
-        if (is_hash_import)
-        {
-            std::cerr << "encountered a library inside a #import\n";
-            auto lib = std::make_shared<class_entity>(this);
-
-            lib->parse_interface(pData, entity_type::LIBRARY, attribs);
-        }
-        else
-        {
-
-            obj = parse_interface(pData, entity_type::LIBRARY, attribs);
-            add_class(obj);
-        }
+        obj = parse_interface(pData, entity_type::LIBRARY, attribs);
+        add_class(obj);
     }
     else if (if_is_word_eat(pData, "coclass"))
     {
-        if (is_hash_import)
-            std::cerr << "encountered a coclass inside a #import\n";
-
         obj = parse_interface(pData, entity_type::COCLASS, attribs);
         add_class(obj);
     }
@@ -1258,6 +1245,11 @@ bool class_entity::parse_class(const char*& pData, attributes& attribs, std::sha
         add_class(obj);
     }
     else if (is_variable == false && if_is_word_eat(pData, "namespace"))
+    {
+        obj = parse_interface(pData, entity_type::NAMESPACE, attribs);
+        add_class(obj);
+    }
+    else if (is_variable == false && if_is_word_eat(pData, "import"))
     {
         obj = parse_interface(pData, entity_type::NAMESPACE, attribs);
         add_class(obj);
@@ -2041,7 +2033,7 @@ bool class_entity::parse_include(const char*& pData, const char* file)
             move_past_comments(pData);
         return true;
     }
-    if (if_is_word_eat(pData, "importlib"))
+    /*if (if_is_word_eat(pData, "importlib"))
     {
         is_hash_import++;
         pData++; // get past (
@@ -2058,19 +2050,52 @@ bool class_entity::parse_include(const char*& pData, const char* file)
             pData++;
         is_hash_import--;
         return true;
-    }
+    }*/
     if (if_is_word_eat(pData, "import"))
-    {
-        is_hash_import++;
-        if (recurseImport)
-            extract_path_and_load(pData, file);
-        else
-            move_past_comments(pData);
-        EAT_SPACES(pData)
-        assert(*pData == ';');
-        if (*pData == ';')
+    {        
+        EAT_SPACES(pData);
+        if(*pData != '\"')
+        {
+            std::stringstream err;
+            err << "import path not supplied";
+            err << std::ends;
+            std::string errString(err.str());
+            throw errString;
+        }
+        pData++;
+        
+        std::string path;
+        
+        while(*pData != '\"' && *pData != 0)
+        {
+            path += *pData;
             pData++;
-        is_hash_import--;
+        }
+        
+        if(*pData != '\"')
+        {
+            std::stringstream err;
+            err << "import path not supplied";
+            err << std::ends;
+            std::string errString(err.str());
+            throw errString;
+        }
+        pData++;
+        current_import.push(path);
+
+        EAT_SPACES(pData);
+        if(*pData != '{')
+        {
+            std::stringstream err;
+            err << "import { missing";
+            err << std::ends;
+            std::string errString(err.str());
+            throw errString;
+        }
+        pData++;
+        parse_structure(pData, true);
+
+        current_import.pop();
         return true;
     }
     return false;
