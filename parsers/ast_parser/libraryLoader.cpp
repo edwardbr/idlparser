@@ -1019,7 +1019,7 @@ std::shared_ptr<class_entity> class_entity::parse_typedef(const char*& pData, at
 
             EAT_SPACES(pData)
 
-            while (*pData != 0 && *pData != ' ' && *pData != '*' && *pData != ';' && *pData != '{' && *pData != ',')
+            while (*pData != 0 && *pData != ' ' && *pData != '*' && *pData != ';' && *pData != '{' && *pData != '[' && *pData != ',')
             {
                 object_name += *pData;
                 pData++;
@@ -1061,6 +1061,26 @@ std::shared_ptr<class_entity> class_entity::parse_typedef(const char*& pData, at
 
                     if (*pData == '}')
                         braketCount--;
+                    pData++;
+                }
+            }
+                        
+            //deal with arrays
+            if (*pData == '[')
+            {
+                parent_name += *pData;
+                pData++;
+                while (*pData != ']')
+                {
+                    if (*pData == '\0')
+                        break;
+
+                    parent_name += *pData;
+                    pData++;
+                }
+                if(*pData)
+                {
+                    parent_name += *pData;
                     pData++;
                 }
             }
