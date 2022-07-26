@@ -91,8 +91,7 @@ std::string macro_parser::ExtractExpression(const char*& pData, const paths& inc
 			
 			if(!extract_word(pData, tempString))
 			{
-				std::cerr << "expected a word insde the brackets of the defined keyword\n";
-				tempString = "";
+				throw std::runtime_error("expected a word insde the brackets of the defined keyword");
 			}
 
 			while(*pData == ' ')
@@ -100,8 +99,7 @@ std::string macro_parser::ExtractExpression(const char*& pData, const paths& inc
 			
 			if(*pData != ')' && required_closing == true)
 			{
-				std::cerr << "expected a ')'\n";
-				tempString = "";
+				throw std::runtime_error("expected a ')'");
 			}
 			else if(required_closing == true)
 			{
@@ -406,7 +404,7 @@ bool macro_parser::ParseInclude(const char*& pData, int ignoreText, std::ostream
 			err << "Error unexpected character: " << *pData;
 			err << std::ends;
 			std::string errString(err.str());
-			throw errString;
+			throw std::runtime_error(errString);
 		}
 		pData++;
 	}
@@ -420,7 +418,7 @@ bool macro_parser::ParseInclude(const char*& pData, int ignoreText, std::ostream
 			err << "Error unexpected character: " << *pData;
 			err << std::ends;
 			std::string errString(err.str());
-			throw errString;
+			throw std::runtime_error(errString);
 		}
 		var = item->second.m_substitutionString;
 	}
@@ -463,7 +461,7 @@ void macro_parser::CleanBuffer(const char*& pData, std::ostream& dest, const pat
 				err << "Error unexpected character: " << *pData;
 				err << std::ends
 				std::string errString(err.str());
-				throw errString;
+				throw std::runtime_error(errString);
 			}
 			pData++;
 			if(*pData != '\"')
@@ -472,7 +470,7 @@ void macro_parser::CleanBuffer(const char*& pData, std::ostream& dest, const pat
 				err << "Error unexpected character: " << *pData;
 				err << std::ends;
 				std::string errString(err.str());
-				throw errString;
+				throw std::runtime_error(errString);
 			}
 			pData++;
 
@@ -488,7 +486,7 @@ void macro_parser::CleanBuffer(const char*& pData, std::ostream& dest, const pat
 				err << "Error unexpected character: " << *pData;
 				err << std::ends;
 				std::string errString(err.str());
-				throw errString;
+				throw std::runtime_error(errString);
 			}
 			pData++;
 
@@ -498,7 +496,7 @@ void macro_parser::CleanBuffer(const char*& pData, std::ostream& dest, const pat
 				err << "Error unexpected character: " << *pData;
 				err << std::ends;
 				std::string errString(err.str());
-				throw errString;
+				throw std::runtime_error(errString);
 			}
 			pData++;
 
@@ -520,7 +518,7 @@ void macro_parser::CleanBuffer(const char*& pData, std::ostream& dest, const pat
 				err << "Error unexpected character: " << *pData;
 				err << std::ends;
 				std::string errString(err.str());
-				throw errString;
+				throw std::runtime_error(errString);
 			}
 			pData++;
 
@@ -536,7 +534,7 @@ void macro_parser::CleanBuffer(const char*& pData, std::ostream& dest, const pat
 				err << "Error unexpected character: " << *pData;
 				err << std::ends;
 				std::string errString(err.str());
-				throw errString;
+				throw std::runtime_error(errString);
 			}
 			pData++;
 
@@ -1086,7 +1084,7 @@ bool macro_parser::SubstituteMacro(int ignoreText, const char*& pData, std::ostr
 						err << "error expecting ','";
 						err << std::ends;
 						std::string errorMsg(err.str());
-						throw errorMsg;
+						throw std::runtime_error(errorMsg);
 					}
 					pData++;
 
@@ -1317,7 +1315,7 @@ void macro_parser::extract_path_and_load(int ignoreText, std::ostream& stream, c
 		err << "failed to load " << file << "\n";
 		err << std::ends;
 		std::string errorMsg(err.str());
-		throw errorMsg;
+		throw std::runtime_error(errorMsg);
 	}
 }
 

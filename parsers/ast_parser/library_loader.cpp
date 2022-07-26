@@ -233,7 +233,7 @@ function_entity class_entity::parse_function(const char*& pData, attributes& att
                         parameter.set_callback(true);
                     }
                     else
-                        std::cerr << "not a call back as expected";
+                        throw std::runtime_error("not a call back as expected");
                 }
                 else if (*pData == '[')
                 {
@@ -383,11 +383,7 @@ function_entity class_entity::parse_function(const char*& pData, attributes& att
 
         if (*pData == '{')
         {
-            std::stringstream err;
-            err << "function implementations are not supported";
-            err << std::ends;
-            std::string errString(err.str());
-            throw errString;
+            throw std::runtime_error("function implementations are not supported");
         }
         else if (func_name == get_name() && *pData == ':') // this is for constructor initialisers
         {
@@ -576,11 +572,7 @@ void class_entity::parse_namespace(const char*& pData)
 
     if (*pData != '{')
     {
-        std::stringstream err;
-        err << "Error expected character '}'";
-        err << std::ends;
-        std::string errString(err.str());
-        throw errString;
+        throw std::runtime_error("Error expected character '}'");
     }
     parse_structure(pData, false);
 }
@@ -852,7 +844,7 @@ void class_entity::parse_structure(const char*& pData, bool bInCurlyBrackets)
                     err << "type " << parent_name << " not known";
                     err << std::ends;
                     std::string errString(err.str());
-                    throw errString;
+                    throw std::runtime_error(errString);
                 }
                 add_base_class(pObj.get());
             }
@@ -880,7 +872,7 @@ void class_entity::parse_structure(const char*& pData, bool bInCurlyBrackets)
                 << " not known";
             err << std::ends;
             std::string errString(err.str());
-            throw errString;
+            throw std::runtime_error(errString);
         }
         add_base_class(pObj.get());
         set_type(entity_type::INTERFACE);
@@ -935,16 +927,6 @@ std::shared_ptr<class_entity> class_entity::parse_typedef(const char*& pData, at
 
     if (type == NULL && object->parse_class(pData, attribs, obj, false))
     {
-        /*std::shared_ptr<class_entity> pObj;
-        if (!find_class(obj->get_name(), pObj))
-        {
-            std::stringstream err;
-            err << "type " << obj->get_name() << " not known";
-            err << std::ends;
-            std::string errString(err.str());
-            throw errString;
-        }
-        object->set_owner(pObj);*/
 		object->set_alias_name(obj->get_name());
 
         bool firstPass = true;
@@ -1185,7 +1167,7 @@ void class_entity::parse_template(const char*& pData, std::list<template_param>&
         err << "Error expected character '<'";
         err << std::ends;
         std::string errString(err.str());
-        throw errString;
+        throw std::runtime_error(errString);
     }
     pData++;
 
@@ -1333,7 +1315,7 @@ bool class_entity::parse_class(const char*& pData, attributes& attribs, std::sha
             err << "Error expected 'class'";
             err << std::ends;
             std::string errString(err.str());
-            throw errString;
+            throw std::runtime_error(errString);
         }
     }
 
@@ -2000,7 +1982,7 @@ void class_entity::extract_path_and_load(const char*& pData, const char* file)
             {
                 if (!load(temp.data()))
                     //					if(!LoadUsingEnv(temp))
-                    std::cerr << "failed to load " << temp << "\n";
+                    throw std::runtime_error(std::string("failed to load ") + temp);
             }
             else
             {
@@ -2017,7 +1999,7 @@ void class_entity::extract_path_and_load(const char*& pData, const char* file)
                 if (!load(path))
                 {
                     //					if(!LoadUsingEnv(temp))
-                    std::cerr << "failed to load " << path << "\n";
+                    throw std::runtime_error(std::string("failed to load ") +  path);
                 }
             }
             return;
@@ -2080,7 +2062,7 @@ bool class_entity::parse_include(const char*& pData, const char* file)
             err << "import path not supplied";
             err << std::ends;
             std::string errString(err.str());
-            throw errString;
+            throw std::runtime_error(errString);
         }
         pData++;
         
@@ -2098,7 +2080,7 @@ bool class_entity::parse_include(const char*& pData, const char* file)
             err << "import path not supplied";
             err << std::ends;
             std::string errString(err.str());
-            throw errString;
+            throw std::runtime_error(errString);
         }
         pData++;
         current_import.push(path);
@@ -2110,7 +2092,7 @@ bool class_entity::parse_include(const char*& pData, const char* file)
             err << "import { missing";
             err << std::ends;
             std::string errString(err.str());
-            throw errString;
+            throw std::runtime_error(errString);
         }
         pData++;
         parse_structure(pData, true);

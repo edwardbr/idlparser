@@ -8,7 +8,7 @@ add_library(ast_parser
     coreclasses.cpp
     cpp_parser.h
     cpp_parser.cpp
-    libraryLoader.cpp)
+    library_loader.cpp)
 
 target_compile_definitions(ast_parser PRIVATE ${HOST_DEFINES})
 target_compile_options(ast_parser PRIVATE ${HOST_COMPILE_OPTIONS})

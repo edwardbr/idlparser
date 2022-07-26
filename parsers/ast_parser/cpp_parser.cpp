@@ -334,11 +334,7 @@ std::string get_template_param(std::string type)
 	}
 	if(inBrackets == false)
 	{
-		std::stringstream err;
-		err << "template type missing '>'";
-		err << std::ends;
-		std::string errString(err.str());
-		throw errString;
+		throw std::runtime_error("template type missing '>'");
 	}
 	return param;
 }
