@@ -1019,8 +1019,13 @@ std::shared_ptr<class_entity> class_entity::parse_typedef(const char*& pData, at
 
             EAT_SPACES(pData)
 
-            while (*pData != 0 && *pData != ' ' && *pData != '*' && *pData != ';' && *pData != '{' && *pData != '[' && *pData != ',')
+            int template_count = 0;
+            while (*pData != 0 && *pData != ' ' && *pData != '*' && *pData != ';' && *pData != '{' && *pData != '[' && (*pData != ',' || template_count > 0))
             {
+                if(*pData == '<')
+                    template_count++;
+                else if(*pData == '>')
+                    template_count--;
                 object_name += *pData;
                 pData++;
             }
