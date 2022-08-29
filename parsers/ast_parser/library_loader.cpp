@@ -83,18 +83,19 @@ function_entity class_entity::parse_function(const char*& pData, attributes& att
     std::string return_type;
     int array_size = 0;
 
-    int in_template = 0;
-
     while (*pData)
     {
-        while (in_template || *pData != ' ' && *pData != '(' && *pData != ')' && *pData != ';' && *pData != '[' && *pData != 0)
-        {
-            assert(in_template >= 0);
-            if (*pData == '<')
-                in_template++;
-            else if (*pData == '>')
-                in_template--;
-            func_name += *pData++;
+	    {
+	        int in_template = 0;
+    	    while (in_template || *pData != ' ' && *pData != '(' && *pData != ')' && *pData != ';' && *pData != '[' && *pData != 0)
+            {
+                assert(in_template >= 0);
+                if (*pData == '<')
+                    in_template++;
+                else if (*pData == '>')
+                    in_template--;
+                func_name += *pData++;
+            }
         }
 
         if (func_name == "const") // CORBA types
