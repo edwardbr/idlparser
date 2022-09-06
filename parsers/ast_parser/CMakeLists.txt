@@ -22,8 +22,6 @@ target_include_directories(ast_parser
 target_link_libraries(ast_parser 
     PUBLIC 
         utils
-    PRIVATE
-        ${HOST_LIBRARIES}
 )
 target_link_options(ast_parser PRIVATE ${HOST_LINK_OPTIONS})
 target_link_directories(ast_parser PUBLIC ${SGX_LIBRARY_PATH})

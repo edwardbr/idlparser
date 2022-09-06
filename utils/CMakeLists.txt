@@ -14,8 +14,4 @@ target_include_directories(utils
         .
     PRIVATE 
         ${HOST_INCLUDES})
-target_link_libraries(utils 
-    PRIVATE
-        ${HOST_LIBRARIES}
-)
 set_property(TARGET utils PROPERTY COMPILE_PDB_NAME utils)

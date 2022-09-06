@@ -13,8 +13,6 @@ target_compile_options(macro_parser PRIVATE ${HOST_COMPILE_OPTIONS})
 target_link_libraries(macro_parser 
     PUBLIC 
         utils
-    PRIVATE
-        ${HOST_LIBRARIES}
 )
 target_include_directories(macro_parser 
     PUBLIC 
