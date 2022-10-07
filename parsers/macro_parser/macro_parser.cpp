@@ -1166,7 +1166,7 @@ bool macro_parser::SubstituteMacro(int ignoreText, const char*& pData, std::ostr
 	}
 	if(!ignoreText)
 	{
-		dest << newSubstString << ' ';
+		dest << newSubstString;
 	}
 	return true;
 }

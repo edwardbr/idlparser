@@ -132,12 +132,12 @@ class function_entity : public entity
 {
 	std::list<std::string> raises_;
 	std::string return_type_;
-	size_t array_size_ = 0;
 	bool pure_virtual_ = false;
 	function_type type_ = FunctionTypeMethod;
 
 	std::list<parameter_entity> parameters_;
 	std::string default_value;
+	std::string array_string_;
 
 public:
 	function_entity() = default;
@@ -153,8 +153,8 @@ public:
 	bool is_pure_virtual() const {return pure_virtual_;}
 	void set_pure_virtual(bool pv){pure_virtual_ = pv;}
 
-	size_t get_array_size() const {return array_size_;}
-	void set_array_size(size_t size){array_size_ = size;}
+	std::string get_array_string() const {return array_string_;}
+	void set_array_string(const std::string& s){array_string_ = s;}
 
 	const std::list<parameter_entity>& get_parameters() const {return parameters_;}
 	void set_parameters(std::list<parameter_entity> parameters){parameters_ = parameters;}
@@ -187,6 +187,7 @@ class class_entity :
 	std::list<function_entity> functions_;
 	std::list<std::shared_ptr<class_entity> > classes_;
 	std::list<template_param> template_params_;
+	bool is_template_ = false;
 	bool recurseImport = true;
 	bool recurseImportLib = true;
 	interface_spec interface_spec_;
@@ -242,6 +243,16 @@ public:
 	bool parse_include(const char*& pData, const char* file);
 
 	bool find_class(std::string type, std::shared_ptr<class_entity>& obj) const;
+
+	void set_is_template(bool is_template)
+	{
+		is_template_ = is_template;
+	}
+
+	bool get_is_template() const
+	{
+		return is_template_;
+	}
 
 #ifdef USE_COM
 	CComBSTR GetInterfaceName(ITypeInfo* typeInfo);

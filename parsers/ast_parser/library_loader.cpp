@@ -144,7 +144,8 @@ function_entity class_entity::parse_function(const char*& pData, attributes& att
                     buf += *pData;
                 pData++;
             } while (count && *pData);
-            func.set_array_size(std::stoul(buf));
+
+            func.set_array_string(buf);
         }
         else if (*pData == 0 || *pData == ';' || *pData == ')')
         {
@@ -1205,8 +1206,11 @@ void class_entity::parse_template(const char*& pData, std::list<template_param>&
     }
 
     template_param tpl;
-    splitVariable(phrase, tpl.name, tpl.type);
-    templateParams.push_back(tpl);
+    if (!phrase.empty())
+    {
+        splitVariable(phrase, tpl.name, tpl.type);
+        templateParams.push_back(tpl);
+    }
 
     pData++;
 }
@@ -1322,6 +1326,7 @@ bool class_entity::parse_class(const char*& pData, attributes& attribs, std::sha
             EAT_SPACES(pData)
             obj = parse_interface(pData, type, attribs);
             obj->template_params_ = templateParams;
+            obj->set_is_template(true);
             add_class(obj);
         }
         else
