@@ -3,6 +3,8 @@
 #include <list>
 #include <cassert>
 #include <cstring>
+#include <string>
+#include <algorithm>
 #include <memory>
 #include <stack>
 
@@ -85,6 +87,23 @@ public:
 	void set_name(std::string name){name_ = name;}
 
 	const attributes& get_attributes() const {return attributes_;}
+	std::string get_attribute(const std::string& name) const 
+	{
+		for(std::list<std::string>::const_iterator it = attributes_.begin(); it != attributes_.end();it++)
+		{
+			if(*it == name)
+			{
+				return *it;
+				break;
+			}
+			auto tmp = (*it).substr(0, name.size());
+			if(tmp == name && (*it)[name.size()] == '=')
+			{
+				return tmp;
+			}
+		};
+		return std::string();
+	}
 	void set_attributes(attributes attribs){attributes_ = attribs;}
 	void add_attribute(std::string attrib){attributes_.push_back(attrib);}
 	void merge_attributes(attributes attribs){attributes_.merge(attribs);}
