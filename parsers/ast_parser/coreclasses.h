@@ -1,3 +1,4 @@
+#pragma once
 #include "commonfuncs.h"
 #include <set>
 #include <list>
