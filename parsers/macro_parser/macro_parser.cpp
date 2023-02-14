@@ -7,6 +7,7 @@
 #include <sstream>
 #include <fstream>
 #include <filesystem>
+#include <functional>
 
 #include "macro_parser.h"
 
