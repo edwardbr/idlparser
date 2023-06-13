@@ -313,26 +313,26 @@ void translate_type(std::string param_type, const class_entity& library)
 std::string get_template_param(std::string type)
 {
 	std::string param;
-	bool inBrackets = false;
+	int inBrackets = 0;
 	for(size_t i = 0;i < type.length();i++)
 	{
-		if(inBrackets == false)
+		if(type[i] == '<')
 		{
-			if(type[i] == '<')
-			{
-				inBrackets = true;
-			}
+			inBrackets++;
+			if(inBrackets == 1)
+				continue;
 		}
-		else
+		else if(type[i] == '>')
 		{
-			if(type[i] == '>')
-			{
-				break;
-			}
+			inBrackets--;
+		}
+		
+		if(inBrackets)
+		{
 			param += type[i];
 		}
 	}
-	if(inBrackets == false)
+	if(inBrackets != 0)
 	{
 		throw std::runtime_error("template type missing '>'");
 	}
@@ -342,15 +342,15 @@ std::string get_template_param(std::string type)
 std::vector<std::string> split_namespaces(std::string type)
 {
 	std::vector<std::string> ret;
-	auto elems = split(type, ':');
-	assert(elems.size() % 2);
-
-	for(auto i = 0 ; i < elems.size();i++)
+	size_t pos = 0;
+	const std::string delimiter = "::";
+	type += delimiter;
+	while ((pos = type.find(delimiter)) != std::string::npos) 
 	{
-		if(!(i%2))
-		{
-			ret.push_back(elems[i]);
-		}
-	}
+		auto token = type.substr(0, pos);
+		ret.push_back(token);
+		type.erase(0, pos + delimiter.length());
+	}  
+
 	return ret;
 }
