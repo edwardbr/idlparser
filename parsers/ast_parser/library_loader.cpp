@@ -265,8 +265,8 @@ function_entity class_entity::parse_function(const char*& pData, attributes& att
                 else
                 {
                     int template_angle = 0;
-                    while (*pData != 0 && *pData != '[' && *pData != '*'
-                           && *pData != ')')
+                    while (*pData != 0 && ((*pData != '[' && *pData != '*'
+                           && *pData != ')') || template_angle))
                     {
                         if(*pData == '<')
                             template_angle++;
