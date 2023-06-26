@@ -90,17 +90,35 @@ public:
 	const attributes& get_attributes() const {return attributes_;}
 	std::string get_attribute(const std::string& name) const 
 	{
-		for(std::list<std::string>::const_iterator it = attributes_.begin(); it != attributes_.end();it++)
+		for(auto it : attributes_)
 		{
-			if(*it == name)
+			if(it == name)
 			{
-				return *it;
+				return it;
 				break;
 			}
-			auto tmp = (*it).substr(0, name.size());
-			if(tmp == name && (*it)[name.size()] == '=')
+			auto tmp = it.substr(0, name.size());
+			if(tmp == name && it[name.size()] == '=')
 			{
-				return tmp;
+				return name;
+			}
+		};
+		return std::string();
+	}
+	
+	std::string get_attribute_value(const std::string& name) const 
+	{
+		for(auto name_value : attributes_)
+		{
+			if(name_value == name)
+			{
+				return name_value;
+				break;
+			}
+			auto tmp = name_value.substr(0, name.size());
+			if(tmp == name && name_value[name.size()] == '=')
+			{
+				return name_value.substr(name.size() + 1);
 			}
 		};
 		return std::string();
