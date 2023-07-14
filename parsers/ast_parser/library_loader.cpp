@@ -851,11 +851,31 @@ void class_entity::parse_structure(const char*& pData, bool bInCurlyBrackets)
                 std::shared_ptr<class_entity> pObj;
                 if (!find_class(parent_name, pObj))
                 {
-                    std::stringstream err;
-                    err << "type " << parent_name << " not known";
-                    err << std::ends;
-                    std::string errString(err.str());
-                    throw std::runtime_error(errString);
+                    if(get_type() == entity_type::ENUM)
+                    {
+                        auto last_owner = get_owner();
+                        auto owner = get_owner();
+                        do
+                        {
+                            owner = owner->get_owner();
+                            if(owner)
+                                last_owner = owner;
+                        }while(owner);
+
+                        
+                        pObj = std::make_shared<class_entity>(last_owner);
+                        pObj->set_type(entity_type::TYPE_NULL);
+                        pObj->set_name(parent_name);
+                        last_owner->add_class(pObj);
+                    }
+                    else
+                    {
+                        std::stringstream err;
+                        err << "type " << parent_name << " not known";
+                        err << std::ends;
+                        std::string errString(err.str());
+                        throw std::runtime_error(errString);
+                    }
                 }
                 add_base_class(pObj.get());
             }
