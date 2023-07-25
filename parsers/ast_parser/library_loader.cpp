@@ -14,6 +14,9 @@
 #define EAT_SPACES(data)                                                                                               \
     while (*data == ' ')                                                                                               \
         data++;
+#define EAT_SPACES_AND_NEW_LINES(data)                                                                                 \
+    while (*data == ' ' || *data == '\n' || *data == '\r')                                                             \
+        data++;
 #define EAT_PAST_SEMICOLON(data)                                                                                       \
     while (*data != ';' && *data != '\0')                                                                              \
         data++;                                                                                                        \
@@ -600,6 +603,34 @@ std::shared_ptr<class_entity> class_entity::parse_interface(const char*& pData, 
     return cls;
 }
 
+std::string class_entity::parse_cpp_quote(const char*& pData)
+{
+    EAT_SPACES_AND_NEW_LINES(pData)
+    if(*pData != '(')
+        throw std::runtime_error("missing bracket after cpp_quote");
+    pData++;
+
+    EAT_SPACES_AND_NEW_LINES(pData)
+
+    std::string contents;
+    
+    const char* pStart = nullptr;
+    const char* pSuffix = nullptr;
+    if(extract_multiline_string_literal(pData, pStart, pSuffix))
+    {
+        contents = std::string(pStart, pSuffix);
+    }
+    else
+    {
+        if(!extract_string_literal(pData, contents))
+            throw std::runtime_error("missing initial \" in cpp_quote");
+    }
+    if(!*pData || *pData != ')')
+        throw std::runtime_error("invalid ending in cpp_quote (no bracket)");
+    pData++;  
+    return contents;
+}
+
 void class_entity::parse_structure(const char*& pData, bool bInCurlyBrackets)
 {
     bool bHasName = false;
@@ -766,6 +797,13 @@ void class_entity::parse_structure(const char*& pData, bool bInCurlyBrackets)
                     }
                     else if (if_is_word_eat(pData, "protected:"))
                     {
+                    }
+                    else if (if_is_word_eat(pData, "cpp_quote"))
+                    {
+                        function_entity func;
+                        func.set_name(parse_cpp_quote(pData));
+                        func.set_type(FunctionTypeCppQuote);
+                        functions_.push_back(func);
                     }
                     else if (isFunction(pData))
                     {
@@ -1358,7 +1396,6 @@ bool class_entity::parse_class(const char*& pData, attributes& attribs, std::sha
             throw std::runtime_error(errString);
         }
     }
-
     else if (if_is_word_eat(pData, "dispinterface"))
     {
         obj = parse_interface(pData, entity_type::DISPATCH_INTERFACE, attribs);

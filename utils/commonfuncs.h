@@ -14,6 +14,8 @@ bool is_preproc_eat(const char*& string1, const char *string2);
 
 
 bool extract_word(const char*& pData, std::string& retval);
+bool extract_multiline_string_literal(const char*& pData, const char*& pStart, const char*& pSuffix);
+bool extract_string_literal(const char*& pData, std::string& contents);
 
 std::vector<std::string> split(const std::string &s, char delim);
 

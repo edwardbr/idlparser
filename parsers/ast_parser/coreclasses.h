@@ -135,6 +135,7 @@ enum function_type
 	FunctionTypePropertyPut,
 	FunctionTypePropertyGet,
 	FunctionTypeVariable,
+	FunctionTypeCppQuote,
 };
 
 
@@ -272,6 +273,7 @@ public:
 	function_entity parse_function(const char*& pData, attributes& attribs, bool bFunctionIsInterface);
 	void parse_variable(const char*& pData);
 	std::shared_ptr<class_entity> parse_interface(const char*& pData, const entity_type type, const attributes& attr);
+	std::string parse_cpp_quote(const char*& pData);
 	void parse_template(const char*& pData, std::list<template_param>& templateParams);
 	void parse_namespace(const char*& pData);
 	void parse_structure(const char*& pData, bool bInCurlyBrackets);

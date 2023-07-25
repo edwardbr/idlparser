@@ -127,3 +127,97 @@ std::string to_upper(std::string s)
     );
     return s;
 }
+
+bool extract_multiline_string_literal(const char*& pData, const char*& pStart, const char*& pSuffix)
+{
+	pStart = nullptr;
+	pSuffix = nullptr;
+	if(*pData != 'R')
+		return false;
+	pData++;
+	if(*pData != '"')
+	{
+		throw std::runtime_error("expected multiline string literal");
+	}
+	pData++;
+
+	std::string suffix = ")";
+	while(*pData && *pData != '(')
+	{
+		if (!((*pData >= '0' && *pData <= '9') || (*pData >= 'A' && *pData <= 'Z') || (*pData >= 'a' && *pData <= 'z') || (*pData == '_')))
+			throw std::runtime_error("invalid string literal");
+
+		suffix += *pData;
+		pData++;
+	}
+	if(!*pData || *pData != '(')
+	{
+		throw std::runtime_error("multiline string literal incomplete");
+	}    
+	suffix += "\"";
+	pData++;   
+	if(!*pData)
+	{
+		throw std::runtime_error("multiline string literal incomplete");
+	}
+	while(*pData && strncmp(pData, suffix.data(), suffix.length()))
+	{
+		if(!pStart)
+			pStart = pData;
+		pData++;
+	}           
+	if(!*pData)
+	{
+		throw std::runtime_error("multiline string literal incomplete");
+	}
+	pSuffix = pData;
+	pData += suffix.length();
+	return true;
+}
+
+bool extract_string_literal(const char*& pData, std::string& contents)
+{
+	if(*pData != '\"')
+		return false;
+	pData++;        
+	while(*pData && *pData != '"')
+	{
+		if(*pData == '\\')
+		{
+			pData++;
+			if(!*pData)
+			{
+				throw std::runtime_error("string literal invalid");
+			}   
+			switch(*pData)
+			{
+				case 'n':
+					contents += '\n';
+					break;
+				case 'r':
+					contents += '\r';
+					break;
+				case '\'':
+					contents += '\'';
+					break;
+				case '\"':
+					contents += '\"';
+					break;
+				case 't':
+					contents += '\t';
+					break;
+				default:
+					throw std::runtime_error("unsupported escape character");
+			}
+		}             
+		else
+		{
+			contents += *pData;
+		}
+		pData++;
+	}    
+	if(!*pData || *pData != '\"')
+		throw std::runtime_error("invalid ending in cpp_quote (no quote)");
+	pData++;  
+	return true; 
+}

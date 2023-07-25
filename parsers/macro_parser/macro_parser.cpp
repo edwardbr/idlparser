@@ -428,6 +428,111 @@ bool macro_parser::ParseInclude(const char*& pData, int ignoreText, std::ostream
 	return true;
 }
 
+void copy_quote(const char*& pData, char*& dest)
+{
+	for(auto ch : "cpp_quote(")
+	{
+		if(!ch)
+			break;
+		*dest = ch;
+		++dest;
+		++pData;
+	}	
+
+	const char* pStart = nullptr;
+	const char* pSuffix = nullptr;
+	auto* oldPData = pData;
+	if(extract_multiline_string_literal(pData, pStart, pSuffix))
+	{
+		while(oldPData != pData)
+		{
+			*dest = *oldPData;
+			++dest;
+			++oldPData;
+		}
+	}
+	else
+	{
+		if(*pData != '\"')
+			throw std::runtime_error("missing initial \" in cpp_quote");
+		*dest = *pData;
+		dest++;
+		pData++;        
+		while(*pData && *pData != '"')
+		{
+			if(*pData == '\\')
+			{
+				*dest = *pData;
+				dest++;
+				pData++;
+				if(!*pData)
+					throw std::runtime_error("invalid ending in cpp_quote (no quote)");
+			} 
+			*dest = *pData;
+			dest++;
+			pData++;
+		}    
+		if(!*pData || *pData != '\"')
+			throw std::runtime_error("invalid ending in cpp_quote (no quote)");
+		*dest = *pData;
+		dest++;
+		pData++;  
+	}
+	while(*pData && (*pData == ' ' || *pData == '\t'))
+		pData++;
+	if(!*pData || *pData != ')')
+		throw std::runtime_error("missing final ) in cpp_quote");
+	*dest = ')';
+	++dest;
+	++pData;
+}
+
+
+void find_end_quote(const char*& pData)
+{
+	for(auto ch : "cpp_quote(")
+	{
+		if(!ch)
+			break;
+		++pData;
+	}	
+
+	const char* pStart = nullptr;
+	const char* pSuffix = nullptr;
+	auto* oldPData = pData;
+	if(extract_multiline_string_literal(pData, pStart, pSuffix))
+	{
+		while(oldPData != pData)
+		{
+			++oldPData;
+		}
+	}
+	else
+	{
+		if(*pData != '\"')
+			throw std::runtime_error("missing initial \" in cpp_quote");
+		pData++;        
+		while(*pData && *pData != '"')
+		{
+			if(*pData == '\\')
+			{
+				pData++;
+				if(!*pData)
+					throw std::runtime_error("invalid ending in cpp_quote (no quote)");
+			} 
+			pData++;
+		}    
+		if(!*pData || *pData != '\"')
+			throw std::runtime_error("invalid ending in cpp_quote (no quote)");
+		pData++;  
+	}
+	while(*pData && (*pData == ' ' || *pData == '\t'))
+		pData++;
+	if(!*pData || *pData != ')')
+		throw std::runtime_error("missing final ) in cpp_quote");
+	++pData;
+}
+
 void macro_parser::CleanBuffer(const char*& pData, std::ostream& dest, const paths& includeDirectories, int inIfDef, int ignoreText, std::vector<std::string>& loaded_includes)
 {
 	int amountToReplace = 0;
@@ -594,6 +699,13 @@ void macro_parser::CleanBuffer(const char*& pData, std::ostream& dest, const pat
 		
 		else if(!bInTheMiddleOfWord && SubstituteMacro(ignoreText, pData, dest, includeDirectories, loaded_includes))
 		{
+		}
+		else if(begins_with(pData,"cpp_quote("))			
+		{
+			auto* start = pData; //save the begining
+			find_end_quote(pData);
+			std::string data(start, pData);
+			dest << data;
 		}
 		else
 		{
@@ -1383,7 +1495,7 @@ void CleanBufferOfComments(const char*& pData)
 				}
 			}
 			//#defines and conditional statements need special handling and are characterised by being terminated by a charage return 
-			else if(is_preproc(pData,"define") || is_preproc(pData,"ifdef") || is_preproc(pData,"ifndef") || is_preproc(pData,"if") || is_preproc(pData,"elif") || is_preproc(pData,"endif")  || is_preproc(pData,"error") || is_word(pData,"cpp_quote"))			
+			else if(is_preproc(pData,"define") || is_preproc(pData,"ifdef") || is_preproc(pData,"ifndef") || is_preproc(pData,"if") || is_preproc(pData,"elif") || is_preproc(pData,"endif")  || is_preproc(pData,"error"))		
 			{
 				if(oldBufPos != pData)
 				{
@@ -1447,6 +1559,18 @@ void CleanBufferOfComments(const char*& pData)
 				}
 				pData++;
 				continue;
+			}
+			//#defines and conditional statements need special handling and are characterised by being terminated by a charage return 
+			else if(begins_with(pData,"cpp_quote("))			
+			{
+				const char* start = pData;
+				find_end_quote(pData);
+				while(start != pData)
+				{
+					*oldBufPos = *start;
+					start++;
+					oldBufPos++;
+				}
 			}
 			/*else if(if_is_word_eat(pData,"cpp_quote") || is_preproc_eat(pData,"pragma"))
 			{
