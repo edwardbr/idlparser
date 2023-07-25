@@ -428,66 +428,6 @@ bool macro_parser::ParseInclude(const char*& pData, int ignoreText, std::ostream
 	return true;
 }
 
-void copy_quote(const char*& pData, char*& dest)
-{
-	for(auto ch : "cpp_quote(")
-	{
-		if(!ch)
-			break;
-		*dest = ch;
-		++dest;
-		++pData;
-	}	
-
-	const char* pStart = nullptr;
-	const char* pSuffix = nullptr;
-	auto* oldPData = pData;
-	if(extract_multiline_string_literal(pData, pStart, pSuffix))
-	{
-		while(oldPData != pData)
-		{
-			*dest = *oldPData;
-			++dest;
-			++oldPData;
-		}
-	}
-	else
-	{
-		if(*pData != '\"')
-			throw std::runtime_error("missing initial \" in cpp_quote");
-		*dest = *pData;
-		dest++;
-		pData++;        
-		while(*pData && *pData != '"')
-		{
-			if(*pData == '\\')
-			{
-				*dest = *pData;
-				dest++;
-				pData++;
-				if(!*pData)
-					throw std::runtime_error("invalid ending in cpp_quote (no quote)");
-			} 
-			*dest = *pData;
-			dest++;
-			pData++;
-		}    
-		if(!*pData || *pData != '\"')
-			throw std::runtime_error("invalid ending in cpp_quote (no quote)");
-		*dest = *pData;
-		dest++;
-		pData++;  
-	}
-	while(*pData && (*pData == ' ' || *pData == '\t'))
-		pData++;
-	if(!*pData || *pData != ')')
-		throw std::runtime_error("missing final ) in cpp_quote");
-	*dest = ')';
-	++dest;
-	++pData;
-}
-
-
 void find_end_quote(const char*& pData)
 {
 	for(auto ch : "cpp_quote(")
@@ -702,7 +642,7 @@ void macro_parser::CleanBuffer(const char*& pData, std::ostream& dest, const pat
 		}
 		else if(begins_with(pData,"cpp_quote("))			
 		{
-			auto* start = pData; //save the begining
+			auto* start = pData; //save the beginning
 			find_end_quote(pData);
 			std::string data(start, pData);
 			dest << data;
