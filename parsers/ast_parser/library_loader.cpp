@@ -607,7 +607,7 @@ std::string class_entity::parse_cpp_quote(const char*& pData)
 {
     EAT_SPACES_AND_NEW_LINES(pData)
     if(*pData != '(')
-        throw std::runtime_error("missing bracket after cpp_quote");
+        throw std::runtime_error("missing bracket after #cpp_quote");
     pData++;
 
     EAT_SPACES_AND_NEW_LINES(pData)
@@ -623,10 +623,10 @@ std::string class_entity::parse_cpp_quote(const char*& pData)
     else
     {
         if(!extract_string_literal(pData, contents))
-            throw std::runtime_error("missing initial \" in cpp_quote");
+            throw std::runtime_error("missing initial \" in #cpp_quote");
     }
     if(!*pData || *pData != ')')
-        throw std::runtime_error("invalid ending in cpp_quote (no bracket)");
+        throw std::runtime_error("invalid ending in #cpp_quote (no bracket)");
     pData++;  
     return contents;
 }
@@ -807,7 +807,7 @@ void class_entity::parse_structure(const char*& pData, bool bInCurlyBrackets)
                     {
                         //makes no sense
                     }
-                    else if (if_is_word_eat(pData, "cpp_quote"))
+                    else if (if_is_word_eat(pData, "#cpp_quote"))
                     {
                         function_entity func;
                         func.set_name(parse_cpp_quote(pData));

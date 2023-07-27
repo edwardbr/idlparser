@@ -178,10 +178,11 @@ bool extract_multiline_string_literal(const char*& pData, const char*& pStart, c
 
 bool extract_string_literal(const char*& pData, std::string& contents)
 {
-	if(*pData != '\"')
+	if(*pData != '\"' && *pData != '^')
 		return false;
+	auto quote_char = *pData;
 	pData++;        
-	while(*pData && *pData != '"')
+	while(*pData && *pData != quote_char)
 	{
 		if(*pData == '\\')
 		{
@@ -217,7 +218,7 @@ bool extract_string_literal(const char*& pData, std::string& contents)
 		}
 		pData++;
 	}    
-	if(!*pData || *pData != '\"')
+	if(!*pData || *pData != quote_char)
 		throw std::runtime_error("invalid ending in cpp_quote (no quote)");
 	pData++;  
 	return true; 

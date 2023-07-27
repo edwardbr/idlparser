@@ -430,7 +430,7 @@ bool macro_parser::ParseInclude(const char*& pData, int ignoreText, std::ostream
 
 void find_end_quote(const char*& pData)
 {
-	for(auto ch : "cpp_quote(")
+	for(auto ch : "#cpp_quote(")
 	{
 		if(!ch)
 			break;
@@ -449,27 +449,28 @@ void find_end_quote(const char*& pData)
 	}
 	else
 	{
-		if(*pData != '\"')
-			throw std::runtime_error("missing initial \" in cpp_quote");
+		if(*pData != '\"' && *pData != '^')
+			throw std::runtime_error("missing initial \" in #cpp_quote");
+		auto quote_char = *pData;
 		pData++;        
-		while(*pData && *pData != '"')
+		while(*pData && *pData != quote_char)
 		{
 			if(*pData == '\\')
 			{
 				pData++;
 				if(!*pData)
-					throw std::runtime_error("invalid ending in cpp_quote (no quote)");
+					throw std::runtime_error("invalid ending in #cpp_quote (no quote)");
 			} 
 			pData++;
 		}    
-		if(!*pData || *pData != '\"')
-			throw std::runtime_error("invalid ending in cpp_quote (no quote)");
+		if(!*pData || *pData != quote_char)
+			throw std::runtime_error("invalid ending in #cpp_quote (no quote)");
 		pData++;  
 	}
 	while(*pData && (*pData == ' ' || *pData == '\t'))
 		pData++;
 	if(!*pData || *pData != ')')
-		throw std::runtime_error("missing final ) in cpp_quote");
+		throw std::runtime_error("missing final ) in #cpp_quote");
 	++pData;
 }
 
@@ -640,7 +641,7 @@ void macro_parser::CleanBuffer(const char*& pData, std::ostream& dest, const pat
 		else if(!bInTheMiddleOfWord && SubstituteMacro(ignoreText, pData, dest, includeDirectories, loaded_includes))
 		{
 		}
-		else if(begins_with(pData,"cpp_quote("))			
+		else if(begins_with(pData,"#cpp_quote("))			
 		{
 			auto* start = pData; //save the beginning
 			find_end_quote(pData);
@@ -1501,7 +1502,7 @@ void CleanBufferOfComments(const char*& pData)
 				continue;
 			}
 			//#defines and conditional statements need special handling and are characterised by being terminated by a charage return 
-			else if(begins_with(pData,"cpp_quote("))			
+			else if(begins_with(pData,"#cpp_quote("))			
 			{
 				const char* start = pData;
 				find_end_quote(pData);
@@ -1512,7 +1513,7 @@ void CleanBufferOfComments(const char*& pData)
 					oldBufPos++;
 				}
 			}
-			/*else if(if_is_word_eat(pData,"cpp_quote") || is_preproc_eat(pData,"pragma"))
+			/*else if(is_preproc_eat(pData,"pragma"))
 			{
 				changed = true;
 				int bracketCount = 0;
