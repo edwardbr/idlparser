@@ -135,10 +135,11 @@ bool extract_multiline_string_literal(const char*& pData, const char*& pStart, c
 	if(*pData != 'R')
 		return false;
 	pData++;
-	if(*pData != '"')
+	if(*pData != '"' && *pData != '^')
 	{
 		throw std::runtime_error("expected multiline string literal");
 	}
+	char quote_char = *pData;
 	pData++;
 
 	std::string suffix = ")";
@@ -154,7 +155,7 @@ bool extract_multiline_string_literal(const char*& pData, const char*& pStart, c
 	{
 		throw std::runtime_error("multiline string literal incomplete");
 	}    
-	suffix += "\"";
+	suffix += quote_char;
 	pData++;   
 	if(!*pData)
 	{
