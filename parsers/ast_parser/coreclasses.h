@@ -136,6 +136,8 @@ enum function_type
 	FunctionTypePropertyGet,
 	FunctionTypeVariable,
 	FunctionTypeCppQuote,
+	FunctionTypePublic,
+	FunctionTypePrivate,
 };
 
 

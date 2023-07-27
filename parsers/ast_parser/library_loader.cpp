@@ -791,12 +791,21 @@ void class_entity::parse_structure(const char*& pData, bool bInCurlyBrackets)
                     }
                     else if (if_is_word_eat(pData, "public:"))
                     {
+                        function_entity func;
+                        func.set_name("public:");
+                        func.set_type(FunctionTypePublic);
+                        functions_.push_back(func);
                     }
                     else if (if_is_word_eat(pData, "private:"))
                     {
+                        function_entity func;
+                        func.set_name("private:");
+                        func.set_type(FunctionTypePrivate);
+                        functions_.push_back(func);
                     }
                     else if (if_is_word_eat(pData, "protected:"))
                     {
+                        //makes no sense
                     }
                     else if (if_is_word_eat(pData, "cpp_quote"))
                     {
