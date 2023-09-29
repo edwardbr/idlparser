@@ -27,6 +27,8 @@ struct macro_parser
 	};
 
 	macro_parser();
+	virtual ~macro_parser() = default;
+
 	[[nodiscard]] virtual bool FindDefString(std::string& var);
 	virtual void UnDefine(std::string& var);
 	virtual void Define(std::string& var);

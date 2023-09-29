@@ -56,8 +56,6 @@ std::string macro_parser::ExtractExpression(const char*& pData, const paths& inc
 	int bracketCount = -1;
 
 	//we need to scan a line until we come accross two words that are not delimited by an operator
-	bool reachedSpace = false; 
-	bool firstpass = true;
 	while(*pData != '\0' && *pData != '\n')
 	{
 		if(*pData == ' ')
@@ -322,10 +320,7 @@ void macro_parser::ProcessIf(const char*& pData, std::ostream& dest, const paths
 			}
 			else
 			{
-				const char* pos = pData;
 				std::string expr = ExtractExpression(pData, includeDirectories, loaded_includes);
-
-//				assert(IsLogicalExpression(expr.data()));//we want to check that this is a logical expression
 
 				const char* exprString = expr.data();
 				std::string value = ReduceExpression(exprString, includeDirectories, loaded_includes);
@@ -476,7 +471,6 @@ void find_end_quote(const char*& pData)
 
 void macro_parser::CleanBuffer(const char*& pData, std::ostream& dest, const paths& includeDirectories, int inIfDef, int ignoreText, std::vector<std::string>& loaded_includes)
 {
-	int amountToReplace = 0;
 	bool bInTheMiddleOfWord = false;
 	//strip out comments and endls;
 	while(*pData != 0)
@@ -681,8 +675,6 @@ void macro_parser::CleanBuffer(const char*& pData, std::ostream& dest, const pat
 				
 				if(!ignoreText)
 				{
-					if(*pData == '#')
-					{ignoreText = ignoreText;}
 					dest << *pData;
 				}
 			}
