@@ -145,8 +145,6 @@ class parameter_entity : public entity
 {
 	std::string type_;
 	size_t array_size_ = 0;
-	bool m_bIsMainVal = false;
-	bool m_bIsException = false;
 	bool is_call_back_ = false;
 	std::list<std::string> array_suffixes_;
 

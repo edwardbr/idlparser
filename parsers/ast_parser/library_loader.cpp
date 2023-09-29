@@ -84,7 +84,6 @@ function_entity class_entity::parse_function(const char*& pData, attributes& att
 
     std::string func_name;
     std::string return_type;
-    int array_size = 0;
 
     while (*pData)
     {
