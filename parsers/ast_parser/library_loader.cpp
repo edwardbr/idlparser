@@ -78,7 +78,6 @@ function_entity class_entity::parse_function(const char*& pData, attributes& att
     func.set_attributes(attribs);
 
     bool bFunctionIsProperty = true;
-    bool bConstant = false;
 
     EAT_SPACES(pData)
 
@@ -99,9 +98,6 @@ function_entity class_entity::parse_function(const char*& pData, attributes& att
                 func_name += *pData++;
             }
         }
-
-        if (func_name == "const") // CORBA types
-            bConstant = true;
 
         if (func_name == "const" || func_name == "unsigned" || func_name == "signed"
             || (interface_spec_ == corba && func_name == "inout") || // CORBA types
@@ -179,10 +175,6 @@ function_entity class_entity::parse_function(const char*& pData, attributes& att
         ; // no processing
     else if (bFunctionIsProperty)
     {
-        /*		if(bConstant == false)
-                                func.set_type(FunctionTypePropertyPut);
-                //		func.m_bIsPutProperty = true;
-                //	func.m_bIsGetProperty = true;*/
         func.set_type(FunctionTypeVariable);
         if(*pData == '=') //this may be a default value
         {
