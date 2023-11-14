@@ -3,24 +3,47 @@
 #include <sstream>
 #include <list>
 #include <unordered_map>
+#include <memory>
 
 #include "cpp_parser.h"
 #include "commonfuncs.h"
 #include "coreclasses.h"
 
 class_entity::class_entity(class_entity* owner, interface_spec spec) :
+	entity(entity_type::NAMESPACE),
 	owner_(owner),
 	recurseImport(true),
 	recurseImportLib(true),
 	interface_spec_(spec)
 {}
 
+const std::list<std::shared_ptr<function_entity>> class_entity::get_functions() const 
+{
+	std::list<std::shared_ptr<function_entity>> functions;
+	for(auto& element : elements_)
+	{
+		if(element->get_entity_type() >= entity_type::FUNCTION_METHOD)
+			functions.push_back(std::static_pointer_cast<function_entity>(element));
+	}
+	return functions;
+}
+
+void class_entity::add_function(std::shared_ptr<function_entity> fn)
+{
+	elements_.push_back(std::static_pointer_cast<entity>(fn));
+}
+void class_entity::add_function(function_entity fn)
+{
+	elements_.push_back(std::static_pointer_cast<entity>(std::make_shared<function_entity>(fn)));
+}
+
 void class_entity::add_class(std::shared_ptr<class_entity> classObject)
 {	
 	if(!current_import.empty())
 		classObject->set_import_lib(current_import.top());
 
-	for(auto it = classes_.begin(); it != classes_.end(); ++it)
+	auto classes = get_classes();
+	for(auto it = classes.begin(); it != classes.end(); ++it)
 	{
 		auto& cls = *it;
 		if(cls->get_name() == classObject->get_name())
@@ -30,13 +53,25 @@ void class_entity::add_class(std::shared_ptr<class_entity> classObject)
 			if(cls->get_import_lib() != "" && classObject->get_import_lib() == "")
 			{
 				//replace the imported definition with the included one
-				cls = classObject;
-				return;
+				// cls = classObject;
+				// return;
+				continue;
 			}
 			return;
 		}
 	}
-	classes_.push_back(classObject);
+	elements_.push_back(std::static_pointer_cast<entity>(classObject));
+}
+
+const std::list<std::shared_ptr<class_entity> > class_entity::get_classes() const 
+{
+	std::list<std::shared_ptr<class_entity>> classes;
+	for(auto& element : elements_)
+	{
+		if(element->get_entity_type() < entity_type::FUNCTION_METHOD)
+			classes.push_back(std::static_pointer_cast<class_entity>(element));
+	}
+	return classes;
 }
 
 bool class_entity::find_class(std::string type, std::shared_ptr<class_entity>& obj) const
@@ -61,7 +96,7 @@ bool class_entity::find_class(std::string type, std::shared_ptr<class_entity>& o
 
 bool class_entity::find_class(const std::vector<std::string>& type, std::shared_ptr<class_entity>& obj) const
 {
-	for(auto& cls : classes_)
+	for(auto& cls : get_classes())
 	{
 		if(cls->get_name() == type[0])
 		{

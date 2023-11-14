@@ -215,7 +215,7 @@ bool is_enum(std::string type, const class_entity& library)
 		std::shared_ptr<class_entity> pObj;
 		if(library.find_class(type, pObj) == true && pObj != NULL)
 		{
-			if(pObj->get_type() == entity_type::ENUM)
+			if(pObj->get_entity_type() == entity_type::ENUM)
 			{
 				return true;
 			}
@@ -303,7 +303,7 @@ void translate_type(std::string param_type, const class_entity& library)
 	std::shared_ptr<class_entity> pObj;
 	if(library.find_class(param_type, pObj) == true && pObj != NULL)
 	{
-		if(pObj->get_type() == entity_type::TYPEDEF)
+		if(pObj->get_entity_type() == entity_type::TYPEDEF)
 		{
 			param_type = pObj->get_owner()->get_name();
 		}

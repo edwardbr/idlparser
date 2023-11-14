@@ -175,7 +175,7 @@ function_entity class_entity::parse_function(const char*& pData, attributes& att
         ; // no processing
     else if (bFunctionIsProperty)
     {
-        func.set_type(FunctionTypeVariable);
+        func.set_entity_type(entity_type::FUNCTION_VARIABLE);
         if(*pData == '=') //this may be a default value
         {
             pData++;
@@ -463,12 +463,12 @@ function_entity class_entity::parse_function(const char*& pData, attributes& att
     if (func.has_value("propput") || func.has_value("propputref"))
     {
         //		func.m_bIsPutProperty = true;
-        func.set_type(FunctionTypePropertyPut);
+        func.set_entity_type(entity_type::FUNCTION_PROPERTYPUT);
     }
     else if (func.has_value("propget"))
     {
         //		func.m_bIsPutProperty = true;
-        func.set_type(FunctionTypePropertyGet);
+        func.set_entity_type(entity_type::FUNCTION_PROPERTYGET);
     }
 
     func.set_name(func_name);
@@ -554,9 +554,9 @@ void class_entity::parse_variable(const char*& pData, bool in_import)
     }
     fn.set_name(fn_name);
     fn.set_return_type(fn_return_type);
-    fn.set_type(FunctionTypeVariable);
+    fn.set_entity_type(entity_type::FUNCTION_VARIABLE);
     fn.set_is_in_import(in_import);
-    functions_.push_back(fn);
+    add_function(fn);
 
     if (*pData == ';')
         pData++;
@@ -588,7 +588,7 @@ std::shared_ptr<class_entity> class_entity::parse_interface(const char*& pData, 
 {
     auto cls = std::make_shared<class_entity>(this);
 
-    cls->set_type(typ);
+    cls->set_entity_type(typ);
     cls->set_attributes(attr);
 
     cls->parse_structure(pData, false, in_import);
@@ -664,11 +664,11 @@ void class_entity::parse_structure(const char*& pData, bool bInCurlyBrackets, bo
                 else
                 {
                     auto obj = std::make_shared<class_entity>(this);
-                    if (get_type() == entity_type::COCLASS)
+                    if (get_entity_type() == entity_type::COCLASS)
                     {
                         auto func = parse_function(pData, attribs, true);
                         func.set_is_in_import(in_import);
-                        functions_.push_back(func);
+                        add_function(func);
                         EAT_SPACES(pData);
                         assert(*pData == ';');
                         if (*pData == ';')
@@ -681,7 +681,7 @@ void class_entity::parse_structure(const char*& pData, bool bInCurlyBrackets, bo
                             pData++;
                     }
 
-                    else if (get_type() == entity_type::UNION)
+                    else if (get_entity_type() == entity_type::UNION)
                     {
                         if (if_is_word_eat(pData, "case"))
                         {
@@ -714,15 +714,15 @@ void class_entity::parse_structure(const char*& pData, bool bInCurlyBrackets, bo
                         attribs.merge(GetAttributes(pData));
                         auto func = parse_function(pData, attribs, false);
                         func.set_is_in_import(in_import);
-                        functions_.push_back(func);
+                        add_function(func);
                         EAT_SPACES(pData);
                         assert(*pData == ';');
                         if (*pData == ';')
                             pData++;
                     }
 
-                    else if (get_type() == entity_type::ENUM)
-                    {
+                    else if (get_entity_type() == entity_type::ENUM)
+{
                         std::string elemname;
                         while (extract_word(pData, elemname))
                         {
@@ -748,7 +748,7 @@ void class_entity::parse_structure(const char*& pData, bool bInCurlyBrackets, bo
                             fn.set_name(elemname);
                             fn.set_return_type(elemValue);
                             fn.set_is_in_import(in_import);
-                            functions_.push_back(fn);
+                            add_function(fn);
 
                             elemname = "";
 
@@ -758,7 +758,7 @@ void class_entity::parse_structure(const char*& pData, bool bInCurlyBrackets, bo
                             EAT_SPACES(pData);
                         }
                     }
-                    else if (get_type() == entity_type::STRUCT)
+                    else if (get_entity_type() == entity_type::STRUCT)
                     {
                         function_entity func(parse_function(pData, attribs, false));
                         EAT_SPACES(pData);
@@ -766,9 +766,9 @@ void class_entity::parse_structure(const char*& pData, bool bInCurlyBrackets, bo
                         if (*pData == ';')
                             pData++;
                         func.set_is_in_import(in_import);
-                        functions_.push_back(func);
+                        add_function(func);
                     }
-                    else if (get_type() == entity_type::DISPATCH_INTERFACE)
+                    else if (get_entity_type() == entity_type::DISPATCH_INTERFACE)
                     {
                         if (if_is_word_eat(pData, "properties:"))
                             ;
@@ -778,7 +778,7 @@ void class_entity::parse_structure(const char*& pData, bool bInCurlyBrackets, bo
                         {
                             auto func = parse_function(pData, attribs, false);
                             func.set_is_in_import(in_import);
-                            functions_.push_back(func);
+                            add_function(func);
                             EAT_SPACES(pData);
                             assert(*pData == ';');
                             if (*pData == ';')
@@ -791,17 +791,17 @@ void class_entity::parse_structure(const char*& pData, bool bInCurlyBrackets, bo
                     {
                         function_entity func;
                         func.set_name("public:");
-                        func.set_type(FunctionTypePublic);
+                        func.set_entity_type(entity_type::FUNCTION_PUBLIC);
                         func.set_is_in_import(in_import);
-                        functions_.push_back(func);
+                        add_function(func);
                     }
                     else if (if_is_word_eat(pData, "private:"))
                     {
                         function_entity func;
                         func.set_name("private:");
-                        func.set_type(FunctionTypePrivate);
+                        func.set_entity_type(entity_type::FUNCTION_PRIVATE);
                         func.set_is_in_import(in_import);
-                        functions_.push_back(func);
+                        add_function(func);
                     }
                     else if (if_is_word_eat(pData, "protected:"))
                     {
@@ -812,18 +812,28 @@ void class_entity::parse_structure(const char*& pData, bool bInCurlyBrackets, bo
                         function_entity func;
                         func.set_name(parse_cpp_quote(pData));
                         func.set_is_in_import(in_import);
-                        func.set_type(FunctionTypeCppQuote);
-                        functions_.push_back(func);
+                        func.set_entity_type(entity_type::FUNCTION_CPPQUOTE);
+                        add_function(func);
+                    }
+                    else if (if_is_word_eat(pData, "constexpr"))
+                    {
+                        function_entity fn(parse_function(pData, attribs, false));
+                        fn.set_entity_type(entity_type::FUNCTION_CONSTEXPR);
+                        fn.set_is_in_import(in_import);
+                        add_function(fn);
+
+                        if (*pData == ';')
+                            pData++;
                     }
                     else if (isFunction(pData))
                     {
-                        function_entity func(parse_function(pData, attribs, get_type() == entity_type::COCLASS));
+                        function_entity func(parse_function(pData, attribs, get_entity_type() == entity_type::COCLASS));
                         EAT_SPACES(pData);
                         assert(*pData == ';');
                         if (*pData == ';')
                             pData++;
                         func.set_is_in_import(in_import);
-                        functions_.push_back(func);
+                        add_function(func);
                     }
                     else
                     {
@@ -846,7 +856,7 @@ void class_entity::parse_structure(const char*& pData, bool bInCurlyBrackets, bo
                 EAT_SPACES(pData)
             }
 
-            if (get_type() == entity_type::UNION)
+            if (get_entity_type() == entity_type::UNION)
             {
                 if (if_is_word_eat(pData, "switch"))
                 {
@@ -899,7 +909,7 @@ void class_entity::parse_structure(const char*& pData, bool bInCurlyBrackets, bo
                 std::shared_ptr<class_entity> pObj;
                 if (!find_class(parent_name, pObj))
                 {
-                    if(get_type() == entity_type::ENUM)
+                    if(get_entity_type() == entity_type::ENUM)
                     {
                         auto last_owner = get_owner();
                         auto owner = get_owner();
@@ -912,7 +922,7 @@ void class_entity::parse_structure(const char*& pData, bool bInCurlyBrackets, bo
 
                         
                         pObj = std::make_shared<class_entity>(last_owner);
-                        pObj->set_type(entity_type::TYPE_NULL);
+                        pObj->set_entity_type(entity_type::TYPE_NULL);
                         pObj->set_name(parent_name);
                         last_owner->add_class(pObj);
                     }
@@ -940,7 +950,7 @@ void class_entity::parse_structure(const char*& pData, bool bInCurlyBrackets, bo
         }
         EAT_SPACES(pData)
     }
-    if (get_type() == entity_type::DISPATCH_INTERFACE)
+    if (get_entity_type() == entity_type::DISPATCH_INTERFACE)
     {
         std::shared_ptr<class_entity> pObj;
         if (!find_class("IDispatch", pObj))
@@ -954,7 +964,7 @@ void class_entity::parse_structure(const char*& pData, bool bInCurlyBrackets, bo
             throw std::runtime_error(errString);
         }
         add_base_class(pObj.get());
-        set_type(entity_type::INTERFACE);
+        set_entity_type(entity_type::INTERFACE);
     }
 }
 
@@ -998,7 +1008,7 @@ std::shared_ptr<class_entity> class_entity::parse_typedef(const char*& pData, at
 {
     auto object = std::make_shared<class_entity>(this);
 
-    object->set_type(entity_type::TYPEDEF);
+    object->set_entity_type(entity_type::TYPEDEF);
 
     attribs.merge(GetAttributes(pData));
 
@@ -1300,8 +1310,8 @@ bool class_entity::parse_class(const char*& pData, attributes& attribs, std::sha
         if (curlyPos == NULL || curlyPos > semicolonPos)
         {
             /*if (obj->GetContainer() == NULL
-                || (obj->GetContainer()->get_type() != entity_type::CLASS
-                                        && obj->GetContainer()->get_type() != entity_type::STRUCT
+                || (obj->GetContainer()->get_entity_type() != entity_type::CLASS
+                                        && obj->GetContainer()->get_entity_type() != entity_type::STRUCT
                                         )
                                 )
             {
@@ -1691,14 +1701,14 @@ void class_entity::GetInterfaceProperties(TYPEATTR* pTypeAttr, class_entity& obj
             fn.add_attribute("immediatebind");
 
         fn.set_is_in_import(in_import);
-        obj.functions_.push_back(fn);
+        obj.add_function(fn);
 
         if (!(pvardesc->wVarFlags & VARFLAG_FREADONLY))
         {
             fn.type = FunctionTypePropertyPut;
 
             fn.set_is_in_import(in_import);
-            obj.functions_.push_back(fn);
+            obj.add_function(fn);
         }
 
         typeInfo->ReleaseVarDesc(pvardesc);
@@ -1826,7 +1836,7 @@ void class_entity::GetInterfaceFunctions(TYPEATTR* pTypeAttr, class_entity& obj,
             typeInfo->ReleaseFuncDesc(desc);
 
             fn.set_is_in_import(in_import);
-            obj.functions_.push_back(fn);
+            obj.add_function(fn);
         }
     }
 }
@@ -1860,7 +1870,7 @@ void class_entity::GetCoclassInterfaces(TYPEATTR* pTypeAttr, class_entity& obj, 
                 fn.name = W2CA(GetInterfaceName(ifTypeInfo));
         }
         fn.set_is_in_import(in_import);
-        obj.functions_.push_back(fn);
+        obj.add_function(fn);
     }
 }
 
@@ -1888,7 +1898,7 @@ void class_entity::GetVariables(class_entity& theClass, unsigned variableCount, 
             typeInfo->ReleaseVarDesc(pvardesc);
             
             fn.set_is_in_import(in_import);
-            theClass.functions_.push_back(fn);
+            theClass.add_function(fn);
         }
     }
 }

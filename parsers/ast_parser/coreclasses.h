@@ -35,10 +35,20 @@ enum class entity_type
 	COCLASS				= 64,
 	UNION				= 128,
 	LIBRARY				= 256,
-	DISPATCH_INTERFACE	= 512,//used only temporarily not seen by client apps
-	CLASS				= 1024,//used only temporarily not seen by client apps
-	TEMPLATE			= 2048,//used only temporarily not seen by client apps
-	NAMESPACE			= 4096,//used only temporarily not seen by client apps
+	DISPATCH_INTERFACE	= 512,
+	CLASS				= 1024,
+	TEMPLATE			= 2048,
+	NAMESPACE			= 4096,
+	PARAMETER			= 8192,
+	
+	FUNCTION_METHOD		= 16384,
+	FUNCTION_PROPERTYPUT= 32768,
+	FUNCTION_PROPERTYGET= 65536,
+	FUNCTION_VARIABLE	= 131072,
+	FUNCTION_CPPQUOTE	= 262144,
+	FUNCTION_PUBLIC		= 524288,
+	FUNCTION_PRIVATE	= 1048576,
+	FUNCTION_CONSTEXPR	= 2097152,
 };
 
 typedef std::list<std::string> attributes;
@@ -58,11 +68,13 @@ protected:
 	attributes attributes_;
 	std::string name_;
 	bool in_import_ = false;
+	entity_type entity_type_;
 
 	entity(const entity& other) = default;
 	entity& operator = (const entity& other) = default;
 public:
-	entity() = default;
+	entity(entity_type type) : entity_type_(type)
+	{};
 	
 	const bool has_value(const char* valueName) const 
 	{
@@ -90,6 +102,9 @@ public:
 
 	bool get_is_in_import() const {return in_import_;}
 	void set_is_in_import(bool in_import){in_import_ = in_import;}
+
+	entity_type get_entity_type() const {return entity_type_;}
+	void set_entity_type(entity_type type){entity_type_ = type;}
 
 	const attributes& get_attributes() const {return attributes_;}
 	std::string get_attribute(const std::string& name) const 
@@ -132,19 +147,6 @@ public:
 	void merge_attributes(attributes attribs){attributes_.merge(attribs);}
 };
 
-enum function_type
-{
-	FunctionTypeOther = 0,
-	FunctionTypeMethod,
-	FunctionTypePropertyPut,
-	FunctionTypePropertyGet,
-	FunctionTypeVariable,
-	FunctionTypeCppQuote,
-	FunctionTypePublic,
-	FunctionTypePrivate,
-};
-
-
 class parameter_entity : public entity
 {
 	std::string type_;
@@ -153,7 +155,7 @@ class parameter_entity : public entity
 	std::list<std::string> array_suffixes_;
 
 public:
-	parameter_entity() = default;
+	parameter_entity() : entity(entity_type::PARAMETER){}
 	parameter_entity(const parameter_entity& other) = default;
 	parameter_entity& operator = (const parameter_entity& other) = default;
 
@@ -176,19 +178,15 @@ class function_entity : public entity
 	std::list<std::string> raises_;
 	std::string return_type_;
 	bool pure_virtual_ = false;
-	function_type type_ = FunctionTypeMethod;
 
 	std::list<parameter_entity> parameters_;
 	std::string default_value;
 	std::string array_string_;
 
 public:
-	function_entity() = default;
+	function_entity() : entity(entity_type::FUNCTION_METHOD){}
 	function_entity(const function_entity& other) = default;
 	function_entity& operator = (const function_entity& other) = default;
-
-	function_type get_type() const {return type_;}
-	void set_type(function_type type){type_ = type;}
 
 	std::string get_return_type() const {return return_type_;}
 	void set_return_type(std::string type){return_type_ = type;}
@@ -226,9 +224,7 @@ class class_entity :
 	class_entity* owner_ = nullptr;
 	std::list<class_entity*> base_classes_;
 	std::string alias_name_;
-	entity_type type_ = entity_type::NAMESPACE;
-	std::list<function_entity> functions_;
-	std::list<std::shared_ptr<class_entity> > classes_;
+	std::list<std::shared_ptr<entity>> elements_;
 	std::list<template_param> template_params_;
 	bool is_template_ = false;
 	bool recurseImport = true;
@@ -244,9 +240,6 @@ public:
 	class_entity(const class_entity& other) = default;
 	class_entity& operator = (const class_entity& other) = default;
 
-	entity_type get_type() const {return type_;}
-	void set_type(entity_type type){type_ = type;}
-
 	class_entity* get_owner() const {return owner_;}
 	void set_owner(class_entity* owner){owner_ = owner;}
 
@@ -257,12 +250,12 @@ public:
 	std::string get_alias_name() const {return alias_name_;}
 	void set_alias_name(std::string name) {alias_name_ = name;}
 
-	const std::list<function_entity>& get_functions() const {return functions_;}
-	void set_functions(std::list<function_entity> raisess){functions_ = raisess;}
-	void add_function(function_entity raises){functions_.push_back(raises);}
+	const std::list<std::shared_ptr<function_entity>> get_functions() const;
+	void add_function(std::shared_ptr<function_entity> fn);
+	void add_function(function_entity fn);
 
 	void add_class(std::shared_ptr<class_entity> classObject);
-	const std::list<std::shared_ptr<class_entity> >& get_classes() const {return classes_;}
+	const std::list<std::shared_ptr<class_entity> > get_classes() const;
 
 	const std::list<template_param>& get_template_params() const {return template_params_;}
 
