@@ -535,7 +535,7 @@ void splitVariable(const std::string& phrase, std::string& name, std::string& ty
     type = phrase.substr(0, j + 1);
 }
 
-void class_entity::parse_variable(const char*& pData)
+void class_entity::parse_variable(const char*& pData, bool in_import)
 {
     std::string phrase;
     for (; *pData != 0 && *pData != ';'; pData++)
@@ -555,13 +555,14 @@ void class_entity::parse_variable(const char*& pData)
     fn.set_name(fn_name);
     fn.set_return_type(fn_return_type);
     fn.set_type(FunctionTypeVariable);
+    fn.set_is_in_import(in_import);
     functions_.push_back(fn);
 
     if (*pData == ';')
         pData++;
 }
 
-void class_entity::parse_namespace(const char*& pData)
+void class_entity::parse_namespace(const char*& pData, bool in_import)
 {
     EAT_SPACES(pData)
 
@@ -579,18 +580,18 @@ void class_entity::parse_namespace(const char*& pData)
     {
         throw std::runtime_error("Error expected character '}'");
     }
-    parse_structure(pData, false);
+    parse_structure(pData, false, in_import);
 }
 
 std::shared_ptr<class_entity> class_entity::parse_interface(const char*& pData, const entity_type typ,
-                                                            const attributes& attr)
+                                                            const attributes& attr, bool in_import)
 {
     auto cls = std::make_shared<class_entity>(this);
 
     cls->set_type(typ);
     cls->set_attributes(attr);
 
-    cls->parse_structure(pData, false);
+    cls->parse_structure(pData, false, in_import);
     return cls;
 }
 
@@ -622,7 +623,7 @@ std::string class_entity::parse_cpp_quote(const char*& pData)
     return contents;
 }
 
-void class_entity::parse_structure(const char*& pData, bool bInCurlyBrackets)
+void class_entity::parse_structure(const char*& pData, bool bInCurlyBrackets, bool in_import)
 {
     bool bHasName = false;
     while (*pData != 0)
@@ -647,14 +648,14 @@ void class_entity::parse_structure(const char*& pData, bool bInCurlyBrackets)
                 EAT_SPACES(pData)
 
                 attributes attribs(GetAttributes(pData));
-                if (parse_include(pData, NULL))
+                if (parse_include(pData, NULL, in_import))
                 {
                     continue;
                 }
                 else if (interface_spec_ == edl
                          && (is_word(pData, "enclave") || is_word(pData, "trusted") || is_word(pData, "untrusted")))
                 {
-                    parse_namespace(pData);
+                    parse_namespace(pData, in_import);
                     EAT_SPACES(pData)
                     if (*pData == ';')
                         pData++;
@@ -665,13 +666,15 @@ void class_entity::parse_structure(const char*& pData, bool bInCurlyBrackets)
                     auto obj = std::make_shared<class_entity>(this);
                     if (get_type() == entity_type::COCLASS)
                     {
-                        functions_.push_back(parse_function(pData, attribs, true));
+                        auto func = parse_function(pData, attribs, true);
+                        func.set_is_in_import(in_import);
+                        functions_.push_back(func);
                         EAT_SPACES(pData);
                         assert(*pData == ';');
                         if (*pData == ';')
                             pData++;
                     }
-                    else if (parse_class(pData, attribs, obj, true))
+                    else if (parse_class(pData, attribs, obj, true, in_import))
                     {
                         //					assert(*pData == ';');
                         if (*pData == ';')
@@ -709,8 +712,9 @@ void class_entity::parse_structure(const char*& pData, bool bInCurlyBrackets)
                         }
 
                         attribs.merge(GetAttributes(pData));
-
-                        functions_.push_back(parse_function(pData, attribs, false));
+                        auto func = parse_function(pData, attribs, false);
+                        func.set_is_in_import(in_import);
+                        functions_.push_back(func);
                         EAT_SPACES(pData);
                         assert(*pData == ';');
                         if (*pData == ';')
@@ -743,6 +747,7 @@ void class_entity::parse_structure(const char*& pData, bool bInCurlyBrackets)
                             function_entity fn;
                             fn.set_name(elemname);
                             fn.set_return_type(elemValue);
+                            fn.set_is_in_import(in_import);
                             functions_.push_back(fn);
 
                             elemname = "";
@@ -760,6 +765,7 @@ void class_entity::parse_structure(const char*& pData, bool bInCurlyBrackets)
                         assert(*pData == ';');
                         if (*pData == ';')
                             pData++;
+                        func.set_is_in_import(in_import);
                         functions_.push_back(func);
                     }
                     else if (get_type() == entity_type::DISPATCH_INTERFACE)
@@ -770,8 +776,9 @@ void class_entity::parse_structure(const char*& pData, bool bInCurlyBrackets)
                             ;
                         else if (isFunction(pData))
                         {
-
-                            functions_.push_back(parse_function(pData, attribs, false));
+                            auto func = parse_function(pData, attribs, false);
+                            func.set_is_in_import(in_import);
+                            functions_.push_back(func);
                             EAT_SPACES(pData);
                             assert(*pData == ';');
                             if (*pData == ';')
@@ -785,6 +792,7 @@ void class_entity::parse_structure(const char*& pData, bool bInCurlyBrackets)
                         function_entity func;
                         func.set_name("public:");
                         func.set_type(FunctionTypePublic);
+                        func.set_is_in_import(in_import);
                         functions_.push_back(func);
                     }
                     else if (if_is_word_eat(pData, "private:"))
@@ -792,6 +800,7 @@ void class_entity::parse_structure(const char*& pData, bool bInCurlyBrackets)
                         function_entity func;
                         func.set_name("private:");
                         func.set_type(FunctionTypePrivate);
+                        func.set_is_in_import(in_import);
                         functions_.push_back(func);
                     }
                     else if (if_is_word_eat(pData, "protected:"))
@@ -802,6 +811,7 @@ void class_entity::parse_structure(const char*& pData, bool bInCurlyBrackets)
                     {
                         function_entity func;
                         func.set_name(parse_cpp_quote(pData));
+                        func.set_is_in_import(in_import);
                         func.set_type(FunctionTypeCppQuote);
                         functions_.push_back(func);
                     }
@@ -812,12 +822,12 @@ void class_entity::parse_structure(const char*& pData, bool bInCurlyBrackets)
                         assert(*pData == ';');
                         if (*pData == ';')
                             pData++;
+                        func.set_is_in_import(in_import);
                         functions_.push_back(func);
                     }
                     else
                     {
-                        parse_variable(pData);
-                        //							advancePassStatement(pData);
+                        parse_variable(pData, in_import);
                     }
                 }
             }
@@ -984,7 +994,7 @@ void class_entity::parse_structure(const char*& pData, bool bInCurlyBrackets)
     return newInterface;
 }*/
 
-std::shared_ptr<class_entity> class_entity::parse_typedef(const char*& pData, attributes& attribs, const char* type)
+std::shared_ptr<class_entity> class_entity::parse_typedef(const char*& pData, attributes& attribs, const char* type, bool in_import)
 {
     auto object = std::make_shared<class_entity>(this);
 
@@ -994,7 +1004,7 @@ std::shared_ptr<class_entity> class_entity::parse_typedef(const char*& pData, at
 
     auto obj = std::make_shared<class_entity>(object.get());
 
-    if (type == NULL && object->parse_class(pData, attribs, obj, false))
+    if (type == NULL && object->parse_class(pData, attribs, obj, false, in_import))
     {
 		object->set_alias_name(obj->get_name());
 
@@ -1099,7 +1109,7 @@ std::shared_ptr<class_entity> class_entity::parse_typedef(const char*& pData, at
                     else
                         break;
                 }
-                parse_typedef(pData, attribs, type.data());
+                parse_typedef(pData, attribs, type.data(), in_import);
             }
 
             // removing any nasty member structures, perhaps I'll do some thing intellegent with it one day...
@@ -1274,7 +1284,7 @@ void class_entity::parse_template(const char*& pData, std::list<template_param>&
 }
 
 bool class_entity::parse_class(const char*& pData, attributes& attribs, std::shared_ptr<class_entity>& obj,
-                               bool handleTypeDefs)
+                               bool handleTypeDefs, bool in_import)
 {
     bool bUseTypeDef = false;
 
@@ -1306,42 +1316,42 @@ bool class_entity::parse_class(const char*& pData, attributes& attribs, std::sha
     }
 
     if (bUseTypeDef || if_is_word_eat(pData, "typedef"))
-        obj = parse_typedef(pData, attribs, NULL);
+        obj = parse_typedef(pData, attribs, NULL, in_import);
 
     else if (if_is_word_eat(pData, "library"))
     {
-        obj = parse_interface(pData, entity_type::LIBRARY, attribs);
+        obj = parse_interface(pData, entity_type::LIBRARY, attribs, in_import);
         add_class(obj);
     }
     else if (if_is_word_eat(pData, "coclass"))
     {
-        obj = parse_interface(pData, entity_type::COCLASS, attribs);
+        obj = parse_interface(pData, entity_type::COCLASS, attribs, in_import);
         add_class(obj);
     }
     else if (is_variable == false && if_is_word_eat(pData, "struct"))
     {
-        obj = parse_interface(pData, entity_type::STRUCT, attribs);
+        obj = parse_interface(pData, entity_type::STRUCT, attribs, in_import);
         add_class(obj);
     }
     else if (is_variable == false && if_is_word_eat(pData, "namespace"))
     {
-        obj = parse_interface(pData, entity_type::NAMESPACE, attribs);
+        obj = parse_interface(pData, entity_type::NAMESPACE, attribs, in_import);
         add_class(obj);
     }
     else if (is_variable == false && if_is_word_eat(pData, "import"))
     {
-        obj = parse_interface(pData, entity_type::NAMESPACE, attribs);
+        obj = parse_interface(pData, entity_type::NAMESPACE, attribs, in_import);
         add_class(obj);
     }
     else if (if_is_word_eat(pData, "union"))
     {
-        obj = parse_interface(pData, entity_type::UNION, attribs);
+        obj = parse_interface(pData, entity_type::UNION, attribs, in_import);
         add_class(obj);
         return false;
     }
     else if (is_variable == false && if_is_word_eat(pData, "enum"))
     {
-        obj = parse_interface(pData, entity_type::ENUM, attribs);
+        obj = parse_interface(pData, entity_type::ENUM, attribs, in_import);
         add_class(obj);
     }
     /*else if (if_is_word_eat(pData, "typedef sequence<"))
@@ -1351,17 +1361,17 @@ bool class_entity::parse_class(const char*& pData, attributes& attribs, std::sha
     }*/
     else if (if_is_word_eat(pData, "exception"))
     {
-        obj = parse_interface(pData, entity_type::EXCEPTION, attribs);
+        obj = parse_interface(pData, entity_type::EXCEPTION, attribs, in_import);
         add_class(obj);
     }
     else if (if_is_word_eat(pData, "interface"))
     {
-        obj = parse_interface(pData, entity_type::INTERFACE, attribs);
+        obj = parse_interface(pData, entity_type::INTERFACE, attribs, in_import);
         add_class(obj);
     }
     else if (if_is_word_eat(pData, "class"))
     {
-        obj = parse_interface(pData, entity_type::CLASS, attribs);
+        obj = parse_interface(pData, entity_type::CLASS, attribs, in_import);
         add_class(obj);
     }
     else if (if_is_word_eat(pData, "template"))
@@ -1382,7 +1392,7 @@ bool class_entity::parse_class(const char*& pData, attributes& attribs, std::sha
         if (type != entity_type::TYPE_NULL)
         {
             EAT_SPACES(pData)
-            obj = parse_interface(pData, type, attribs);
+            obj = parse_interface(pData, type, attribs, in_import);
             obj->template_params_ = templateParams;
             obj->set_is_template(true);
             add_class(obj);
@@ -1398,7 +1408,7 @@ bool class_entity::parse_class(const char*& pData, attributes& attribs, std::sha
     }
     else if (if_is_word_eat(pData, "dispinterface"))
     {
-        obj = parse_interface(pData, entity_type::DISPATCH_INTERFACE, attribs);
+        obj = parse_interface(pData, entity_type::DISPATCH_INTERFACE, attribs, in_import);
         add_class(obj);
     }
     else
@@ -1680,12 +1690,14 @@ void class_entity::GetInterfaceProperties(TYPEATTR* pTypeAttr, class_entity& obj
         if (pvardesc->wVarFlags & VARFLAG_FIMMEDIATEBIND)
             fn.add_attribute("immediatebind");
 
+        fn.set_is_in_import(in_import);
         obj.functions_.push_back(fn);
 
         if (!(pvardesc->wVarFlags & VARFLAG_FREADONLY))
         {
             fn.type = FunctionTypePropertyPut;
 
+            fn.set_is_in_import(in_import);
             obj.functions_.push_back(fn);
         }
 
@@ -1813,6 +1825,7 @@ void class_entity::GetInterfaceFunctions(TYPEATTR* pTypeAttr, class_entity& obj,
 
             typeInfo->ReleaseFuncDesc(desc);
 
+            fn.set_is_in_import(in_import);
             obj.functions_.push_back(fn);
         }
     }
@@ -1846,6 +1859,7 @@ void class_entity::GetCoclassInterfaces(TYPEATTR* pTypeAttr, class_entity& obj, 
             if (SUCCEEDED(hr))
                 fn.name = W2CA(GetInterfaceName(ifTypeInfo));
         }
+        fn.set_is_in_import(in_import);
         obj.functions_.push_back(fn);
     }
 }
@@ -1872,7 +1886,8 @@ void class_entity::GetVariables(class_entity& theClass, unsigned variableCount, 
             fn.return_type = GenerateTypeString(pvardesc->elemdescVar.tdesc, typeInfo);
 
             typeInfo->ReleaseVarDesc(pvardesc);
-
+            
+            fn.set_is_in_import(in_import);
             theClass.functions_.push_back(fn);
         }
     }
@@ -2038,7 +2053,7 @@ CComBSTR class_entity::GetInterfaceName(ITypeInfo* typeInfo)
 }
 #endif
 
-void class_entity::extract_path_and_load(const char*& pData, const char* file)
+void class_entity::extract_path_and_load(const char*& pData, const char* file, bool in_import)
 {
     EAT_SPACES(pData)
 
@@ -2057,7 +2072,7 @@ void class_entity::extract_path_and_load(const char*& pData, const char* file)
             const char* fname_ext = std::max(strrchr(temp.data(), '\\'), strrchr(temp.data(), '/'));
             if (fname_ext != NULL)
             {
-                if (!load(temp.data()))
+                if (!load(temp.data(), in_import))
                     //					if(!LoadUsingEnv(temp))
                     throw std::runtime_error(std::string("failed to load ") + temp);
             }
@@ -2073,7 +2088,7 @@ void class_entity::extract_path_and_load(const char*& pData, const char* file)
                 {
                     strcpy(path, temp.data());
                 }
-                if (!load(path))
+                if (!load(path, in_import))
                 {
                     //					if(!LoadUsingEnv(temp))
                     throw std::runtime_error(std::string("failed to load ") +  path);
@@ -2102,12 +2117,12 @@ void move_past_comments(const char*& pData)
     }
 }
 
-bool class_entity::parse_include(const char*& pData, const char* file)
+bool class_entity::parse_include(const char*& pData, const char* file, bool in_import)
 {
     if (if_is_word_eat(pData, "#include"))
     {
         if (recurseImportLib)
-            extract_path_and_load(pData, file);
+            extract_path_and_load(pData, file, in_import);
         else
             move_past_comments(pData);
         return true;
@@ -2118,7 +2133,7 @@ bool class_entity::parse_include(const char*& pData, const char* file)
         pData++; // get past (
         EAT_SPACES(pData)
         if (recurseImportLib)
-            extract_path_and_load(pData, file);
+            extract_path_and_load(pData, file, bool in_import);
         else
             move_past_comments(pData);
         EAT_SPACES(pData)
@@ -2172,7 +2187,7 @@ bool class_entity::parse_include(const char*& pData, const char* file)
             throw std::runtime_error(errString);
         }
         pData++;
-        parse_structure(pData, true);
+        parse_structure(pData, true, true);
 
         current_import.pop();
         return true;
@@ -2180,7 +2195,7 @@ bool class_entity::parse_include(const char*& pData, const char* file)
     return false;
 }
 
-bool class_entity::load(const char* file)
+bool class_entity::load(const char* file, bool in_import)
 {
     if (loaded_files.find(file) != loaded_files.end())
         return true;
@@ -2198,7 +2213,7 @@ bool class_entity::load(const char* file)
     std::getline(preproc_stream, preproc_data, '\0');
 
     const char* tmp = preproc_data.data();
-    parse_structure(tmp, true);
+    parse_structure(tmp, true, in_import);
 
     return true;
 }

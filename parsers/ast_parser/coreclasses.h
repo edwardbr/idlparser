@@ -57,6 +57,7 @@ class entity
 protected:
 	attributes attributes_;
 	std::string name_;
+	bool in_import_ = false;
 
 	entity(const entity& other) = default;
 	entity& operator = (const entity& other) = default;
@@ -86,6 +87,9 @@ public:
 
 	std::string get_name() const {return name_;}
 	void set_name(std::string name){name_ = name;}
+
+	bool get_is_in_import() const {return in_import_;}
+	void set_is_in_import(bool in_import){in_import_ = in_import;}
 
 	const attributes& get_attributes() const {return attributes_;}
 	std::string get_attribute(const std::string& name) const 
@@ -268,19 +272,19 @@ public:
 	//std::shared_ptr<class_entity> parse_sequence(const char*& pData, attributes& attribs);
 	void parse_union(const char*& pData, attributes& attribs);
 	bool has_typedefs(const char* pData);
-	std::shared_ptr<class_entity> parse_typedef(const char*& pData, attributes& attribs, const char* type);
-	bool parse_class(const char*& pData, attributes& attribs, std::shared_ptr<class_entity>& obj, bool handleTypeDefs);
+	std::shared_ptr<class_entity> parse_typedef(const char*& pData, attributes& attribs, const char* type, bool in_import);
+	bool parse_class(const char*& pData, attributes& attribs, std::shared_ptr<class_entity>& obj, bool handleTypeDefs, bool in_import);
 	function_entity parse_function(const char*& pData, attributes& attribs, bool bFunctionIsInterface);
-	void parse_variable(const char*& pData);
-	std::shared_ptr<class_entity> parse_interface(const char*& pData, const entity_type type, const attributes& attr);
+	void parse_variable(const char*& pData, bool in_import);
+	std::shared_ptr<class_entity> parse_interface(const char*& pData, const entity_type type, const attributes& attr, bool in_import);
 	std::string parse_cpp_quote(const char*& pData);
 	void parse_template(const char*& pData, std::list<template_param>& templateParams);
-	void parse_namespace(const char*& pData);
-	void parse_structure(const char*& pData, bool bInCurlyBrackets);
+	void parse_namespace(const char*& pData, bool in_import);
+	void parse_structure(const char*& pData, bool bInCurlyBrackets, bool in_import);
 
-	bool load(const char* file = nullptr);
-	void extract_path_and_load(const char*& pData, const char* file);
-	bool parse_include(const char*& pData, const char* file);
+	bool load(const char* file, bool in_import);
+	void extract_path_and_load(const char*& pData, const char* file, bool in_import);
+	bool parse_include(const char*& pData, const char* file, bool in_import);
 
 	bool find_class(std::string type, std::shared_ptr<class_entity>& obj) const;
 
