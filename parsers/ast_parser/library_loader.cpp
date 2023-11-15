@@ -588,6 +588,7 @@ std::shared_ptr<class_entity> class_entity::parse_interface(const char*& pData, 
 {
     auto cls = std::make_shared<class_entity>(this);
 
+    cls->set_is_in_import(in_import);
     cls->set_entity_type(typ);
     cls->set_attributes(attr);
 
@@ -812,13 +813,13 @@ void class_entity::parse_structure(const char*& pData, bool bInCurlyBrackets, bo
                         function_entity func;
                         func.set_name(parse_cpp_quote(pData));
                         func.set_is_in_import(in_import);
-                        func.set_entity_type(entity_type::FUNCTION_CPPQUOTE);
+                        func.set_entity_type(entity_type::CPPQUOTE);
                         add_function(func);
                     }
                     else if (if_is_word_eat(pData, "constexpr"))
                     {
                         function_entity fn(parse_function(pData, attribs, false));
-                        fn.set_entity_type(entity_type::FUNCTION_CONSTEXPR);
+                        fn.set_entity_type(entity_type::CONSTEXPR);
                         fn.set_is_in_import(in_import);
                         add_function(fn);
 

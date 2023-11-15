@@ -17,6 +17,17 @@ class_entity::class_entity(class_entity* owner, interface_spec spec) :
 	interface_spec_(spec)
 {}
 
+const std::list<std::shared_ptr<entity>> class_entity::get_elements(entity_type types) const
+{	
+	std::list<std::shared_ptr<entity>> functions;
+	for(auto& element : elements_)
+	{
+		if((element->get_entity_type() & types) != entity_type::TYPE_NULL)
+			functions.push_back(std::static_pointer_cast<entity>(element));
+	}
+	return functions;
+}
+
 const std::list<std::shared_ptr<function_entity>> class_entity::get_functions() const 
 {
 	std::list<std::shared_ptr<function_entity>> functions;
