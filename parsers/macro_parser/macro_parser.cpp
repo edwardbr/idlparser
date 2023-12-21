@@ -64,12 +64,6 @@ std::string macro_parser::ExtractExpression(const char*& pData, const paths& inc
 			continue;
 		}
 
-/*		if(firstpass)
-		{
-			firstpass = false;
-			retVal += ' ';
-		}*/
-
 		std::string tempString;
 		
 		if(is_word(pData,"defined"))
@@ -487,65 +481,6 @@ void macro_parser::CleanBuffer(const char*& pData, std::ostream& dest, const pat
 		{
 			bInTheMiddleOfWord = false;
 		}
-/*		else if(is_word(pData,"importlib"))			
-		{
-			bInTheMiddleOfWord = false;
-
-			pData += 9;
-
-			while(*pData == ' ')
-				pData++;
-
-			if(*pData != '(')
-			{
-				std::stringstream err;
-				err << "Error unexpected character: " << *pData;
-				err << std::ends
-				std::string errString(err.str());
-				throw std::runtime_error(errString);
-			}
-			pData++;
-			if(*pData != '\"')
-			{
-				std::stringstream err;
-				err << "Error unexpected character: " << *pData;
-				err << std::ends;
-				std::string errString(err.str());
-				throw std::runtime_error(errString);
-			}
-			pData++;
-
-			std::string var;
-			while(*pData != '\0' && *pData != '\n' && *pData != '\"' && *pData != '>')
-			{
-				var += *pData++;
-			}
-
-			if(*pData != '\"')
-			{
-				std::stringstream err;
-				err << "Error unexpected character: " << *pData;
-				err << std::ends;
-				std::string errString(err.str());
-				throw std::runtime_error(errString);
-			}
-			pData++;
-
-			if(*pData != ')')
-			{
-				std::stringstream err;
-				err << "Error unexpected character: " << *pData;
-				err << std::ends;
-				std::string errString(err.str());
-				throw std::runtime_error(errString);
-			}
-			pData++;
-
-			std::stringstream includeStream;
-			load(includeStream, var.data());
-			includeStream << std::ends;
-			output << includeStream.str();
-		}*/
 		else if(is_preproc_eat(pData,"import"))			
 		{
 			bInTheMiddleOfWord = false;
@@ -682,42 +617,6 @@ void macro_parser::CleanBuffer(const char*& pData, std::ostream& dest, const pat
 		}
 	}
 }
-
-
-/*char IsLogicalExpression(const char* pData)
-{
-	char isLogicalExpression = '?';
-	bool inBrakets = false;
-	if(*pData == '(')
-	{
-		inBrakets = true;
-		pData++;
-	}
-
-	while(*pData != '\0' && *pData != '\n')
-	{
-		if(*pData == '(')
-		{
-			if(isLogicalExpression != '?')
-				if(isLogicalExpression != IsLogicalExpression(pData))
-					return '?';
-			else
-				isLogicalExpression = IsLogicalExpression(pData);
-		}
-		if(*pData == ')')
-		{
-			pData++;
-			break;
-		}
-		if(*pData == '<' || *pData == '>' || (*pData == '=' && *(pData+1) == '=') || *pData == '&' || *pData == '|' || *pData == '!')
-			isLogicalExpression = 'y';
-
-		pData++;
-	}
-	if(isLogicalExpression == '?')
-		isLogicalExpression = 'n';
-	return isLogicalExpression;
-}*/
 
 std::string macro_parser::not_(const std::string val, const std::string)
 {
@@ -890,8 +789,6 @@ bool macro_parser::IsOperator(const char* pData, std::string& operatorString)
 //reduce a complex expression to its value
 std::string macro_parser::ReduceExpression(const char*& pData, const paths& includeDirectories, std::vector<std::string>& loaded_includes)
 {
-//	pData++;  //gobble up those leading brackets
-
 	std::list<std::string> components;
 	std::string temp;
 
@@ -1043,11 +940,6 @@ bool macro_parser::SubstituteMacro(int ignoreText, const char*& pData, std::ostr
 		it = defines.find(macroName);
 		if(it == defines.end())
 			return false; // no return
-
-		/*if(macroName == "_CRT_DEPRECATE_TEXT")
-		{
-			macroName = macroName;
-		}*/
 
 		pData += macroName.length();
 	}
@@ -1505,41 +1397,6 @@ void CleanBufferOfComments(const char*& pData)
 					oldBufPos++;
 				}
 			}
-			/*else if(is_preproc_eat(pData,"pragma"))
-			{
-				changed = true;
-				int bracketCount = 0;
-				bool bInComments = false;
-				while(*pData != 0)
-				{
-					if(bInComments)
-					{
-						if(is_word(pData,"\\\\"))
-							pData++;
-						else if(is_word(pData,"\\\""))
-							pData++;
-						else if(*pData == '\"')
-							bInComments = false;
-						pData++;
-						continue;
-
-					}
-					else if(*pData == ')' && bracketCount == 1)
-					{
-						pData++;
-						break;
-					}
-					else if(*pData == '(')
-						bracketCount++;
-					else if(*pData == ')')
-						bracketCount--;
-					else if(*pData == '\"')
-						bInComments = true;
-
-					pData++;
-				}
-				continue;
-			}*/
 			else if(begins_with(pData,"//"))			
 			{
 				DeleteRestofLine(pData);

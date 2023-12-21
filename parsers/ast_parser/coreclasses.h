@@ -151,7 +151,6 @@ public:
             if (it == name)
             {
                 return it;
-                break;
             }
             auto tmp = it.substr(0, name.size());
             if (tmp == name && it[name.size()] == '=')
@@ -169,7 +168,6 @@ public:
             if (name_value == name)
             {
                 return name_value;
-                break;
             }
             auto tmp = name_value.substr(0, name.size());
             if (tmp == name && name_value[name.size()] == '=')
@@ -305,7 +303,6 @@ public:
     std::string get_import_lib() const { return import_lib_; }
     void set_import_lib(std::string name) { import_lib_ = name; }
 
-    // std::shared_ptr<class_entity> parse_sequence(const char*& pData, attributes& attribs);
     void parse_union(const char*& pData, attributes& attribs);
     bool has_typedefs(const char* pData);
     std::shared_ptr<class_entity> parse_typedef(const char*& pData, attributes& attribs, const char* type,
@@ -359,6 +356,3 @@ struct typeInfo
     std::string suffix;
     const class_entity* pObj;
 };
-
-// std::string expandTypeString(const char* type, const class_entity& lib);
-// void getTypeStringInfo(const char* type, typeInfo& info, const class_entity& lib);

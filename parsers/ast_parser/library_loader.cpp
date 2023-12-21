@@ -157,15 +157,6 @@ function_entity class_entity::parse_function(const char*& pData, attributes& att
             if (return_type.length())
                 return_type += ' ';
 
-            /*			const class_entity* obj;
-                                    if(find_class(func_name, *pObjects, obj))
-                                    {
-                                            if(obj->type == TYPEDEF)
-                                            {
-                                                    func_name = obj->parentName;
-                                                    break;
-                                            }
-                                    }*/
             return_type += func_name;
             func_name = "";
         }
@@ -340,26 +331,6 @@ function_entity class_entity::parse_function(const char*& pData, attributes& att
                 {
                     if (parameter_type.length())
                         parameter_type += ' ';
-
-                    /*					const class_entity* obj;
-                                                            if(GetLibrary().find_class(parameter_name, obj))
-                                                                    if(obj->type == TYPEDEF)
-                                                                            parameter_name = obj->parentName;
-
-                    //#############this code was commented out doing so will break the com/corba bridge
-                                                            for(std::list<class_entity*, ClassObjectAllocator>::iterator
-                    it = pObjects->m_classes->begin();it != pObjects->m_classes->end();it++)
-                                                            {
-                                                                    if((*it).name == parameter_name)
-                                                                    {
-                                                                            if((*it).type == TYPEDEF)
-                                                                            {
-                                                                                    parameter_name = (*it).parentName;
-                                                                                    break;
-                                                                            }
-                                                                    }
-                                                            }*/
-
                     parameter_type += parameter_name;
                     parameter_name = "";
                 }
@@ -456,18 +427,14 @@ function_entity class_entity::parse_function(const char*& pData, attributes& att
         {
             break;
         }
-        //		pData++;
     }
 
-    //	pData++;
     if (func.has_value("propput") || func.has_value("propputref"))
     {
-        //		func.m_bIsPutProperty = true;
         func.set_entity_type(entity_type::FUNCTION_PROPERTYPUT);
     }
     else if (func.has_value("propget"))
     {
-        //		func.m_bIsPutProperty = true;
         func.set_entity_type(entity_type::FUNCTION_PROPERTYGET);
     }
 
@@ -568,11 +535,6 @@ void class_entity::parse_namespace(const char*& pData, bool in_import)
 
     std::string nameSpace;
     extract_word(pData, nameSpace);
-
-    /*if (ns.length() != 0)
-    {
-        nameSpace = ns + "::" + nameSpace;
-    }*/
 
     EAT_SPACES(pData)
 
@@ -677,7 +639,6 @@ void class_entity::parse_structure(const char*& pData, bool bInCurlyBrackets, bo
                     }
                     else if (parse_class(pData, attribs, obj, true, in_import))
                     {
-                        //					assert(*pData == ';');
                         if (*pData == ';')
                             pData++;
                     }
@@ -969,42 +930,6 @@ void class_entity::parse_structure(const char*& pData, bool bInCurlyBrackets, bo
     }
 }
 
-/*std::shared_ptr<class_entity> class_entity::parse_sequence(const char*& pData, attributes& attribs)
-{
-        auto newInterface = std::make_shared<class_entity>(shared_from_this());
-
-    EAT_SPACES(pData)
-
-        std::string parent_name;
-    while (*pData != ' ' && *pData != '>' && *pData != 0)
-    {
-        parent_name += *pData;
-        pData++;
-    }
-        newInterface->set_parent_name(parent_name);
-
-    if (*pData == 0)
-    {
-        assert(0);
-        return newInterface;
-    }
-    pData++;
-
-    EAT_SPACES(pData)
-
-        std::string name;
-    while (*pData != ';' && *pData != 0)
-        name += *pData++;
-
-        newInterface->set_name(name);
-
-    newInterface->set_type(entity_type::SEQUENCE);
-    newInterface->set_attributes(attribs);
-
-    EAT_PAST_SEMICOLON(pData)
-    return newInterface;
-}*/
-
 std::shared_ptr<class_entity> class_entity::parse_typedef(const char*& pData, attributes& attribs, const char* type, bool in_import)
 {
     auto object = std::make_shared<class_entity>(this);
@@ -1065,18 +990,10 @@ std::shared_ptr<class_entity> class_entity::parse_typedef(const char*& pData, at
 
             EAT_SPACES(pData)
         } while (*pData == ',');
-        //		assert(*pData == ';');
     }
     else
     {
         std::string parent_name;
-        /*{
-            auto owner = object->get_owner();
-            if (owner)
-            {
-                parent_name = owner->get_name();
-            }
-        }*/
 
         std::string object_name = object->get_name();
         if (type != NULL)
@@ -1203,9 +1120,6 @@ void class_entity::parse_union(const char*& pData, attributes& attribs)
     }
     while (*pData && *pData != ';')
         pData++;
-
-    //	if(*pData == ';')
-    //		pData++;
 }
 
 bool class_entity::has_typedefs(const char* pData)
@@ -1310,15 +1224,6 @@ bool class_entity::parse_class(const char*& pData, attributes& attribs, std::sha
         const char* semicolonPos = strchr(&*pData, ';');
         if (curlyPos == NULL || curlyPos > semicolonPos)
         {
-            /*if (obj->GetContainer() == NULL
-                || (obj->GetContainer()->get_entity_type() != entity_type::CLASS
-                                        && obj->GetContainer()->get_entity_type() != entity_type::STRUCT
-                                        )
-                                )
-            {
-                EAT_PAST_SEMICOLON(pData)
-                return true;
-            }*/
             is_variable = true;
         }
 
@@ -1365,11 +1270,6 @@ bool class_entity::parse_class(const char*& pData, attributes& attribs, std::sha
         obj = parse_interface(pData, entity_type::ENUM, attribs, in_import);
         add_class(obj);
     }
-    /*else if (if_is_word_eat(pData, "typedef sequence<"))
-    {
-        obj = parse_sequence(pData, attribs);
-        add_class(obj);
-    }*/
     else if (if_is_word_eat(pData, "exception"))
     {
         obj = parse_interface(pData, entity_type::EXCEPTION, attribs, in_import);
@@ -1428,194 +1328,6 @@ bool class_entity::parse_class(const char*& pData, attributes& attribs, std::sha
     EAT_SPACES(pData)
     return true;
 }
-
-/*bool class_entity::LoadUsingEnv(const std::string& file)
-{
-        const char* includes = includeDirectories.data();
-        if(!includes)
-                return false;
-
-#ifdef USE_COM
-        USES_CONVERSION;
-#endif
-
-        while(*includes)
-        {
-                std::string path;
-                while(*includes && *includes != ';')
-                        path += *includes++;
-                path += '\\' + file;
-
-#ifdef USE_COM
-                ITypeLibPtr typeLib;
-                HRESULT hr = LoadTypeLib(A2CW(path.data()),&typeLib);
-
-                if(SUCCEEDED(hr))
-                {
-                        UINT count = typeLib->GetTypeInfoCount();
-                        for(int i = 0;i < count;i++)
-                        {
-                            ITypeInfoPtr typeInfo;
-                                hr = typeLib->GetTypeInfo(i, &typeInfo);
-                                if (SUCCEEDED(hr))
-                                {
-                                        TYPEKIND typekind;
-                                        hr = typeLib->GetTypeInfoType(i, &typekind);
-                                        if (SUCCEEDED(hr))
-                                        {
-                                                bool addClass = true;
-                                                                                        auto obj =
-std::make_shared<class_entity>(shared_from_this());
-
-std::string()));
-
-                                                obj->name = W2CA(GetInterfaceName(typeInfo));
-
-                                                TYPEATTR* pTypeAttr;
-                                                HRESULT hr = typeInfo->GetTypeAttr(&pTypeAttr);
-
-
-                                                if(memcmp(&pTypeAttr->guid, &GUID_NULL, sizeof(GUID)))
-                                                {
-                                                        wchar_t buf[] = L"uuid(xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx) ";
-                                                        hr = StringFromGUID2(pTypeAttr->guid,&buf[4],40);
-                                                        if(SUCCEEDED(hr))
-                                                        {
-                                                                buf[4] = '(';
-                                                                buf[41] = ')';
-                                                                obj->add_attribute(W2CA(buf));
-                                                        }
-                                                }
-
-                                                {
-                                                        char buf[45];
-                                                        sprintf(buf,"lcid(%d)",pTypeAttr->lcid);
-                                                        obj->add_attribute(buf);
-                                                }
-
-                                                {
-                                                        char buf[45];
-                                                        sprintf(buf,"version(%d.%d)",pTypeAttr->wMajorVerNum,pTypeAttr->wMinorVerNum);
-                                                        obj->add_attribute(buf);
-                                                }
-
-                                                bool isDispatch = false;
-
-                                                switch (typekind)
-                                                {
-                                                        case TKIND_DISPATCH:
-                                                                {
-                                                                        //we are a dispinterface
-                                                                        isDispatch = true;
-
-                                                                        obj->parentName = "IDispatch";
-                                                                        obj->type = entity_type::INTERFACE;
-
-                                                                        //if we get past these two functions then we are
-a dual interface therefore treat as a custom interface HREFTYPE refType; hr = typeInfo->GetRefTypeOfImplType(-1,
-&refType); if (SUCCEEDED(hr))
-                                                                        {
-                                                                                ITypeInfoPtr dualTypeInfo;
-                                                                                hr = typeInfo->GetRefTypeInfo(refType,
-&dualTypeInfo); if (SUCCEEDED(hr))
-                                                                                {
-                                                                                        //we have now got the alter ego
-don't break but go onto the next block typeInfo = dualTypeInfo; obj->name = W2CA(GetInterfaceName(typeInfo));
-                                                                                }
-                                                                                else
-                                                                                {
-                                                                                        GetInterfaceFunctions(pTypeAttr,
-obj, typeInfo); GetInterfaceProperties(pTypeAttr, obj, typeInfo); break;
-                                                                                }
-                                                                        }
-                                                                        else
-                                                                        {
-                                                                                GetInterfaceFunctions(pTypeAttr, obj,
-typeInfo); GetInterfaceProperties(pTypeAttr, obj, typeInfo); break;
-                                                                        }
-                                                                }
-                                                        case TKIND_INTERFACE:
-                                                                {
-                                                                        obj->type = entity_type::INTERFACE;
-
-                                                                        if(!isDispatch)
-                                                                                GetInterfaceFunctions(pTypeAttr, obj,
-typeInfo);
-
-                                                                        //get the base class's name
-                                                                        HREFTYPE hreftype;
-                                                                        hr = typeInfo->GetRefTypeOfImplType(0,
-&hreftype); if (FAILED(hr)) break;
-
-                                                                        ITypeInfoPtr baseTypeInfo;
-                                                                        hr = typeInfo->GetRefTypeInfo(hreftype,
-&baseTypeInfo); if (FAILED(hr)) break;
-
-                                                                        obj->parentName =
-W2CA(GetInterfaceName(baseTypeInfo));
-
-                                                                }
-
-                                                                break;
-
-
-                                                        case TKIND_MODULE:
-                                                                //we are a module
-                                                                //NOT IMPLEMENTED
-                                                                break;
-
-                                                        case TKIND_COCLASS:
-                                                                //we are a coclass
-                                                                obj->type = entity_type::COCLASS;
-                                                                addClass = false;
-                                                                //an interesting excercise but when we are loading a
-type library we don't need to load
-                                                                //coclass's of other type libraries just their defined
-types such as unions and interfaces
-//								GetCoclassInterfaces(pTypeAttr, obj, typeInfo);
-                                                                break;
-
-                                                        case TKIND_ENUM:
-                                                                //we are a enum
-                                                                obj->type = entity_type::ENUM;
-                                                                GetVariables(obj, pTypeAttr->cVars, typeInfo);
-                                                                break;
-
-                                                        case TKIND_ALIAS:
-                                                                obj->type = TYPEDEF;
-                                                                obj->parentName =
-GenerateTypeString(pTypeAttr->tdescAlias, typeInfo); break;
-
-                                                        case TKIND_RECORD:
-                                                                obj->type = entity_type::STRUCT;
-                                                                GetVariables(obj, pTypeAttr->cVars, typeInfo);
-                                                                break;
-
-                                                        case TKIND_UNION:
-                                                                obj->type = entity_type::UNION;
-                                                                GetVariables(obj, pTypeAttr->cVars, typeInfo);
-                                                                break;
-
-                                                        default:
-                                                                break;
-                                                }
-
-                                                typeInfo->ReleaseTypeAttr(pTypeAttr);
-                                                if(addClass)
-                                                        add_class(obj);
-                                        }
-                                }
-                        }
-                }
-                else
-#endif
-                        if(load(path.data()))
-                        return true;
-                if(*includes == ';')
-                        includes++;
-        }
-        return false;
-}*/
 
 #ifdef USE_COM
 void class_entity::GetInterfaceProperties(TYPEATTR* pTypeAttr, class_entity& obj, ITypeInfo* typeInfo)
@@ -2084,7 +1796,6 @@ void class_entity::extract_path_and_load(const char*& pData, const char* file, b
             if (fname_ext != NULL)
             {
                 if (!load(temp.data(), in_import))
-                    //					if(!LoadUsingEnv(temp))
                     throw std::runtime_error(std::string("failed to load ") + temp);
             }
             else
@@ -2101,7 +1812,6 @@ void class_entity::extract_path_and_load(const char*& pData, const char* file, b
                 }
                 if (!load(path, in_import))
                 {
-                    //					if(!LoadUsingEnv(temp))
                     throw std::runtime_error(std::string("failed to load ") +  path);
                 }
             }
@@ -2138,24 +1848,6 @@ bool class_entity::parse_include(const char*& pData, const char* file, bool in_i
             move_past_comments(pData);
         return true;
     }
-    /*if (if_is_word_eat(pData, "importlib"))
-    {
-        is_hash_import++;
-        pData++; // get past (
-        EAT_SPACES(pData)
-        if (recurseImportLib)
-            extract_path_and_load(pData, file, bool in_import);
-        else
-            move_past_comments(pData);
-        EAT_SPACES(pData)
-        pData++; // get past )
-        EAT_SPACES(pData)
-        assert(*pData == ';');
-        if (*pData == ';')
-            pData++;
-        is_hash_import--;
-        return true;
-    }*/
     if (if_is_word_eat(pData, "import"))
     {        
         EAT_SPACES(pData);

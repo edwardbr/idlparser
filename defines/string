@@ -1,11 +1,5 @@
 namespace std
 {
-	/*template<class T>
-	class basic_string
-	{};
-
-    using string = basic_string<char>;*/
-
     class string
 	{};
 }

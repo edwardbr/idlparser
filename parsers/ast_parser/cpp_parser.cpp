@@ -2,26 +2,6 @@
 #include "coreclasses.h"
 #include "cpp_parser.h"
 
-/*std::string wsdl_namespace("xt__");
-
-std::string strip_trailing_(std::string data)
-{
-	if(strncmp(data.data(), wsdl_namespace.data(), wsdl_namespace.length()) == 0)
-	{
-		data = data.substr(wsdl_namespace.length());
-	}
-
-	int i = data.length() - 1;
-	for(;i >= 0;i--)
-	{
-		if(data[i] != '_')
-		{
-			return data.substr(0,i+1);
-		}
-	}
-	return data;
-}*/
-
 size_t find_key_word(std::string type, const char* val, bool check_end)
 {
 	size_t len = strlen(val);
@@ -184,30 +164,7 @@ bool is_char_star(std::string type)
 {
 	return find_key_word(type, "char*", true) != -1 || find_key_word(type, "char *", true) != -1;
 }
-/*bool isString(std::string type)
-{
-	return find_key_word(type, "std::string", true) != -1;
-}
-bool isVector(std::string type)
-{
-	return find_key_word(type, "std::vector", false) != -1;
-}
-bool isList(std::string type)
-{
-	return find_key_word(type, "std::list", false) != -1;
-}
-bool isMap(std::string type)
-{
-	return find_key_word(type, "std::map", false) != -1;
-}
-bool isSet(std::string type)
-{
-	return find_key_word(type, "std::set", false) != -1;
-}
-bool isJavaScriptObject(std::string type)
-{
-	return find_key_word(type, "javascript_object", false) != -1;
-}*/
+
 bool is_enum(std::string type, const class_entity& library)
 {
 	if(find_key_word(type, "enum", true) == -1)

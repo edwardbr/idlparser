@@ -63,9 +63,6 @@ void class_entity::add_class(std::shared_ptr<class_entity> classObject)
 				return;
 			if(cls->get_import_lib() != "" && classObject->get_import_lib() == "")
 			{
-				//replace the imported definition with the included one
-				// cls = classObject;
-				// return;
 				continue;
 			}
 			return;

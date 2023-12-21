@@ -94,8 +94,6 @@ bool extract_word(const char*& pData, std::string& retval)
 		temp += *pData++;
 	retval += temp;
 
-//if(temp == "DECIMAL")
-//	int i = 0;
 	return temp.size() > 0;
 }
 

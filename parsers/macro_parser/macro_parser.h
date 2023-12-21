@@ -32,7 +32,6 @@ struct macro_parser
 	[[nodiscard]] virtual bool FindDefString(std::string& var);
 	virtual void UnDefine(std::string& var);
 	virtual void Define(std::string& var);
-	//virtual char IsLogicalExpression(const char* pData);
 	[[nodiscard]] virtual std::string ExtractExpression(const char*& pData, const paths& includeDirectories, std::vector<std::string>& loaded_includes);
 	[[nodiscard]] virtual bool SubstituteMacro(int ignoreText, const char*& pData, std::ostream& dest, const paths& includeDirectories, std::vector<std::string>& loaded_includes);
 	virtual void ProcessIf(const char*& pData, std::ostream& dest, const paths& includeDirectories, int& inIfDef, int& ignoreText, bool& bInTheMiddleOfWord, std::vector<std::string>& loaded_includes);
