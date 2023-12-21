@@ -123,6 +123,37 @@ bool class_entity::find_class(const std::vector<std::string>& type, std::shared_
 	return false;
 }
 
+const class_entity& get_root(const class_entity& cls)
+{
+	auto* tmp = cls.get_owner();
+	while(tmp)
+	{
+		auto tmp1 = tmp->get_owner();
+		if(!tmp1)
+			break;
+		tmp = tmp1;
+	}
+	if(tmp)
+		return *tmp;
+	return cls;
+}
+
+std::string get_full_name(const class_entity& cls)
+{
+	auto name = cls.get_name();
+	auto* tmp = cls.get_owner();
+	while(tmp)
+	{
+		name = tmp->get_name() + "::" + name;
+		auto tmp1 = tmp->get_owner();
+		if(!tmp1)
+			break;
+		tmp = tmp1;
+	}
+	name = "::" + name;
+	return name;
+}
+
 /*std::string expandTypeString(const char* type, const class_entity& lib)
 {
 	std::string temp;

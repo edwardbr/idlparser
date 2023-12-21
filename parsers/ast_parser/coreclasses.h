@@ -340,6 +340,9 @@ public:
 #endif
 };
 
+const class_entity& get_root(const class_entity& cls);
+std::string get_full_name(const class_entity& cls);
+
 extern std::stringstream verboseStream;
 extern std::stack<std::string> current_import;
 
