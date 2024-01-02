@@ -116,7 +116,10 @@ bool class_entity::find_class(const std::vector<std::string>& type, std::shared_
 			else
 			{
 				std::vector<std::string> t(++type.begin(), type.end());
-				return cls->find_class(t, obj);
+				// keep looking if not found : may happen when an imported namespace "hides" the loaded one
+				bool found = cls->find_class(t, obj);
+				if (found)
+					return true;
 			}
 		}
 	}
