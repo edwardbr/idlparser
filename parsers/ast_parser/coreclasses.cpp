@@ -141,12 +141,14 @@ const class_entity& get_root(const class_entity& cls)
 	return cls;
 }
 
-std::string get_full_name(const class_entity& cls)
+std::string get_full_name(const class_entity& cls, bool stop_when_base_has_no_name)
 {
 	auto name = cls.get_name();
 	auto* tmp = cls.get_owner();
 	while(tmp)
 	{
+		if(stop_when_base_has_no_name && tmp->get_name().empty())
+			break;
 		name = tmp->get_name() + "::" + name;
 		auto tmp1 = tmp->get_owner();
 		if(!tmp1)
