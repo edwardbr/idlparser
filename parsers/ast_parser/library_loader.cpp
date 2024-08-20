@@ -78,6 +78,7 @@ function_entity class_entity::parse_function(const char*& pData, attributes& att
     func.set_attributes(attribs);
 
     bool bFunctionIsProperty = true;
+    bool is_static = false;
 
     EAT_SPACES(pData)
 
@@ -99,7 +100,21 @@ function_entity class_entity::parse_function(const char*& pData, attributes& att
             }
         }
 
-        if (func_name == "const" || func_name == "unsigned" || func_name == "signed"
+        if (func_name == "static")
+        {
+            is_static = true;
+            func_name = "";
+            EAT_SPACES(pData);
+            continue;
+        }
+        else if (func_name == "constexpr")
+        {
+            func.set_entity_type(entity_type::CONSTEXPR);
+            func_name = "";
+            // if(is_static)
+            //     func_name = std::string("static ") + func_name;
+        }
+        else if (func_name == "const" || func_name == "unsigned" || func_name == "signed"
             || (interface_spec_ == corba && func_name == "inout") || // CORBA types
             ((interface_spec_ == corba || interface_spec_ == com) && (func_name == "in" || func_name == "out"))
             || (interface_spec_ == edl && func_name == "public"))
@@ -166,7 +181,8 @@ function_entity class_entity::parse_function(const char*& pData, attributes& att
         ; // no processing
     else if (bFunctionIsProperty)
     {
-        func.set_entity_type(entity_type::FUNCTION_VARIABLE);
+        if(func.get_entity_type() != entity_type::CONSTEXPR)
+            func.set_entity_type(entity_type::FUNCTION_VARIABLE);
         if(*pData == '=') //this may be a default value
         {
             pData++;
@@ -306,11 +322,11 @@ function_entity class_entity::parse_function(const char*& pData, attributes& att
                 }
 
                 // gsoap yuckyness
-                if (*pData == '0' || *pData == '1')
-                {
-                    pData++;
-                    EAT_SPACES(pData)
-                }
+                // if (*pData == '0' || *pData == '1')
+                // {
+                //     pData++;
+                //     EAT_SPACES(pData)
+                // }
 
                 if (*pData == ',' || *pData == ')')
                 {
