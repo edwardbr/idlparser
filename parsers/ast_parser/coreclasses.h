@@ -341,7 +341,7 @@ public:
 };
 
 const class_entity& get_root(const class_entity& cls);
-std::string get_full_name(const class_entity& cls);
+std::string get_full_name(const class_entity& cls, bool stop_when_base_has_no_name = false);
 
 extern std::stringstream verboseStream;
 extern std::stack<std::string> current_import;
