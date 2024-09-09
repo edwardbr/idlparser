@@ -255,18 +255,6 @@ void strip_reference_modifiers(std::string& param_type, std::string& referenceMo
 	param_type = param_type.substr(0, i + 1);
 }
 
-void translate_type(std::string param_type, const class_entity& library)
-{
-	std::shared_ptr<class_entity> pObj;
-	if(library.find_class(param_type, pObj) == true && pObj != NULL)
-	{
-		if(pObj->get_entity_type() == entity_type::TYPEDEF)
-		{
-			param_type = pObj->get_owner()->get_name();
-		}
-	}
-}
-
 std::string get_template_param(std::string type)
 {
 	std::string param;
@@ -310,4 +298,16 @@ std::vector<std::string> split_namespaces(std::string type)
 	}  
 
 	return ret;
+}
+
+std::string trim_string(std::string str) 
+{
+    const std::string whiteSpaces = " ";
+    // Remove leading whitespace
+    size_t first_non_space = str.find_first_not_of(whiteSpaces);
+    str.erase(0, first_non_space);
+    // Remove trailing whitespace
+    size_t last_non_space = str.find_last_not_of(whiteSpaces);
+    str.erase(last_non_space + 1);
+    return str;
 }

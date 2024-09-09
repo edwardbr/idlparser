@@ -22,6 +22,6 @@ bool is_enum(std::string type, const class_entity& library);
 std::string unconst(std::string type);
 std::string unenum(std::string type);
 void strip_reference_modifiers(std::string& param_type, std::string& referenceModifiers);
-void translate_type(std::string param_type, const class_entity& library);
 std::string get_template_param(std::string type);
 std::vector<std::string> split_namespaces(std::string type);
+std::string trim_string(std::string str);

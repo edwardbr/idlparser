@@ -48,6 +48,7 @@ enum class entity_type : uint64_t
     FUNCTION_PUBLIC = 524288,
     FUNCTION_PRIVATE = 1048576,
     CONSTEXPR = 2097152,
+    TEMPLATE_DECLARATION = 4194304,
 
     NAMESPACE_MEMBERS = STRUCT | ENUM | EXCEPTION | SEQUENCE | INTERFACE | TYPEDEF | COCLASS | UNION | LIBRARY
                         | DISPATCH_INTERFACE | CLASS | TEMPLATE | NAMESPACE | CPPQUOTE | CONSTEXPR,
@@ -90,14 +91,7 @@ inline entity_type operator &= (entity_type lhs, entity_type rhs)
 
 typedef std::list<std::string> attributes;
 
-struct template_param
-{
-public:
-    std::string type;
-    std::string name;
-};
-
-// this class contains the name container and attributes used by a derived class
+// all types are derived from entities, including interfaces, structs, functions, parameters and template parameters
 class entity
 {
 protected:
@@ -182,6 +176,35 @@ public:
     void merge_attributes(attributes attribs) { attributes_.merge(attribs); }
 };
 
+//for template class declarations
+struct template_declaration : public entity
+{
+public:
+    std::string type;
+    std::string default_value;
+
+    template_declaration()
+        : entity(entity_type::TEMPLATE_DECLARATION)
+    {
+    }
+};
+
+
+enum template_deduction_type
+{
+    CLASS,
+    TYPENAME,
+    OTHER
+};
+
+struct template_deduction
+{
+public:
+    template_deduction_type type;
+    std::shared_ptr<class_entity> identified_type = nullptr;
+    template_declaration declaration;
+};
+
 class parameter_entity : public entity
 {
     std::string type_;
@@ -264,7 +287,7 @@ class class_entity : public entity, std::enable_shared_from_this<class_entity>
     std::list<class_entity*> base_classes_;
     std::string alias_name_;
     std::list<std::shared_ptr<entity>> elements_;
-    std::list<template_param> template_params_;
+    std::list<template_declaration> template_params_;
     bool is_template_ = false;
     bool recurseImport = true;
     bool recurseImportLib = true;
@@ -288,6 +311,8 @@ public:
 
     std::string get_alias_name() const { return alias_name_; }
     void set_alias_name(std::string name) { alias_name_ = name; }
+    
+    void deduct_template_type(const template_declaration& decl, template_deduction& deduction) const;
 
     const std::list<std::shared_ptr<entity>> get_elements(entity_type types) const;
 
@@ -298,7 +323,7 @@ public:
     void add_class(std::shared_ptr<class_entity> classObject);
     const std::list<std::shared_ptr<class_entity>> get_classes() const;
 
-    const std::list<template_param>& get_template_params() const { return template_params_; }
+    const std::list<template_declaration>& get_template_params() const { return template_params_; }
 
     std::string get_import_lib() const { return import_lib_; }
     void set_import_lib(std::string name) { import_lib_ = name; }
@@ -314,7 +339,7 @@ public:
     std::shared_ptr<class_entity> parse_interface(const char*& pData, const entity_type type, const attributes& attr,
                                                   bool in_import);
     std::string parse_cpp_quote(const char*& pData);
-    void parse_template(const char*& pData, std::list<template_param>& templateParams);
+    void parse_template(const char*& pData, std::list<template_declaration>& templateParams);
     void parse_namespace(const char*& pData, bool in_import);
     void parse_structure(const char*& pData, bool bInCurlyBrackets, bool in_import);
 

@@ -17,6 +17,26 @@ class_entity::class_entity(class_entity* owner, interface_spec spec) :
 	interface_spec_(spec)
 {}
 
+void class_entity::deduct_template_type(const template_declaration& decl, template_deduction& deduction) const
+{
+	deduction.declaration = decl;
+	
+	if(decl.type == "class")
+		deduction.type = template_deduction_type::CLASS;
+	else if(decl.type == "typename")
+		deduction.type = template_deduction_type::TYPENAME;
+	else
+		deduction.type = template_deduction_type::OTHER;
+	
+	if(deduction.type == template_deduction_type::OTHER)
+	{
+		if(!find_class(decl.type, deduction.identified_type))
+		{
+			std::cout << "template type: " << decl.type << " not found\n";
+		}
+	}
+}
+
 const std::list<std::shared_ptr<entity>> class_entity::get_elements(entity_type types) const
 {	
 	std::list<std::shared_ptr<entity>> functions;

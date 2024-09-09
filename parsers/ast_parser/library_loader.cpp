@@ -10,6 +10,7 @@
 #include <stack>
 
 #include "coreclasses.h"
+#include "cpp_parser.h"
 
 #define EAT_SPACES(data)                                                                                               \
     while (*data == ' ')                                                                                               \
@@ -516,6 +517,23 @@ void splitVariable(const std::string& phrase, std::string& name, std::string& ty
 
     name = phrase.substr(start_pos + 1, end_pos + 1);
     type = phrase.substr(0, j + 1);
+}
+
+void splitTemplate(std::string phrase, std::string& name, std::string& type, std::string& default_value)
+{
+    phrase = trim_string(phrase);
+
+    auto pos = phrase.find_first_of(" ");
+
+    type = phrase.substr(0, pos);
+    name = trim_string(phrase.substr(pos + 1));
+    
+    pos = name.find_first_of("=");
+    if(pos != std::string::npos)
+    {
+        default_value = trim_string(name.substr(pos + 1));
+        name = trim_string(name.substr(0, pos));
+    }
 }
 
 void class_entity::parse_variable(const char*& pData, bool in_import)
@@ -1182,7 +1200,7 @@ bool class_entity::has_typedefs(const char* pData)
     return true;
 }
 
-void class_entity::parse_template(const char*& pData, std::list<template_param>& templateParams)
+void class_entity::parse_template(const char*& pData, std::list<template_declaration>& templateParams)
 {
     EAT_SPACES(pData)
 
@@ -1201,8 +1219,10 @@ void class_entity::parse_template(const char*& pData, std::list<template_param>&
     {
         if (*pData == ',')
         {
-            template_param tpl;
-            splitVariable(phrase, tpl.name, tpl.type);
+            template_declaration tpl;
+            std::string name;
+            splitTemplate(phrase, name, tpl.type, tpl.default_value);
+            tpl.set_name(name);
             templateParams.push_back(tpl);
             phrase.clear();
         }
@@ -1214,10 +1234,12 @@ void class_entity::parse_template(const char*& pData, std::list<template_param>&
         }
     }
 
-    template_param tpl;
+    template_declaration tpl;
     if (!phrase.empty())
     {
-        splitVariable(phrase, tpl.name, tpl.type);
+        std::string name;
+        splitTemplate(phrase, name, tpl.type, tpl.default_value);
+        tpl.set_name(name);
         templateParams.push_back(tpl);
     }
 
@@ -1305,7 +1327,7 @@ bool class_entity::parse_class(const char*& pData, attributes& attribs, std::sha
     {
         EAT_SPACES(pData)
 
-        std::list<template_param> templateParams;
+        std::list<template_declaration> templateParams;
         parse_template(pData, templateParams);
 
         EAT_SPACES(pData)
