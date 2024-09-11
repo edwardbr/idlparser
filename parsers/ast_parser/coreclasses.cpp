@@ -30,7 +30,8 @@ void class_entity::deduct_template_type(const template_declaration& decl, templa
 	
 	if(deduction.type == template_deduction_type::OTHER)
 	{
-		if(!find_class(decl.type, deduction.identified_type))
+		//we need something smarter than "size_t"
+		if(decl.type != "size_t" && !find_class(decl.type, deduction.identified_type))
 		{
 			std::cout << "template type: " << decl.type << " not found\n";
 		}
