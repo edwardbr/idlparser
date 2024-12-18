@@ -756,13 +756,40 @@ void class_entity::parse_structure(const char*& pData, bool bInCurlyBrackets, bo
                     }
                     else if (get_entity_type() == entity_type::STRUCT)
                     {
-                        function_entity func(parse_function(pData, attribs, false));
-                        EAT_SPACES(pData);
-                        assert(*pData == ';');
-                        if (*pData == ';')
-                            pData++;
-                        func.set_is_in_import(in_import);
-                        add_function(func);
+                        if (if_is_word_eat(pData, "public:"))
+                        {
+                            function_entity func;
+                            func.set_name("public:");
+                            func.set_entity_type(entity_type::FUNCTION_PUBLIC);
+                            func.set_is_in_import(in_import);
+                            add_function(func);
+                        }
+                        else if (if_is_word_eat(pData, "private:"))
+                        {
+                            function_entity func;
+                            func.set_name("private:");
+                            func.set_entity_type(entity_type::FUNCTION_PRIVATE);
+                            func.set_is_in_import(in_import);
+                            add_function(func);
+                        }
+                        else if (if_is_word_eat(pData, "#cpp_quote"))
+                        {
+                            function_entity func;
+                            func.set_name(parse_cpp_quote(pData));
+                            func.set_is_in_import(in_import);
+                            func.set_entity_type(entity_type::CPPQUOTE);
+                            add_function(func);
+                        }
+                        else
+                        {               
+                            function_entity func(parse_function(pData, attribs, false));
+                            EAT_SPACES(pData);
+                            assert(*pData == ';');
+                            if (*pData == ';')
+                                pData++;
+                            func.set_is_in_import(in_import);
+                            add_function(func);
+                        }
                     }
                     else if (get_entity_type() == entity_type::DISPATCH_INTERFACE)
                     {
@@ -798,10 +825,6 @@ void class_entity::parse_structure(const char*& pData, bool bInCurlyBrackets, bo
                         func.set_entity_type(entity_type::FUNCTION_PRIVATE);
                         func.set_is_in_import(in_import);
                         add_function(func);
-                    }
-                    else if (if_is_word_eat(pData, "protected:"))
-                    {
-                        //makes no sense
                     }
                     else if (if_is_word_eat(pData, "#cpp_quote"))
                     {
