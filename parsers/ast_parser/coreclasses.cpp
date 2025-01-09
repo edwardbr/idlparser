@@ -162,7 +162,7 @@ const class_entity& get_root(const class_entity& cls)
 	return cls;
 }
 
-std::string get_full_name(const class_entity& cls, bool stop_when_base_has_no_name)
+std::string get_full_name(const class_entity& cls, bool stop_when_base_has_no_name, bool add_prefix_delimiter, std::string delimiter)
 {
 	auto name = cls.get_name();
 	auto* tmp = cls.get_owner();
@@ -170,13 +170,14 @@ std::string get_full_name(const class_entity& cls, bool stop_when_base_has_no_na
 	{
 		if(stop_when_base_has_no_name && tmp->get_name().empty())
 			break;
-		name = tmp->get_name() + "::" + name;
+		name = tmp->get_name() + delimiter + name;
 		auto tmp1 = tmp->get_owner();
 		if(!tmp1)
 			break;
 		tmp = tmp1;
 	}
-	name = "::" + name;
+	if(add_prefix_delimiter)
+		name = "::" + name;
 	return name;
 }
 
