@@ -1,13 +1,14 @@
+#include <algorithm>
+#include <array>
+#include <filesystem>
+#include <fstream>
 #include <iostream>
-#include <string>
-#include <sstream>
 #include <list>
 #include <set>
-#include <algorithm>
-#include <unordered_map>
-#include <fstream>
-#include <filesystem>
+#include <sstream>
 #include <stack>
+#include <string>
+#include <unordered_map>
 
 #include "coreclasses.h"
 #include "cpp_parser.h"
@@ -1845,7 +1846,7 @@ void class_entity::extract_path_and_load(const char*& pData, const char* file, b
 
     pData++;
 
-    char path[1024];
+    std::array<char, 1024> path;
     std::string temp;
     while (*pData)
     {
@@ -1864,16 +1865,16 @@ void class_entity::extract_path_and_load(const char*& pData, const char* file, b
                 const char* fname_ext = std::max(strrchr(file, '\\'), strrchr(file, '/'));
                 if (fname_ext != NULL)
                 {
-                    strncpy(path, file, fname_ext - file + 1);
-                    strcat(path, temp.data());
+                    auto last_pos = std::copy(file, fname_ext + 1, path.begin());
+                    std::copy(temp.begin(), temp.end(), last_pos);
                 }
                 else
                 {
-                    strcpy(path, temp.data());
+                    std::copy(temp.begin(), temp.end(), path.begin());
                 }
-                if (!load(path, in_import))
+                if (!load(path.data(), in_import))
                 {
-                    throw std::runtime_error(std::string("failed to load ") +  path);
+                    throw std::runtime_error(std::string("failed to load ") +  std::string(path.data()));
                 }
             }
             return;
