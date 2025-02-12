@@ -107,14 +107,14 @@ public:
     entity(entity_type type)
         : entity_type_(type) {};
 
-    const bool has_value(const char* valueName) const
+    bool has_value(const char* valueName) const
     {
         for (std::list<std::string>::const_iterator it = attributes_.begin(); it != attributes_.end(); it++)
             if (!strcmp2((*it).data(), valueName))
                 return true;
         return false;
     }
-    const bool get_value(const char* valueName, std::string& value) const
+    bool get_value(const char* valueName, std::string& value) const
     {
         for (std::list<std::string>::const_iterator it = attributes_.begin(); it != attributes_.end(); it++)
         {
