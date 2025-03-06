@@ -28,6 +28,6 @@ namespace attribute_types
 
     // attributes that change the default behaviour of the idl parser
     
-    // please dont use this, struct and class are not keywords that the idl parser should be tolerating
-    constexpr const char* tolerate_struct_or_class = "buggy_tolerate_struct_or_class";
+    // please dont use this, struct and enum are not keywords that the idl parser should be tolerating
+    constexpr const char* tolerate_struct_or_enum = "buggy_tolerate_struct_or_enum";
 }

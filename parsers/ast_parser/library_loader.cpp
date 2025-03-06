@@ -131,9 +131,9 @@ function_entity class_entity::parse_function(const char*& pData, attributes& att
             func_name = "";
             continue;
         }        
-        else if((func_name == "struct" || func_name == "class") && std::find(attribs.begin(), attribs.end(), attribute_types::tolerate_struct_or_class) == attribs.end())
+        else if((func_name == "struct" || func_name == "enum") && std::find(attribs.begin(), attribs.end(), attribute_types::tolerate_struct_or_enum) == attribs.end())
         {
-            throw std::runtime_error("struct and class are not valid parameter names for function and member declarations");
+            throw std::runtime_error("struct and enum are not valid parameter names for function and member declarations");
         }
         
         EAT_SPACES(pData)
@@ -326,9 +326,9 @@ function_entity class_entity::parse_function(const char*& pData, attributes& att
                     parameter_name = "";
                     continue;
                 }     
-                if((parameter_name == "struct" || parameter_name == "class") && std::find(attribs.begin(), attribs.end(), attribute_types::tolerate_struct_or_class) == attribs.end())
+                if((parameter_name == "struct" || parameter_name == "enum") && std::find(attribs.begin(), attribs.end(), attribute_types::tolerate_struct_or_enum) == attribs.end())
                 {
-                    throw std::runtime_error("struct and class are not valid parameter names for function and member declarations");
+                    throw std::runtime_error("struct and enum are not valid parameter names for function and member declarations");
                 }
 
                 // gsoap yuckyness
