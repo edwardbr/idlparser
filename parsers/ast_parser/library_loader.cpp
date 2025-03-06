@@ -11,6 +11,7 @@
 
 #include "coreclasses.h"
 #include "cpp_parser.h"
+#include "attributes.h"
 
 #define EAT_SPACES(data)                                                                                               \
     while (*data == ' ')                                                                                               \
@@ -116,8 +117,8 @@ function_entity class_entity::parse_function(const char*& pData, attributes& att
             //     func_name = std::string("static ") + func_name;
         }
         else if (func_name == "const" || func_name == "unsigned" || func_name == "signed"
-            || (interface_spec_ == corba && func_name == "inout") || // CORBA types
-            ((interface_spec_ == corba || interface_spec_ == com) && (func_name == "in" || func_name == "out"))
+            || (interface_spec_ == corba && func_name == "inout") // CORBA types
+            || ((interface_spec_ == corba || interface_spec_ == com) && (func_name == "in" || func_name == "out"))
             || (interface_spec_ == edl && func_name == "public"))
         {
             if (func_name == "inout")
