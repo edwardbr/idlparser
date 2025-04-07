@@ -80,7 +80,6 @@ function_entity class_entity::parse_function(const char*& pData, attributes& att
     func.set_attributes(attribs);
 
     bool bFunctionIsProperty = true;
-    bool is_static = false;
 
     EAT_SPACES(pData)
 
@@ -104,7 +103,7 @@ function_entity class_entity::parse_function(const char*& pData, attributes& att
 
         if (func_name == "static")
         {
-            is_static = true;
+            func.set_static(true);
             func_name = "";
             EAT_SPACES(pData);
             continue;
@@ -113,8 +112,6 @@ function_entity class_entity::parse_function(const char*& pData, attributes& att
         {
             func.set_entity_type(entity_type::CONSTEXPR);
             func_name = "";
-            // if(is_static)
-            //     func_name = std::string("static ") + func_name;
         }
         else if (func_name == "const" || func_name == "unsigned" || func_name == "signed"
             || (interface_spec_ == corba && func_name == "inout") // CORBA types

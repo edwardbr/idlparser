@@ -239,6 +239,7 @@ class function_entity : public entity
     std::list<std::string> raises_;
     std::string return_type_;
     bool pure_virtual_ = false;
+    bool static_ = false;
 
     std::list<parameter_entity> parameters_;
     std::string default_value;
@@ -257,6 +258,9 @@ public:
 
     bool is_pure_virtual() const { return pure_virtual_; }
     void set_pure_virtual(bool pv) { pure_virtual_ = pv; }
+
+    bool is_static() const { return static_; }
+    void set_static(bool stat) { static_ = stat; }
 
     std::string get_array_string() const { return array_string_; }
     void set_array_string(const std::string& s) { array_string_ = s; }
