@@ -106,6 +106,7 @@ protected:
 public:
     entity(entity_type type)
         : entity_type_(type) {};
+    virtual ~entity() = default;
 
     bool has_value(const char* valueName) const
     {
@@ -299,6 +300,7 @@ class class_entity : public entity, std::enable_shared_from_this<class_entity>
 public:
     class_entity(class_entity* owner_, interface_spec spec = header);
     class_entity(const class_entity& other) = delete;
+    virtual ~class_entity() = default;
     
     class_entity& operator=(const class_entity& other) = delete;
 
