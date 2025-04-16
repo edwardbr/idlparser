@@ -8,7 +8,7 @@ add_library(macro_parser
     macro_parser.h
     macro_parser.cpp)
 
-target_compile_definitions(macro_parser PRIVATE ${HOST_DEFINES})
+target_compile_definitions(macro_parser PRIVATE ${HOST_DEFINES} _CRT_SECURE_NO_WARNINGS)
 target_compile_options(macro_parser PRIVATE ${HOST_COMPILE_OPTIONS})
 target_link_libraries(macro_parser 
     PUBLIC 
