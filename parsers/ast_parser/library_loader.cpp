@@ -132,7 +132,7 @@ function_entity class_entity::parse_function(const char*& pData, attributes& att
         {
             throw std::runtime_error("struct and enum are not valid parameter names for function and member declarations");
         }
-
+        
         EAT_SPACES(pData)
 
         if (*pData == '(')
