@@ -89,9 +89,10 @@ function_entity class_entity::parse_function(const char*& pData, attributes& att
 
     while (*pData)
     {
-	    {
-	        int in_template = 0;
-    	    while (in_template || *pData != ' ' && *pData != '(' && *pData != ')' && *pData != ';' && *pData != '[' && *pData != 0)
+        {
+            int in_template = 0;
+            while (in_template
+                   || *pData != ' ' && *pData != '(' && *pData != ')' && *pData != ';' && *pData != '[' && *pData != 0)
             {
                 assert(in_template >= 0);
                 if (*pData == '<')
@@ -115,9 +116,9 @@ function_entity class_entity::parse_function(const char*& pData, attributes& att
             func_name = "";
         }
         else if (func_name == "const" || func_name == "unsigned" || func_name == "signed"
-            || (interface_spec_ == corba && func_name == "inout") // CORBA types
-            || ((interface_spec_ == corba || interface_spec_ == com) && (func_name == "in" || func_name == "out"))
-            || (interface_spec_ == edl && func_name == "public"))
+                 || (interface_spec_ == corba && func_name == "inout") // CORBA types
+                 || ((interface_spec_ == corba || interface_spec_ == com) && (func_name == "in" || func_name == "out"))
+                 || (interface_spec_ == edl && func_name == "public"))
         {
             if (func_name == "inout")
             {
@@ -128,12 +129,15 @@ function_entity class_entity::parse_function(const char*& pData, attributes& att
                 func.add_attribute(func_name);
             func_name = "";
             continue;
-        }        
-        else if((func_name == "struct" || func_name == "enum") && std::find(attribs.begin(), attribs.end(), attribute_types::tolerate_struct_or_enum) == attribs.end())
-        {
-            throw std::runtime_error("struct and enum are not valid parameter names for function and member declarations");
         }
-        
+        else if ((func_name == "struct" || func_name == "enum")
+                 && std::find(attribs.begin(), attribs.end(), attribute_types::tolerate_struct_or_enum)
+                        == attribs.end())
+        {
+            throw std::runtime_error(
+                "struct and enum are not valid parameter names for function and member declarations");
+        }
+
         EAT_SPACES(pData)
 
         if (*pData == '(')
@@ -170,7 +174,7 @@ function_entity class_entity::parse_function(const char*& pData, attributes& att
         }
         else
         {
-            if(*pData == '=')
+            if (*pData == '=')
                 break;
 
             if (return_type.length())
@@ -185,19 +189,19 @@ function_entity class_entity::parse_function(const char*& pData, attributes& att
         ; // no processing
     else if (bFunctionIsProperty)
     {
-        if(func.get_entity_type() != entity_type::CONSTEXPR)
+        if (func.get_entity_type() != entity_type::CONSTEXPR)
             func.set_entity_type(entity_type::FUNCTION_VARIABLE);
-        if(*pData == '=') //this may be a default value
+        if (*pData == '=') // this may be a default value
         {
             pData++;
 
             EAT_SPACES(pData)
-            
+
             std::string default_value;
             while (*pData != ';' && *pData != 0)
-                default_value += *pData++;            
+                default_value += *pData++;
             func.set_default_value(default_value);
-            if(*pData != ';')
+            if (*pData != ';')
                 pData++;
         }
     }
@@ -270,14 +274,13 @@ function_entity class_entity::parse_function(const char*& pData, attributes& att
                 else
                 {
                     int template_angle = 0;
-                    while (*pData != 0 && ((*pData != '[' && *pData != '*'
-                           && *pData != ')') || template_angle))
+                    while (*pData != 0 && ((*pData != '[' && *pData != '*' && *pData != ')') || template_angle))
                     {
-                        if(*pData == '<')
+                        if (*pData == '<')
                             template_angle++;
-                        if(*pData == '>')
+                        if (*pData == '>')
                             template_angle--;
-                        if(template_angle == 0 && (*pData == ' ' || *pData == ','))
+                        if (template_angle == 0 && (*pData == ' ' || *pData == ','))
                             break;
                         parameter_name += *pData++;
                     }
@@ -323,10 +326,13 @@ function_entity class_entity::parse_function(const char*& pData, attributes& att
                         parameter.add_attribute(parameter_name);
                     parameter_name = "";
                     continue;
-                }     
-                if((parameter_name == "struct" || parameter_name == "enum") && std::find(attribs.begin(), attribs.end(), attribute_types::tolerate_struct_or_enum) == attribs.end())
+                }
+                if ((parameter_name == "struct" || parameter_name == "enum")
+                    && std::find(attribs.begin(), attribs.end(), attribute_types::tolerate_struct_or_enum)
+                           == attribs.end())
                 {
-                    throw std::runtime_error("struct and enum are not valid parameter names for function and member declarations");
+                    throw std::runtime_error(
+                        "struct and enum are not valid parameter names for function and member declarations");
                 }
 
                 // gsoap yuckyness
@@ -534,9 +540,9 @@ void splitTemplate(std::string phrase, std::string& name, std::string& type, std
 
     type = phrase.substr(0, pos);
     name = trim_string(phrase.substr(pos + 1));
-    
+
     pos = name.find_first_of("=");
-    if(pos != std::string::npos)
+    if (pos != std::string::npos)
     {
         default_value = trim_string(name.substr(pos + 1));
         name = trim_string(name.substr(0, pos));
@@ -602,28 +608,28 @@ std::shared_ptr<class_entity> class_entity::parse_interface(const char*& pData, 
 std::string class_entity::parse_cpp_quote(const char*& pData)
 {
     EAT_SPACES_AND_NEW_LINES(pData)
-    if(*pData != '(')
+    if (*pData != '(')
         throw std::runtime_error("missing bracket after #cpp_quote");
     pData++;
 
     EAT_SPACES_AND_NEW_LINES(pData)
 
     std::string contents;
-    
+
     const char* pStart = nullptr;
     const char* pSuffix = nullptr;
-    if(extract_multiline_string_literal(pData, pStart, pSuffix))
+    if (extract_multiline_string_literal(pData, pStart, pSuffix))
     {
         contents = std::string(pStart, pSuffix);
     }
     else
     {
-        if(!extract_string_literal(pData, contents))
+        if (!extract_string_literal(pData, contents))
             throw std::runtime_error("missing initial \" in #cpp_quote");
     }
-    if(!*pData || *pData != ')')
+    if (!*pData || *pData != ')')
         throw std::runtime_error("invalid ending in #cpp_quote (no bracket)");
-    pData++;  
+    pData++;
     return contents;
 }
 
@@ -725,7 +731,7 @@ void class_entity::parse_structure(const char*& pData, bool bInCurlyBrackets, bo
                     }
 
                     else if (get_entity_type() == entity_type::ENUM)
-{
+                    {
                         std::string elemname;
                         while (extract_word(pData, elemname))
                         {
@@ -788,7 +794,7 @@ void class_entity::parse_structure(const char*& pData, bool bInCurlyBrackets, bo
                             add_function(func);
                         }
                         else
-                        {               
+                        {
                             function_entity func(parse_function(pData, attribs, false));
                             EAT_SPACES(pData);
                             assert(*pData == ';');
@@ -935,18 +941,17 @@ void class_entity::parse_structure(const char*& pData, bool bInCurlyBrackets, bo
                 std::shared_ptr<class_entity> pObj;
                 if (!find_class(parent_name, pObj))
                 {
-                    if(get_entity_type() == entity_type::ENUM)
+                    if (get_entity_type() == entity_type::ENUM)
                     {
                         auto last_owner = get_owner();
                         auto owner = get_owner();
                         do
                         {
                             owner = owner->get_owner();
-                            if(owner)
+                            if (owner)
                                 last_owner = owner;
-                        }while(owner);
+                        } while (owner);
 
-                        
                         pObj = std::make_shared<class_entity>(last_owner);
                         pObj->set_entity_type(entity_type::TYPE_NULL);
                         pObj->set_name(parent_name);
@@ -982,9 +987,7 @@ void class_entity::parse_structure(const char*& pData, bool bInCurlyBrackets, bo
         if (!find_class("IDispatch", pObj))
         {
             std::stringstream err;
-            err << "type "
-                << "IDispatch"
-                << " not known";
+            err << "type " << "IDispatch" << " not known";
             err << std::ends;
             std::string errString(err.str());
             throw std::runtime_error(errString);
@@ -994,7 +997,8 @@ void class_entity::parse_structure(const char*& pData, bool bInCurlyBrackets, bo
     }
 }
 
-std::shared_ptr<class_entity> class_entity::parse_typedef(const char*& pData, attributes& attribs, const char* type, bool in_import)
+std::shared_ptr<class_entity> class_entity::parse_typedef(const char*& pData, attributes& attribs, const char* type,
+                                                          bool in_import)
 {
     auto object = std::make_shared<class_entity>(this);
 
@@ -1006,7 +1010,7 @@ std::shared_ptr<class_entity> class_entity::parse_typedef(const char*& pData, at
 
     if (type == NULL && object->parse_class(pData, attribs, obj, false, in_import))
     {
-		object->set_alias_name(obj->get_name());
+        object->set_alias_name(obj->get_name());
 
         bool firstPass = true;
         do
@@ -1073,11 +1077,12 @@ std::shared_ptr<class_entity> class_entity::parse_typedef(const char*& pData, at
             EAT_SPACES(pData)
 
             int template_count = 0;
-            while (*pData != 0 && *pData != ' ' && *pData != '*' && *pData != ';' && *pData != '{' && *pData != '[' && (*pData != ',' || template_count > 0))
+            while (*pData != 0 && *pData != ' ' && *pData != '*' && *pData != ';' && *pData != '{' && *pData != '['
+                   && (*pData != ',' || template_count > 0))
             {
-                if(*pData == '<')
+                if (*pData == '<')
                     template_count++;
-                else if(*pData == '>')
+                else if (*pData == '>')
                     template_count--;
                 object_name += *pData;
                 pData++;
@@ -1122,8 +1127,8 @@ std::shared_ptr<class_entity> class_entity::parse_typedef(const char*& pData, at
                     pData++;
                 }
             }
-                        
-            //deal with arrays
+
+            // deal with arrays
             if (*pData == '[')
             {
                 parent_name += *pData;
@@ -1136,7 +1141,7 @@ std::shared_ptr<class_entity> class_entity::parse_typedef(const char*& pData, at
                     parent_name += *pData;
                     pData++;
                 }
-                if(*pData)
+                if (*pData)
                 {
                     parent_name += *pData;
                     pData++;
@@ -1258,7 +1263,7 @@ void class_entity::parse_template(const char*& pData, std::list<template_declara
         }
         else
         {
-            if(phrase.empty())
+            if (phrase.empty())
                 EAT_SPACES(pData);
             phrase += *pData;
         }
@@ -1363,9 +1368,9 @@ bool class_entity::parse_class(const char*& pData, attributes& attribs, std::sha
         EAT_SPACES(pData)
 
         entity_type type = entity_type::TYPE_NULL;
-        if(if_is_word_eat(pData, "class"))
+        if (if_is_word_eat(pData, "class"))
             type = entity_type::CLASS;
-        if(if_is_word_eat(pData, "struct"))
+        if (if_is_word_eat(pData, "struct"))
             type = entity_type::STRUCT;
 
         if (type != entity_type::TYPE_NULL)
@@ -1677,7 +1682,7 @@ void class_entity::GetVariables(class_entity& theClass, unsigned variableCount, 
             fn.return_type = GenerateTypeString(pvardesc->elemdescVar.tdesc, typeInfo);
 
             typeInfo->ReleaseVarDesc(pvardesc);
-            
+
             fn.set_is_in_import(in_import);
             theClass.add_function(fn);
         }
@@ -1880,7 +1885,7 @@ void class_entity::extract_path_and_load(const char*& pData, const char* file, b
                 }
                 if (!load(path.data(), in_import))
                 {
-                    throw std::runtime_error(std::string("failed to load ") +  std::string(path.data()));
+                    throw std::runtime_error(std::string("failed to load ") + std::string(path.data()));
                 }
             }
             return;
@@ -1917,9 +1922,9 @@ bool class_entity::parse_include(const char*& pData, const char* file, bool in_i
         return true;
     }
     if (if_is_word_eat(pData, "import"))
-    {        
+    {
         EAT_SPACES(pData);
-        if(*pData != '\"')
+        if (*pData != '\"')
         {
             std::stringstream err;
             err << "import path not supplied";
@@ -1928,16 +1933,16 @@ bool class_entity::parse_include(const char*& pData, const char* file, bool in_i
             throw std::runtime_error(errString);
         }
         pData++;
-        
+
         std::string path;
-        
-        while(*pData != '\"' && *pData != 0)
+
+        while (*pData != '\"' && *pData != 0)
         {
             path += *pData;
             pData++;
         }
-        
-        if(*pData != '\"')
+
+        if (*pData != '\"')
         {
             std::stringstream err;
             err << "import path not supplied";
@@ -1949,7 +1954,7 @@ bool class_entity::parse_include(const char*& pData, const char* file, bool in_i
         current_import.push(path);
 
         EAT_SPACES(pData);
-        if(*pData != '{')
+        if (*pData != '{')
         {
             std::stringstream err;
             err << "import { missing";

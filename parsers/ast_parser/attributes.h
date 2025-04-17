@@ -8,9 +8,9 @@ namespace attribute_types
     // function modifiers
     ///////////////////////////////
 
-    // this makes a function const the idl parser does not support modifiers at the end of a function declaration after the last ')'
-    constexpr const char* const_function = "const";   
-
+    // this makes a function const the idl parser does not support modifiers at the end of a function declaration after
+    // the last ')'
+    constexpr const char* const_function = "const";
 
     ///////////////////////////////
     // parameter modifiers
@@ -25,9 +25,8 @@ namespace attribute_types
     // pass by value parameter (not really needed now?)
     constexpr const char* by_value_param = "by_value";
 
-
     // attributes that change the default behaviour of the idl parser
-    
+
     // please dont use this, struct and enum are not keywords that the idl parser should be tolerating
     constexpr const char* tolerate_struct_or_enum = "buggy_tolerate_struct_or_enum";
 }

@@ -56,38 +56,35 @@ enum class entity_type : uint64_t
                         | CPPQUOTE | FUNCTION_PUBLIC | FUNCTION_PRIVATE | CONSTEXPR,
 };
 
-inline entity_type operator |(entity_type lhs, entity_type rhs)
+inline entity_type operator|(entity_type lhs, entity_type rhs)
 {
-    return 
-        static_cast<entity_type>(static_cast<std::underlying_type<entity_type>::type>(lhs) |
-        static_cast<std::underlying_type<entity_type>::type>(rhs));
+    return static_cast<entity_type>(static_cast<std::underlying_type<entity_type>::type>(lhs)
+                                    | static_cast<std::underlying_type<entity_type>::type>(rhs));
 }
 
-inline entity_type operator &(entity_type lhs, entity_type rhs)
+inline entity_type operator&(entity_type lhs, entity_type rhs)
 {
-    return static_cast<entity_type>(static_cast<std::underlying_type<entity_type>::type>(lhs) &
-        static_cast<std::underlying_type<entity_type>::type>(rhs));
+    return static_cast<entity_type>(static_cast<std::underlying_type<entity_type>::type>(lhs)
+                                    & static_cast<std::underlying_type<entity_type>::type>(rhs));
 }
-inline bool operator !(entity_type item)
+inline bool operator!(entity_type item)
 {
     return item == entity_type::TYPE_NULL;
 }
 
-inline entity_type operator |= (entity_type lhs, entity_type rhs)
+inline entity_type operator|=(entity_type lhs, entity_type rhs)
 {
-    lhs = 
-        static_cast<entity_type>(static_cast<std::underlying_type<entity_type>::type>(lhs) |
-        static_cast<std::underlying_type<entity_type>::type>(rhs));
+    lhs = static_cast<entity_type>(static_cast<std::underlying_type<entity_type>::type>(lhs)
+                                   | static_cast<std::underlying_type<entity_type>::type>(rhs));
     return lhs;
 }
 
-inline entity_type operator &= (entity_type lhs, entity_type rhs)
+inline entity_type operator&=(entity_type lhs, entity_type rhs)
 {
-    lhs =
-    static_cast<entity_type>(static_cast<std::underlying_type<entity_type>::type>(lhs) &
-        static_cast<std::underlying_type<entity_type>::type>(rhs));
+    lhs = static_cast<entity_type>(static_cast<std::underlying_type<entity_type>::type>(lhs)
+                                   & static_cast<std::underlying_type<entity_type>::type>(rhs));
     return lhs;
-}  
+}
 
 typedef std::list<std::string> attributes;
 
@@ -177,7 +174,7 @@ public:
     void merge_attributes(attributes attribs) { attributes_.merge(attribs); }
 };
 
-//for template class declarations
+// for template class declarations
 struct template_declaration : public entity
 {
 public:
@@ -189,7 +186,6 @@ public:
     {
     }
 };
-
 
 enum template_deduction_type
 {
@@ -305,7 +301,7 @@ public:
     class_entity(class_entity* owner_, interface_spec spec = header);
     class_entity(const class_entity& other) = delete;
     virtual ~class_entity() = default;
-    
+
     class_entity& operator=(const class_entity& other) = delete;
 
     class_entity* get_owner() const { return owner_; }
@@ -317,7 +313,7 @@ public:
 
     std::string get_alias_name() const { return alias_name_; }
     void set_alias_name(std::string name) { alias_name_ = name; }
-    
+
     void deduct_template_type(const template_declaration& decl, template_deduction& deduction) const;
 
     const std::list<std::shared_ptr<entity>> get_elements(entity_type types) const;
@@ -372,7 +368,8 @@ public:
 };
 
 const class_entity& get_root(const class_entity& cls);
-std::string get_full_name(const class_entity& cls, bool stop_when_base_has_no_name = false, bool add_prefix_delimiter = true, std::string delimiter = "::");
+std::string get_full_name(const class_entity& cls, bool stop_when_base_has_no_name = false,
+                          bool add_prefix_delimiter = true, std::string delimiter = "::");
 
 extern std::stringstream verboseStream;
 extern std::stack<std::string> current_import;
