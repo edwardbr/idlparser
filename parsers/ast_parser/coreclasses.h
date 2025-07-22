@@ -164,7 +164,13 @@ public:
             auto tmp = name_value.substr(0, name.size());
             if (tmp == name && name_value[name.size()] == '=')
             {
-                return name_value.substr(name.size() + 1);
+                auto str = name_value.substr(name.size() + 1);
+                if (str.size() > 0 && str[0] == '"')
+                {
+                    str = str.substr(1);
+                    str = str.substr(0, str.size() - 1);
+                }
+                return str;
             }
         };
         return std::string();
