@@ -11,6 +11,7 @@ namespace attribute_types
     // this makes a function const the idl parser does not support modifiers at the end of a function declaration after
     // the last ')'
     constexpr const char* const_function = "const";
+    constexpr const char* description = "description";
 
     ///////////////////////////////
     // parameter modifiers

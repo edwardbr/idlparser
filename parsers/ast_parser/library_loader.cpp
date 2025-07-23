@@ -29,7 +29,7 @@
 std::set<std::string> loaded_files;
 std::stack<std::string> current_import;
 
-attributes GetAttributes(const char*& pData)
+attributes get_attributes(const char*& pData)
 {
     attributes attribs;
     if (*pData == '[')
@@ -40,7 +40,8 @@ attributes GetAttributes(const char*& pData)
 
             ;
         bool bInAttribute = false;
-        std::string property;
+        std::pair<std::string, std::string> property;
+        bool inValue = false;
         int inBracket = 0;
         for (; *pData != 0; pData++)
         {
@@ -50,8 +51,9 @@ attributes GetAttributes(const char*& pData)
             if (bInAttribute && !inBracket && *pData == ',')
             {
                 attribs.push_back(property);
-                property = "";
+                property = {};
                 bInAttribute = false;
+                inValue = false;
             }
             else if (*pData == ']')
             {
@@ -66,8 +68,55 @@ attributes GetAttributes(const char*& pData)
                     inBracket++;
                 else if (*pData == ')')
                     inBracket--;
+                else if (*pData == '=' && !inValue && inBracket == 0)
+                {
+                    inValue = true;
+                    bInAttribute = true;
+                    continue;
+                }
                 bInAttribute = true;
-                property += *pData;
+
+                if (inValue)
+                {
+                    const char* pDataBeforeExtract = pData;
+                    const char* pStart = nullptr;
+                    const char* pSuffix = nullptr;
+                    std::string extracted_string;
+
+                    if (extract_multiline_string_literal(pData, pStart, pSuffix))
+                    {
+                        property.second.append(pDataBeforeExtract, pData - pDataBeforeExtract);
+                        pData--; // To compensate for loop increment
+                        attribs.push_back(property);
+                        property = {};
+                        bInAttribute = false;
+                        inValue = false;
+                    }
+                    else if (*pData == '"')
+                    {
+                        if (extract_string_literal(pData, extracted_string))
+                        {
+                            property.second.append(pDataBeforeExtract, pData - pDataBeforeExtract);
+                            pData--; // To compensate for loop increment
+                            attribs.push_back(property);
+                            property = {};
+                            bInAttribute = false;
+                            inValue = false;
+                        }
+                        else
+                        {
+                            throw std::runtime_error("invalid string literal");
+                        }
+                    }
+                    else
+                    {
+                        property.second += *pData;
+                    }
+                }
+                else
+                {
+                    property.first += *pData;
+                }
             }
         }
         EAT_SPACES(pData)
@@ -78,7 +127,7 @@ attributes GetAttributes(const char*& pData)
 function_entity class_entity::parse_function(const char*& pData, attributes& attribs, bool bFunctionIsInterface)
 {
     function_entity func;
-    func.set_attributes(attribs);
+    func.swap(attribs);
 
     bool bFunctionIsProperty = true;
 
@@ -122,16 +171,17 @@ function_entity class_entity::parse_function(const char*& pData, attributes& att
         {
             if (func_name == "inout")
             {
-                func.add_attribute("in");
-                func.add_attribute("out");
+                func.push_back("in");
+                func.push_back("out");
             }
             else
-                func.add_attribute(func_name);
+                func.push_back(func_name);
             func_name = "";
             continue;
         }
         else if ((func_name == "struct" || func_name == "enum")
-                 && std::find(attribs.begin(), attribs.end(), attribute_types::tolerate_struct_or_enum)
+                 && std::find_if(attribs.begin(), attribs.end(), [](const std::pair<std::string, std::string>& attr)
+                                 { return attr.first == attribute_types::tolerate_struct_or_enum; })
                         == attribs.end())
         {
             throw std::runtime_error(
@@ -214,7 +264,8 @@ function_entity class_entity::parse_function(const char*& pData, attributes& att
 
             EAT_SPACES(pData)
 
-            parameter.set_attributes(GetAttributes(pData));
+            auto attribs = get_attributes(pData);
+            parameter.swap(attribs);
 
             std::string parameter_name;
             std::string parameter_type;
@@ -307,7 +358,10 @@ function_entity class_entity::parse_function(const char*& pData, attributes& att
                         parameter.add_array_suffix(suffix);
                     }
                     else
-                        parameter.merge_attributes(GetAttributes(pData));
+                    {
+                        auto attribs = get_attributes(pData);
+                        parameter.merge(attribs);
+                    }
                 }
 
                 EAT_SPACES(pData)
@@ -319,16 +373,17 @@ function_entity class_entity::parse_function(const char*& pData, attributes& att
                 {
                     if (parameter_name == "inout")
                     {
-                        parameter.add_attribute("in");
-                        parameter.add_attribute("out");
+                        parameter.push_back("in");
+                        parameter.push_back("out");
                     }
                     else
-                        parameter.add_attribute(parameter_name);
+                        parameter.push_back(parameter_name);
                     parameter_name = "";
                     continue;
                 }
                 if ((parameter_name == "struct" || parameter_name == "enum")
-                    && std::find(attribs.begin(), attribs.end(), attribute_types::tolerate_struct_or_enum)
+                    && std::find_if(attribs.begin(), attribs.end(), [](const std::pair<std::string, std::string>& attr)
+                                    { return attr.first == attribute_types::tolerate_struct_or_enum; })
                            == attribs.end())
                 {
                     throw std::runtime_error(
@@ -592,14 +647,14 @@ void class_entity::parse_namespace(const char*& pData, bool in_import)
     parse_structure(pData, false, in_import);
 }
 
-std::shared_ptr<class_entity> class_entity::parse_interface(const char*& pData, const entity_type typ,
-                                                            const attributes& attr, bool in_import)
+std::shared_ptr<class_entity> class_entity::parse_interface(const char*& pData, const entity_type typ, attributes& attr,
+                                                            bool in_import)
 {
     auto cls = std::make_shared<class_entity>(this);
 
     cls->set_is_in_import(in_import);
     cls->set_entity_type(typ);
-    cls->set_attributes(attr);
+    cls->swap(attr);
 
     cls->parse_structure(pData, false, in_import);
     return cls;
@@ -657,7 +712,7 @@ void class_entity::parse_structure(const char*& pData, bool bInCurlyBrackets, bo
             {
                 EAT_SPACES(pData)
 
-                attributes attribs(GetAttributes(pData));
+                auto attribs = get_attributes(pData);
                 if (parse_include(pData, NULL, in_import))
                 {
                     continue;
@@ -720,7 +775,8 @@ void class_entity::parse_structure(const char*& pData, bool bInCurlyBrackets, bo
                             EAT_SPACES(pData);
                         }
 
-                        attribs.merge(GetAttributes(pData));
+                        auto tmp = get_attributes(pData);
+                        attribs.merge(tmp);
                         auto func = parse_function(pData, attribs, false);
                         func.set_is_in_import(in_import);
                         add_function(func);
@@ -897,7 +953,7 @@ void class_entity::parse_structure(const char*& pData, bool bInCurlyBrackets, bo
                         assert(0);
                     pData++;
 
-                    attributes attribs(GetAttributes(pData));
+                    attributes attribs = get_attributes(pData);
                     attribs.push_back(std::string("switch"));
                     parse_function(pData, attribs, false);
 
@@ -1004,7 +1060,8 @@ std::shared_ptr<class_entity> class_entity::parse_typedef(const char*& pData, at
 
     object->set_entity_type(entity_type::TYPEDEF);
 
-    attribs.merge(GetAttributes(pData));
+    auto tmp = get_attributes(pData);
+    attribs.merge(tmp);
 
     auto obj = std::make_shared<class_entity>(object.get());
 
@@ -1046,7 +1103,7 @@ std::shared_ptr<class_entity> class_entity::parse_typedef(const char*& pData, at
             }
             temp->set_name(name);
             if (ispointer)
-                temp->add_attribute(std::string("pointer"));
+                temp->push_back(std::string("pointer"));
 
             if (firstPass)
             {
@@ -1419,7 +1476,7 @@ void class_entity::GetInterfaceProperties(TYPEATTR* pTypeAttr, class_entity& obj
 
         char buf[256];
         sprintf(buf, "id(%d)", pvardesc->memid);
-        fn.add_attribute(buf);
+        fn.push_back(buf);
 
         fn.return_type = GenerateTypeString(pvardesc->elemdescVar.tdesc, typeInfo);
 
@@ -1430,17 +1487,17 @@ void class_entity::GetInterfaceProperties(TYPEATTR* pTypeAttr, class_entity& obj
             fn.name = W2CA(name.m_str);
 
         if (pvardesc->elemdescVar.paramdesc.wParamFlags & PARAMFLAG_FIN)
-            fn.add_attribute("in");
+            fn.push_back("in");
         if (pvardesc->elemdescVar.paramdesc.wParamFlags & PARAMFLAG_FOUT)
-            fn.add_attribute("out");
+            fn.push_back("out");
         if (pvardesc->elemdescVar.paramdesc.wParamFlags & PARAMFLAG_FLCID)
-            fn.add_attribute("lcid");
+            fn.push_back("lcid");
         if (pvardesc->elemdescVar.paramdesc.wParamFlags & PARAMFLAG_FRETVAL)
-            fn.add_attribute("retval");
+            fn.push_back("retval");
         if (pvardesc->elemdescVar.paramdesc.wParamFlags & PARAMFLAG_FLCID)
-            fn.add_attribute("lcid");
+            fn.push_back("lcid");
         if (pvardesc->elemdescVar.paramdesc.wParamFlags & PARAMFLAG_FOPT)
-            fn.add_attribute("optional");
+            fn.push_back("optional");
 
         if (pvardesc->elemdescVar.paramdesc.wParamFlags & (PARAMFLAG_FOPT | PARAMFLAG_FHASDEFAULT))
         {
@@ -1449,42 +1506,42 @@ void class_entity::GetInterfaceProperties(TYPEATTR* pTypeAttr, class_entity& obj
             std::string defaultValue = "defaultvalue(\"";
             defaultValue += W2CA(var.bstrVal);
             defaultValue += "\")";
-            fn.add_attribute(defaultValue);
+            fn.push_back(defaultValue);
         }
 
         if (pvardesc->varkind == VAR_PERINSTANCE)
-            fn.add_attribute("VAR_PERINSTANCE");
+            fn.push_back("VAR_PERINSTANCE");
         else if (pvardesc->varkind == VAR_STATIC)
-            fn.add_attribute("VAR_STATIC");
+            fn.push_back("VAR_STATIC");
         else if (pvardesc->varkind == VAR_CONST)
-            fn.add_attribute("VAR_CONST");
+            fn.push_back("VAR_CONST");
         else if (pvardesc->varkind == VAR_DISPATCH)
-            fn.add_attribute("VAR_DISPATCH");
+            fn.push_back("VAR_DISPATCH");
 
         if (pvardesc->wVarFlags & VARFLAG_FSOURCE)
-            fn.add_attribute("VARFLAG_FSOURCE");
+            fn.push_back("VARFLAG_FSOURCE");
         if (pvardesc->wVarFlags & VARFLAG_FBINDABLE)
-            fn.add_attribute("bindable");
+            fn.push_back("bindable");
         if (pvardesc->wVarFlags & VARFLAG_FREQUESTEDIT)
-            fn.add_attribute("requestedit");
+            fn.push_back("requestedit");
         if (pvardesc->wVarFlags & VARFLAG_FDISPLAYBIND)
-            fn.add_attribute("displaybind");
+            fn.push_back("displaybind");
         if (pvardesc->wVarFlags & VARFLAG_FDEFAULTBIND)
-            fn.add_attribute("defaultbind");
+            fn.push_back("defaultbind");
         if (pvardesc->wVarFlags & VARFLAG_FHIDDEN)
-            fn.add_attribute("hidden");
+            fn.push_back("hidden");
         if (pvardesc->wVarFlags & VARFLAG_FRESTRICTED)
-            fn.add_attribute("restricted");
+            fn.push_back("restricted");
         if (pvardesc->wVarFlags & VARFLAG_FDEFAULTCOLLELEM)
-            fn.add_attribute("defaultcollelem");
+            fn.push_back("defaultcollelem");
         if (pvardesc->wVarFlags & VARFLAG_FUIDEFAULT)
-            fn.add_attribute("uidefault");
+            fn.push_back("uidefault");
         if (pvardesc->wVarFlags & VARFLAG_FNONBROWSABLE)
-            fn.add_attribute("nonbrowsable");
+            fn.push_back("nonbrowsable");
         if (pvardesc->wVarFlags & VARFLAG_FREPLACEABLE)
-            fn.add_attribute("replaceable");
+            fn.push_back("replaceable");
         if (pvardesc->wVarFlags & VARFLAG_FIMMEDIATEBIND)
-            fn.add_attribute("immediatebind");
+            fn.push_back("immediatebind");
 
         fn.set_is_in_import(in_import);
         obj.add_function(fn);
@@ -1520,7 +1577,7 @@ void class_entity::GetInterfaceFunctions(TYPEATTR* pTypeAttr, class_entity& obj,
 
             char buf[256];
             sprintf(buf, "id(%d)", desc->memid);
-            fn.add_attribute(buf);
+            fn.push_back(buf);
 
             switch (desc->invkind)
             {
@@ -1529,15 +1586,15 @@ void class_entity::GetInterfaceFunctions(TYPEATTR* pTypeAttr, class_entity& obj,
                 break;
             case INVOKE_PROPERTYGET:
                 fn.type = FunctionTypePropertyGet;
-                fn.add_attribute("propget");
+                fn.push_back("propget");
                 break;
             case INVOKE_PROPERTYPUT:
                 fn.type = FunctionTypePropertyPut;
-                fn.add_attribute("propput");
+                fn.push_back("propput");
                 break;
             case INVOKE_PROPERTYPUTREF:
                 fn.type = FunctionTypePropertyPut;
-                fn.add_attribute("propputref");
+                fn.push_back("propputref");
                 break;
             default:
                 return;
@@ -1546,31 +1603,31 @@ void class_entity::GetInterfaceFunctions(TYPEATTR* pTypeAttr, class_entity& obj,
             fn.return_type = GenerateTypeString(desc->elemdescFunc.tdesc, typeInfo);
 
             if (desc->wFuncFlags & FUNCFLAG_FRESTRICTED)
-                fn.add_attribute("restricted");
+                fn.push_back("restricted");
             if (desc->wFuncFlags & FUNCFLAG_FSOURCE)
-                fn.add_attribute("FUNCFLAG_FSOURCE");
+                fn.push_back("FUNCFLAG_FSOURCE");
             if (desc->wFuncFlags & FUNCFLAG_FBINDABLE)
-                fn.add_attribute("bindable");
+                fn.push_back("bindable");
             if (desc->wFuncFlags & FUNCFLAG_FREQUESTEDIT)
-                fn.add_attribute("requestedit");
+                fn.push_back("requestedit");
             if (desc->wFuncFlags & FUNCFLAG_FDISPLAYBIND)
-                fn.add_attribute("displaybind");
+                fn.push_back("displaybind");
             if (desc->wFuncFlags & FUNCFLAG_FDEFAULTBIND)
-                fn.add_attribute("defaultbind");
+                fn.push_back("defaultbind");
             if (desc->wFuncFlags & FUNCFLAG_FHIDDEN)
-                fn.add_attribute("hidden");
+                fn.push_back("hidden");
             if (desc->wFuncFlags & FUNCFLAG_FUSESGETLASTERROR)
-                fn.add_attribute("FUNCFLAG_FUSESGETLASTERROR");
+                fn.push_back("FUNCFLAG_FUSESGETLASTERROR");
             if (desc->wFuncFlags & FUNCFLAG_FDEFAULTCOLLELEM)
-                fn.add_attribute("defaultcollelem");
+                fn.push_back("defaultcollelem");
             if (desc->wFuncFlags & FUNCFLAG_FUIDEFAULT)
-                fn.add_attribute("uidefault");
+                fn.push_back("uidefault");
             if (desc->wFuncFlags & FUNCFLAG_FNONBROWSABLE)
-                fn.add_attribute("nonbrowsable");
+                fn.push_back("nonbrowsable");
             if (desc->wFuncFlags & FUNCFLAG_FREPLACEABLE)
-                fn.add_attribute("replaceable");
+                fn.push_back("replaceable");
             if (desc->wFuncFlags & FUNCFLAG_FIMMEDIATEBIND)
-                fn.add_attribute("immediatebind");
+                fn.push_back("immediatebind");
 
             BSTR* rgbstrNames = (BSTR*)_alloca(sizeof(BSTR) * (desc->cParams + 1));
             memset(rgbstrNames, 0, sizeof(BSTR*) * (desc->cParams + 1));
@@ -1586,22 +1643,22 @@ void class_entity::GetInterfaceFunctions(TYPEATTR* pTypeAttr, class_entity& obj,
                     param.type = GenerateTypeString(desc->lprgelemdescParam[p].tdesc, typeInfo);
 
                     if (desc->lprgelemdescParam[p].paramdesc.wParamFlags & PARAMFLAG_FIN)
-                        param.add_attribute("in");
+                        param.push_back("in");
 
                     if (desc->lprgelemdescParam[p].paramdesc.wParamFlags & PARAMFLAG_FOUT)
-                        param.add_attribute("out");
+                        param.push_back("out");
 
                     if (desc->lprgelemdescParam[p].paramdesc.wParamFlags & PARAMFLAG_FLCID)
-                        param.add_attribute("lcid");
+                        param.push_back("lcid");
 
                     if (desc->lprgelemdescParam[p].paramdesc.wParamFlags & PARAMFLAG_FRETVAL)
-                        param.add_attribute("retval");
+                        param.push_back("retval");
 
                     if (desc->lprgelemdescParam[p].paramdesc.wParamFlags & PARAMFLAG_FLCID)
-                        param.add_attribute("lcid");
+                        param.push_back("lcid");
 
                     if (desc->lprgelemdescParam[p].paramdesc.wParamFlags & PARAMFLAG_FOPT)
-                        param.add_attribute("optional");
+                        param.push_back("optional");
 
                     if (desc->lprgelemdescParam[p].paramdesc.wParamFlags & (PARAMFLAG_FOPT | PARAMFLAG_FHASDEFAULT))
                     {
@@ -1610,7 +1667,7 @@ void class_entity::GetInterfaceFunctions(TYPEATTR* pTypeAttr, class_entity& obj,
                         std::string defaultValue = "defaultvalue(\"";
                         defaultValue += W2CA(var.bstrVal);
                         defaultValue += "\")";
-                        fn.add_attribute(defaultValue);
+                        fn.push_back(defaultValue);
                     }
                     fn.parameters.push_back(param);
                 }
@@ -1638,13 +1695,13 @@ void class_entity::GetCoclassInterfaces(TYPEATTR* pTypeAttr, class_entity& obj, 
         int flags = 0;
         HRESULT hr = typeInfo->GetImplTypeFlags(n, &flags);
         if (flags & IMPLTYPEFLAG_FDEFAULT)
-            fn.add_attribute("default");
+            fn.push_back("default");
         if (flags & IMPLTYPEFLAG_FSOURCE)
-            fn.add_attribute("source");
+            fn.push_back("source");
         if (flags & IMPLTYPEFLAG_FRESTRICTED)
-            fn.add_attribute("restricted");
+            fn.push_back("restricted");
         if (flags & IMPLTYPEFLAG_FDEFAULTVTABLE)
-            fn.add_attribute("defaultvtable");
+            fn.push_back("defaultvtable");
 
         HREFTYPE hreftype;
         hr = typeInfo->GetRefTypeOfImplType(n, &hreftype);
@@ -1672,7 +1729,7 @@ void class_entity::GetVariables(class_entity& theClass, unsigned variableCount, 
             function_entity fn(&theClass);
             char buf[256];
             sprintf(buf, "id(%d)", pvardesc->memid);
-            fn.add_attribute(buf);
+            fn.push_back(buf);
 
             CComBSTR name;
             unsigned int cNames = 0; // not used

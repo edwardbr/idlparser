@@ -8,6 +8,7 @@
 #include <algorithm>
 #include <memory>
 #include <stack>
+#include <unordered_map>
 
 #ifdef WIN32
 #ifdef USE_COM
@@ -86,13 +87,55 @@ inline entity_type operator&=(entity_type lhs, entity_type rhs)
     return lhs;
 }
 
-typedef std::list<std::string> attributes;
+class attributes
+{
+private:
+    std::vector<std::pair<std::string, std::string>> data_;
+
+public:
+    void push_back(const std::string& str) { data_.push_back(std::make_pair(str, "")); }
+
+    void push_back(const std::pair<std::string, std::string>& pair) { data_.push_back(pair); }
+
+    void merge(const attributes& other) { data_.insert(data_.end(), other.data_.begin(), other.data_.end()); }
+
+    auto begin() const { return data_.begin(); }
+    auto end() const { return data_.end(); }
+    auto begin() { return data_.begin(); }
+    auto end() { return data_.end(); }
+
+    size_t size() const { return data_.size(); }
+    bool empty() const { return data_.empty(); }
+
+    bool has_value(const std::string& str) const
+    {
+        for (auto attrib : data_)
+        {
+            if (attrib.first == str)
+                return true;
+        }
+        return false;
+    }
+
+    std::string get_value(const std::string& str) const
+    {
+        for (auto attrib : data_)
+        {
+            if (attrib.first == str)
+                return attrib.second;
+        }
+        return std::string();
+    }
+
+    void swap(attributes& data) { data_.swap(data.data_); }
+
+    const std::vector<std::pair<std::string, std::string>>& get_data() const { return data_; }
+};
 
 // all types are derived from entities, including interfaces, structs, functions, parameters and template parameters
-class entity
+class entity : public attributes
 {
 protected:
-    attributes attributes_;
     std::string name_;
     bool in_import_ = false;
     entity_type entity_type_;
@@ -102,29 +145,8 @@ protected:
 
 public:
     entity(entity_type type)
-        : entity_type_(type) {};
+        : entity_type_(type) { };
     virtual ~entity() = default;
-
-    bool has_value(const char* valueName) const
-    {
-        for (std::list<std::string>::const_iterator it = attributes_.begin(); it != attributes_.end(); it++)
-            if (!strcmp2((*it).data(), valueName))
-                return true;
-        return false;
-    }
-    bool get_value(const char* valueName, std::string& value) const
-    {
-        for (std::list<std::string>::const_iterator it = attributes_.begin(); it != attributes_.end(); it++)
-        {
-            const char* name = (*it).data();
-            if (!strcmp2(name, valueName))
-            {
-                value = &name[strlen(valueName)];
-                return true;
-            }
-        }
-        return false;
-    }
 
     std::string get_name() const { return name_; }
     void set_name(std::string name) { name_ = name; }
@@ -134,50 +156,6 @@ public:
 
     entity_type get_entity_type() const { return entity_type_; }
     void set_entity_type(entity_type type) { entity_type_ = type; }
-
-    const attributes& get_attributes() const { return attributes_; }
-    std::string get_attribute(const std::string& name) const
-    {
-        for (auto it : attributes_)
-        {
-            if (it == name)
-            {
-                return it;
-            }
-            auto tmp = it.substr(0, name.size());
-            if (tmp == name && it[name.size()] == '=')
-            {
-                return name;
-            }
-        };
-        return std::string();
-    }
-
-    std::string get_attribute_value(const std::string& name) const
-    {
-        for (auto name_value : attributes_)
-        {
-            if (name_value == name)
-            {
-                return name_value;
-            }
-            auto tmp = name_value.substr(0, name.size());
-            if (tmp == name && name_value[name.size()] == '=')
-            {
-                auto str = name_value.substr(name.size() + 1);
-                if (str.size() > 0 && str[0] == '"')
-                {
-                    str = str.substr(1);
-                    str = str.substr(0, str.size() - 1);
-                }
-                return str;
-            }
-        };
-        return std::string();
-    }
-    void set_attributes(attributes attribs) { attributes_ = attribs; }
-    void add_attribute(std::string attrib) { attributes_.push_back(attrib); }
-    void merge_attributes(attributes attribs) { attributes_.merge(attribs); }
 };
 
 // for template class declarations
@@ -344,7 +322,7 @@ public:
                      bool in_import);
     function_entity parse_function(const char*& pData, attributes& attribs, bool bFunctionIsInterface);
     void parse_variable(const char*& pData, bool in_import);
-    std::shared_ptr<class_entity> parse_interface(const char*& pData, const entity_type type, const attributes& attr,
+    std::shared_ptr<class_entity> parse_interface(const char*& pData, const entity_type type, attributes& attr,
                                                   bool in_import);
     std::string parse_cpp_quote(const char*& pData);
     void parse_template(const char*& pData, std::list<template_declaration>& templateParams);
