@@ -85,7 +85,7 @@ attributes get_attributes(const char*& pData)
 
                     if (extract_multiline_string_literal(pData, pStart, pSuffix))
                     {
-                        property.second.append(pDataBeforeExtract, pData - pDataBeforeExtract);
+                        property.second.append(pStart, pSuffix - pStart);
                         pData--; // To compensate for loop increment
                         attribs.push_back(property);
                         property = {};

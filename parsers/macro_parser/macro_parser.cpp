@@ -490,6 +490,9 @@ void macro_parser::CleanBuffer(const char*& pData, std::ostream& dest, const pat
             }
         }
 
+        const char* pStart = 0;
+        const char* pSuffix = 0;
+
         if (ParseInclude(pData, ignoreText, dest, includeDirectories, loaded_includes))
         {
             bInTheMiddleOfWord = false;
@@ -588,6 +591,11 @@ void macro_parser::CleanBuffer(const char*& pData, std::ostream& dest, const pat
             auto* start = pData; // save the beginning
             find_end_quote(pData);
             std::string data(start, pData);
+            dest << data;
+        }
+        else if (extract_multiline_string_literal(pData, pStart, pSuffix))
+        {
+            std::string data(pStart, pSuffix - pStart);
             dest << data;
         }
         else
@@ -1397,6 +1405,20 @@ void CleanBufferOfComments(const char*& pData)
                 {
                     *oldBufPos = *start;
                     start++;
+                    oldBufPos++;
+                }
+            }
+            else if (begins_with(pData, "R\""))
+            {
+                const char* pTmp = pData;
+                const char* pStart = nullptr;
+                const char* pSuffix = nullptr;
+
+                extract_multiline_string_literal(pTmp, pStart, pSuffix);
+                while (pData != pTmp)
+                {
+                    *oldBufPos = *pData;
+                    pData++;
                     oldBufPos++;
                 }
             }

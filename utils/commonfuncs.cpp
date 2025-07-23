@@ -127,11 +127,11 @@ bool extract_multiline_string_literal(const char*& pData, const char*& pStart, c
     pSuffix = nullptr;
     if (*pData != 'R')
         return false;
-    pData++;
-    if (*pData != '"' && *pData != '^')
+    if (pData[1] != '"' && pData[1] != '^')
     {
-        throw std::runtime_error("expected multiline string literal");
+        return false;
     }
+    pData++;
     char quote_char = *pData;
     pData++;
 
