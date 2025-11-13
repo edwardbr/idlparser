@@ -9,6 +9,7 @@
 #include <memory>
 #include <stack>
 #include <unordered_map>
+#include <cstdint>
 
 #ifdef WIN32
 #ifdef USE_COM
