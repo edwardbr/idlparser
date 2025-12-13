@@ -8,6 +8,7 @@
 #include <algorithm>
 #include <memory>
 #include <stack>
+#include <stdint.h>
 
 #ifdef WIN32
 #ifdef USE_COM
@@ -102,7 +103,7 @@ protected:
 
 public:
     entity(entity_type type)
-        : entity_type_(type) {};
+        : entity_type_(type) { };
     virtual ~entity() = default;
 
     bool has_value(const char* valueName) const
@@ -164,13 +165,7 @@ public:
             auto tmp = name_value.substr(0, name.size());
             if (tmp == name && name_value[name.size()] == '=')
             {
-                auto str = name_value.substr(name.size() + 1);
-                if (str.size() > 0 && str[0] == '"')
-                {
-                    str = str.substr(1);
-                    str = str.substr(0, str.size() - 1);
-                }
-                return str;
+                return name_value.substr(name.size() + 1);
             }
         };
         return std::string();
