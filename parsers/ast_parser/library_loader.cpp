@@ -165,17 +165,9 @@ function_entity class_entity::parse_function(const char*& pData, attributes& att
             func_name = "";
         }
         else if (func_name == "const" || func_name == "unsigned" || func_name == "signed"
-                 || (interface_spec_ == corba && func_name == "inout") // CORBA types
-                 || ((interface_spec_ == corba || interface_spec_ == com) && (func_name == "in" || func_name == "out"))
                  || (interface_spec_ == edl && func_name == "public"))
         {
-            if (func_name == "inout")
-            {
-                func.push_back("in");
-                func.push_back("out");
-            }
-            else
-                func.push_back(func_name);
+            func.push_back(func_name);
             func_name = "";
             continue;
         }
@@ -366,18 +358,9 @@ function_entity class_entity::parse_function(const char*& pData, attributes& att
 
                 EAT_SPACES(pData)
 
-                if (parameter_name == "const" || parameter_name == "unsigned" || parameter_name == "signed"
-                    || (interface_spec_ == corba && parameter_name == "inout")
-                    || ((interface_spec_ == corba || interface_spec_ == com)
-                        && (parameter_name == "in" || parameter_name == "out"))) // CORBA types
+                if (parameter_name == "const" || parameter_name == "unsigned" || parameter_name == "signed")
                 {
-                    if (parameter_name == "inout")
-                    {
-                        parameter.push_back("in");
-                        parameter.push_back("out");
-                    }
-                    else
-                        parameter.push_back(parameter_name);
+                    parameter.push_back(parameter_name);
                     parameter_name = "";
                     continue;
                 }
@@ -512,15 +495,6 @@ function_entity class_entity::parse_function(const char*& pData, attributes& att
         {
             break;
         }
-    }
-
-    if (func.has_value("propput") || func.has_value("propputref"))
-    {
-        func.set_entity_type(entity_type::FUNCTION_PROPERTYPUT);
-    }
-    else if (func.has_value("propget"))
-    {
-        func.set_entity_type(entity_type::FUNCTION_PROPERTYGET);
     }
 
     func.set_name(func_name);
@@ -729,17 +703,7 @@ void class_entity::parse_structure(const char*& pData, bool bInCurlyBrackets, bo
                 else
                 {
                     auto obj = std::make_shared<class_entity>(this);
-                    if (get_entity_type() == entity_type::COCLASS)
-                    {
-                        auto func = parse_function(pData, attribs, true);
-                        func.set_is_in_import(in_import);
-                        add_function(func);
-                        EAT_SPACES(pData);
-                        assert(*pData == ';');
-                        if (*pData == ';')
-                            pData++;
-                    }
-                    else if (parse_class(pData, attribs, obj, true, in_import))
+                    if (parse_class(pData, attribs, obj, true, in_import))
                     {
                         if (*pData == ';')
                             pData++;
@@ -860,25 +824,6 @@ void class_entity::parse_structure(const char*& pData, bool bInCurlyBrackets, bo
                             add_function(func);
                         }
                     }
-                    else if (get_entity_type() == entity_type::DISPATCH_INTERFACE)
-                    {
-                        if (if_is_word_eat(pData, "properties:"))
-                            ;
-                        else if (if_is_word_eat(pData, "methods:"))
-                            ;
-                        else if (isFunction(pData))
-                        {
-                            auto func = parse_function(pData, attribs, false);
-                            func.set_is_in_import(in_import);
-                            add_function(func);
-                            EAT_SPACES(pData);
-                            assert(*pData == ';');
-                            if (*pData == ';')
-                                pData++;
-                        }
-                        else
-                            assert(0);
-                    }
                     else if (if_is_word_eat(pData, "public:"))
                     {
                         function_entity func;
@@ -915,7 +860,7 @@ void class_entity::parse_structure(const char*& pData, bool bInCurlyBrackets, bo
                     }
                     else if (isFunction(pData))
                     {
-                        function_entity func(parse_function(pData, attribs, get_entity_type() == entity_type::COCLASS));
+                        function_entity func(parse_function(pData, attribs, false));
                         EAT_SPACES(pData);
                         assert(*pData == ';');
                         if (*pData == ';')
@@ -1036,20 +981,6 @@ void class_entity::parse_structure(const char*& pData, bool bInCurlyBrackets, bo
                 pData++;
         }
         EAT_SPACES(pData)
-    }
-    if (get_entity_type() == entity_type::DISPATCH_INTERFACE)
-    {
-        std::shared_ptr<class_entity> pObj;
-        if (!find_class("IDispatch", pObj))
-        {
-            std::stringstream err;
-            err << "type " << "IDispatch" << " not known";
-            err << std::ends;
-            std::string errString(err.str());
-            throw std::runtime_error(errString);
-        }
-        add_base_class(pObj.get());
-        set_entity_type(entity_type::INTERFACE);
     }
 }
 
@@ -1284,9 +1215,9 @@ bool class_entity::has_typedefs(const char* pData)
     EAT_SPACES(pData)
 
     if (*pData == ';' || *pData == '[' || *pData == '\0' || is_word(pData, "struct") || is_word(pData, "interface")
-        || is_word(pData, "class") || is_word(pData, "namespace") || is_word(pData, "dispinterface")
-        || is_word(pData, "exception") || is_word(pData, "enum") || is_word(pData, "union") || is_word(pData, "typedef")
-        || is_word(pData, "library") || is_word(pData, "#include") || is_word(pData, "import"))
+        || is_word(pData, "class") || is_word(pData, "namespace") || is_word(pData, "exception")
+        || is_word(pData, "enum") || is_word(pData, "union") || is_word(pData, "typedef") || is_word(pData, "#include")
+        || is_word(pData, "import"))
         return false;
 
     return true;
@@ -1346,8 +1277,7 @@ bool class_entity::parse_class(const char*& pData, attributes& attribs, std::sha
     bool is_variable = false;
 
     if (is_word(pData, "struct") || is_word(pData, "interface") || is_word(pData, "class") || is_word(pData, "template")
-        || is_word(pData, "dispinterface") || is_word(pData, "exception") || is_word(pData, "enum")
-        || is_word(pData, "union"))
+        || is_word(pData, "exception") || is_word(pData, "enum") || is_word(pData, "union"))
     {
         // continue if this is only a forward declarantion
         const char* curlyPos = strchr(&*pData, '{');
@@ -1364,16 +1294,6 @@ bool class_entity::parse_class(const char*& pData, attributes& attribs, std::sha
     if (bUseTypeDef || if_is_word_eat(pData, "typedef"))
         obj = parse_typedef(pData, attribs, NULL, in_import);
 
-    else if (if_is_word_eat(pData, "library"))
-    {
-        obj = parse_interface(pData, entity_type::LIBRARY, attribs, in_import);
-        add_class(obj);
-    }
-    else if (if_is_word_eat(pData, "coclass"))
-    {
-        obj = parse_interface(pData, entity_type::COCLASS, attribs, in_import);
-        add_class(obj);
-    }
     else if (is_variable == false && if_is_word_eat(pData, "struct"))
     {
         obj = parse_interface(pData, entity_type::STRUCT, attribs, in_import);
@@ -1447,464 +1367,12 @@ bool class_entity::parse_class(const char*& pData, attributes& attribs, std::sha
             throw std::runtime_error(errString);
         }
     }
-    else if (if_is_word_eat(pData, "dispinterface"))
-    {
-        obj = parse_interface(pData, entity_type::DISPATCH_INTERFACE, attribs, in_import);
-        add_class(obj);
-    }
     else
         return false;
 
     EAT_SPACES(pData)
     return true;
 }
-
-#ifdef USE_COM
-void class_entity::GetInterfaceProperties(TYPEATTR* pTypeAttr, class_entity& obj, ITypeInfo* typeInfo)
-{
-    USES_CONVERSION;
-    // Enumerate methods and return a collection of these.
-    for (unsigned int n = 0; n < pTypeAttr->cVars; n++)
-    {
-        LPVARDESC pvardesc = NULL;
-        HRESULT hr = typeInfo->GetVarDesc(n, &pvardesc);
-        if (FAILED(hr))
-            break;
-
-        function_entity fn(&obj);
-        fn.type = FunctionTypePropertyGet;
-
-        char buf[256];
-        sprintf(buf, "id(%d)", pvardesc->memid);
-        fn.push_back(buf);
-
-        fn.return_type = GenerateTypeString(pvardesc->elemdescVar.tdesc, typeInfo);
-
-        CComBSTR name;
-        unsigned int cNames = 0;
-        hr = typeInfo->GetNames(pvardesc->memid, &name, 1, &cNames);
-        if (SUCCEEDED(hr))
-            fn.name = W2CA(name.m_str);
-
-        if (pvardesc->elemdescVar.paramdesc.wParamFlags & PARAMFLAG_FIN)
-            fn.push_back("in");
-        if (pvardesc->elemdescVar.paramdesc.wParamFlags & PARAMFLAG_FOUT)
-            fn.push_back("out");
-        if (pvardesc->elemdescVar.paramdesc.wParamFlags & PARAMFLAG_FLCID)
-            fn.push_back("lcid");
-        if (pvardesc->elemdescVar.paramdesc.wParamFlags & PARAMFLAG_FRETVAL)
-            fn.push_back("retval");
-        if (pvardesc->elemdescVar.paramdesc.wParamFlags & PARAMFLAG_FLCID)
-            fn.push_back("lcid");
-        if (pvardesc->elemdescVar.paramdesc.wParamFlags & PARAMFLAG_FOPT)
-            fn.push_back("optional");
-
-        if (pvardesc->elemdescVar.paramdesc.wParamFlags & (PARAMFLAG_FOPT | PARAMFLAG_FHASDEFAULT))
-        {
-            CComVariant var(pvardesc->elemdescVar.paramdesc.pparamdescex->varDefaultValue);
-            var.ChangeType(VT_BSTR);
-            std::string defaultValue = "defaultvalue(\"";
-            defaultValue += W2CA(var.bstrVal);
-            defaultValue += "\")";
-            fn.push_back(defaultValue);
-        }
-
-        if (pvardesc->varkind == VAR_PERINSTANCE)
-            fn.push_back("VAR_PERINSTANCE");
-        else if (pvardesc->varkind == VAR_STATIC)
-            fn.push_back("VAR_STATIC");
-        else if (pvardesc->varkind == VAR_CONST)
-            fn.push_back("VAR_CONST");
-        else if (pvardesc->varkind == VAR_DISPATCH)
-            fn.push_back("VAR_DISPATCH");
-
-        if (pvardesc->wVarFlags & VARFLAG_FSOURCE)
-            fn.push_back("VARFLAG_FSOURCE");
-        if (pvardesc->wVarFlags & VARFLAG_FBINDABLE)
-            fn.push_back("bindable");
-        if (pvardesc->wVarFlags & VARFLAG_FREQUESTEDIT)
-            fn.push_back("requestedit");
-        if (pvardesc->wVarFlags & VARFLAG_FDISPLAYBIND)
-            fn.push_back("displaybind");
-        if (pvardesc->wVarFlags & VARFLAG_FDEFAULTBIND)
-            fn.push_back("defaultbind");
-        if (pvardesc->wVarFlags & VARFLAG_FHIDDEN)
-            fn.push_back("hidden");
-        if (pvardesc->wVarFlags & VARFLAG_FRESTRICTED)
-            fn.push_back("restricted");
-        if (pvardesc->wVarFlags & VARFLAG_FDEFAULTCOLLELEM)
-            fn.push_back("defaultcollelem");
-        if (pvardesc->wVarFlags & VARFLAG_FUIDEFAULT)
-            fn.push_back("uidefault");
-        if (pvardesc->wVarFlags & VARFLAG_FNONBROWSABLE)
-            fn.push_back("nonbrowsable");
-        if (pvardesc->wVarFlags & VARFLAG_FREPLACEABLE)
-            fn.push_back("replaceable");
-        if (pvardesc->wVarFlags & VARFLAG_FIMMEDIATEBIND)
-            fn.push_back("immediatebind");
-
-        fn.set_is_in_import(in_import);
-        obj.add_function(fn);
-
-        if (!(pvardesc->wVarFlags & VARFLAG_FREADONLY))
-        {
-            fn.type = FunctionTypePropertyPut;
-
-            fn.set_is_in_import(in_import);
-            obj.add_function(fn);
-        }
-
-        typeInfo->ReleaseVarDesc(pvardesc);
-        pvardesc = NULL;
-    }
-}
-
-void class_entity::GetInterfaceFunctions(TYPEATTR* pTypeAttr, class_entity& obj, ITypeInfo* typeInfo)
-{
-    USES_CONVERSION;
-    for (unsigned int n = 0; n < pTypeAttr->cFuncs; n++)
-    {
-        FUNCDESC* desc = NULL;
-        HRESULT hr = typeInfo->GetFuncDesc(n, &desc);
-        if (SUCCEEDED(hr))
-        {
-            function_entity fn(&obj);
-
-            CComBSTR name;
-            HRESULT hr = typeInfo->GetDocumentation(desc->memid, &name, NULL, NULL, NULL);
-            if (SUCCEEDED(hr))
-                fn.name = W2CA(name.m_str);
-
-            char buf[256];
-            sprintf(buf, "id(%d)", desc->memid);
-            fn.push_back(buf);
-
-            switch (desc->invkind)
-            {
-            case INVOKE_FUNC:
-                fn.type = FunctionTypeMethod;
-                break;
-            case INVOKE_PROPERTYGET:
-                fn.type = FunctionTypePropertyGet;
-                fn.push_back("propget");
-                break;
-            case INVOKE_PROPERTYPUT:
-                fn.type = FunctionTypePropertyPut;
-                fn.push_back("propput");
-                break;
-            case INVOKE_PROPERTYPUTREF:
-                fn.type = FunctionTypePropertyPut;
-                fn.push_back("propputref");
-                break;
-            default:
-                return;
-            }
-
-            fn.return_type = GenerateTypeString(desc->elemdescFunc.tdesc, typeInfo);
-
-            if (desc->wFuncFlags & FUNCFLAG_FRESTRICTED)
-                fn.push_back("restricted");
-            if (desc->wFuncFlags & FUNCFLAG_FSOURCE)
-                fn.push_back("FUNCFLAG_FSOURCE");
-            if (desc->wFuncFlags & FUNCFLAG_FBINDABLE)
-                fn.push_back("bindable");
-            if (desc->wFuncFlags & FUNCFLAG_FREQUESTEDIT)
-                fn.push_back("requestedit");
-            if (desc->wFuncFlags & FUNCFLAG_FDISPLAYBIND)
-                fn.push_back("displaybind");
-            if (desc->wFuncFlags & FUNCFLAG_FDEFAULTBIND)
-                fn.push_back("defaultbind");
-            if (desc->wFuncFlags & FUNCFLAG_FHIDDEN)
-                fn.push_back("hidden");
-            if (desc->wFuncFlags & FUNCFLAG_FUSESGETLASTERROR)
-                fn.push_back("FUNCFLAG_FUSESGETLASTERROR");
-            if (desc->wFuncFlags & FUNCFLAG_FDEFAULTCOLLELEM)
-                fn.push_back("defaultcollelem");
-            if (desc->wFuncFlags & FUNCFLAG_FUIDEFAULT)
-                fn.push_back("uidefault");
-            if (desc->wFuncFlags & FUNCFLAG_FNONBROWSABLE)
-                fn.push_back("nonbrowsable");
-            if (desc->wFuncFlags & FUNCFLAG_FREPLACEABLE)
-                fn.push_back("replaceable");
-            if (desc->wFuncFlags & FUNCFLAG_FIMMEDIATEBIND)
-                fn.push_back("immediatebind");
-
-            BSTR* rgbstrNames = (BSTR*)_alloca(sizeof(BSTR) * (desc->cParams + 1));
-            memset(rgbstrNames, 0, sizeof(BSTR*) * (desc->cParams + 1));
-
-            unsigned int pcNames = 0;
-            hr = typeInfo->GetNames(desc->memid, rgbstrNames, desc->cParams + 1, &pcNames);
-            if (SUCCEEDED(hr))
-            {
-                for (int p = 1; p < desc->cParams; p++)
-                {
-                    parameter_entity param(&obj);
-                    param.name = W2CA(rgbstrNames[p]);
-                    param.type = GenerateTypeString(desc->lprgelemdescParam[p].tdesc, typeInfo);
-
-                    if (desc->lprgelemdescParam[p].paramdesc.wParamFlags & PARAMFLAG_FIN)
-                        param.push_back("in");
-
-                    if (desc->lprgelemdescParam[p].paramdesc.wParamFlags & PARAMFLAG_FOUT)
-                        param.push_back("out");
-
-                    if (desc->lprgelemdescParam[p].paramdesc.wParamFlags & PARAMFLAG_FLCID)
-                        param.push_back("lcid");
-
-                    if (desc->lprgelemdescParam[p].paramdesc.wParamFlags & PARAMFLAG_FRETVAL)
-                        param.push_back("retval");
-
-                    if (desc->lprgelemdescParam[p].paramdesc.wParamFlags & PARAMFLAG_FLCID)
-                        param.push_back("lcid");
-
-                    if (desc->lprgelemdescParam[p].paramdesc.wParamFlags & PARAMFLAG_FOPT)
-                        param.push_back("optional");
-
-                    if (desc->lprgelemdescParam[p].paramdesc.wParamFlags & (PARAMFLAG_FOPT | PARAMFLAG_FHASDEFAULT))
-                    {
-                        CComVariant var(desc->lprgelemdescParam[p].paramdesc.pparamdescex->varDefaultValue);
-                        var.ChangeType(VT_BSTR);
-                        std::string defaultValue = "defaultvalue(\"";
-                        defaultValue += W2CA(var.bstrVal);
-                        defaultValue += "\")";
-                        fn.push_back(defaultValue);
-                    }
-                    fn.parameters.push_back(param);
-                }
-            }
-
-            for (int p = 0; p < desc->cParams; p++)
-                SysFreeString(rgbstrNames[p]);
-
-            typeInfo->ReleaseFuncDesc(desc);
-
-            fn.set_is_in_import(in_import);
-            obj.add_function(fn);
-        }
-    }
-}
-
-void class_entity::GetCoclassInterfaces(TYPEATTR* pTypeAttr, class_entity& obj, ITypeInfo* typeInfo)
-{
-    USES_CONVERSION;
-    // Enumerate interfaces/dispinterfaces in coclass and return a collection of these.
-    for (unsigned int n = 0; n < pTypeAttr->cImplTypes; n++)
-    {
-        function_entity fn(&obj);
-
-        int flags = 0;
-        HRESULT hr = typeInfo->GetImplTypeFlags(n, &flags);
-        if (flags & IMPLTYPEFLAG_FDEFAULT)
-            fn.push_back("default");
-        if (flags & IMPLTYPEFLAG_FSOURCE)
-            fn.push_back("source");
-        if (flags & IMPLTYPEFLAG_FRESTRICTED)
-            fn.push_back("restricted");
-        if (flags & IMPLTYPEFLAG_FDEFAULTVTABLE)
-            fn.push_back("defaultvtable");
-
-        HREFTYPE hreftype;
-        hr = typeInfo->GetRefTypeOfImplType(n, &hreftype);
-        if (SUCCEEDED(hr))
-        {
-            ITypeInfoPtr ifTypeInfo;
-            hr = typeInfo->GetRefTypeInfo(hreftype, &ifTypeInfo);
-            if (SUCCEEDED(hr))
-                fn.name = W2CA(GetInterfaceName(ifTypeInfo));
-        }
-        fn.set_is_in_import(in_import);
-        obj.add_function(fn);
-    }
-}
-
-void class_entity::GetVariables(class_entity& theClass, unsigned variableCount, ITypeInfo* typeInfo)
-{
-    USES_CONVERSION;
-    for (unsigned int n = 0; n < variableCount; n++)
-    {
-        LPVARDESC pvardesc = NULL;
-        HRESULT hr = typeInfo->GetVarDesc(n, &pvardesc);
-        if (SUCCEEDED(hr))
-        {
-            function_entity fn(&theClass);
-            char buf[256];
-            sprintf(buf, "id(%d)", pvardesc->memid);
-            fn.push_back(buf);
-
-            CComBSTR name;
-            unsigned int cNames = 0; // not used
-            typeInfo->GetNames(pvardesc->memid, &name, 1, &cNames);
-            fn.name = W2CA(name);
-
-            fn.return_type = GenerateTypeString(pvardesc->elemdescVar.tdesc, typeInfo);
-
-            typeInfo->ReleaseVarDesc(pvardesc);
-
-            fn.set_is_in_import(in_import);
-            theClass.add_function(fn);
-        }
-    }
-}
-
-std::string class_entity::GenerateTypeString(TYPEDESC& typedesc, ITypeInfo* typeInfo)
-{
-    USES_CONVERSION;
-    if (typedesc.vt == VT_USERDEFINED)
-    {
-        ITypeInfoPtr userTypeInfo;
-        HRESULT hr = typeInfo->GetRefTypeInfo(typedesc.hreftype, &userTypeInfo);
-        if (SUCCEEDED(hr))
-            return std::string(W2CA(GetInterfaceName(userTypeInfo)));
-    }
-
-    if (typedesc.vt == VT_CARRAY)
-    {
-        std::string ret(GenerateTypeString(typedesc.lpadesc->tdescElem, typeInfo));
-        for (int i = 0; i < typedesc.lpadesc->cDims; i++)
-        {
-            SAFEARRAYBOUND& arrayBound = typedesc.lpadesc->rgbounds[i];
-            char buf[20];
-            sprintf(buf, "[%d..%d]", arrayBound.lLbound, arrayBound.lLbound + arrayBound.cElements - 1);
-            ret += buf;
-        }
-        return ret;
-    }
-    if (typedesc.vt == VT_PTR || typedesc.vt == VT_SAFEARRAY)
-        return std::string(GenerateTypeString(*typedesc.lptdesc, typeInfo) + "*");
-
-    std::string ret;
-    switch ((typedesc.vt ^ VT_ARRAY) & (typedesc.vt ^ VT_BYREF))
-    {
-    case VT_NULL:
-        ret = "NULL";
-        break;
-    case VT_I2:
-        ret = "short";
-        break;
-    case VT_I4:
-        ret = "long";
-        break;
-    case VT_R4:
-        ret = "float";
-        break;
-    case VT_R8:
-        ret = "double";
-        break;
-    case VT_CY:
-        ret = "CURRENCY";
-        break;
-    case VT_DATE:
-        ret = "DATE";
-        break;
-    case VT_BSTR:
-        ret = "BSTR";
-        break;
-    case VT_DISPATCH:
-        ret = "IDispatch*";
-        break;
-    case VT_ERROR:
-        ret = "SCODE";
-        break;
-    case VT_BOOL:
-        ret = "BOOL";
-        break;
-    case VT_VARIANT:
-        ret = "VARIANT";
-        break;
-    case VT_UNKNOWN:
-        ret = "IUnknown*";
-        break;
-    case VT_I1:
-        ret = "char";
-        break;
-    case VT_UI1:
-        ret = "unsigned char";
-        break;
-    case VT_UI2:
-        ret = "unsigned int";
-        break;
-    case VT_UI4:
-        ret = "unsigned long";
-        break;
-    case VT_I8:
-        ret = "__int64";
-        break;
-    case VT_UI8:
-        ret = "unsigned __int64";
-        break;
-    case VT_INT:
-        ret = "int";
-        break;
-    case VT_UINT:
-        ret = "unsigned int";
-        break;
-    case VT_VOID:
-        ret = "void";
-        break;
-    case VT_HRESULT:
-        ret = "HRESULT";
-        break;
-    case VT_LPSTR:
-        ret = "char*";
-        break;
-    case VT_LPWSTR:
-        ret = "WCHAR*";
-        break;
-
-        /*	case VT_DECIMAL:
-                        ret = "DECIMAL";
-                        break;
-                case VT_FILETIME:
-                        ret = "FILETIME";
-                        break;
-                case VT_BLOB:
-                        ret = "BLOB";
-                        break;
-                case VT_STREAM:
-                        ret = "STREAM";
-                        break;
-                case VT_STORAGE:
-                        ret = "STORAGE";
-                        break;
-                case VT_STREAMED_OBJECT:
-                        ret = "STREAMED_OBJECT";
-                        break;
-                case VT_STORED_OBJECT:
-                        ret = "STORED_OBJECT";
-                        break;
-                case VT_BLOB_OBJECT:
-                        ret = "BLOB_OBJECT";
-                        break;
-                case VT_CF:
-                        ret = "CF";
-                        break;
-                case VT_CLSID:
-                        ret = "CLSID";
-                        break;*/
-    default:
-        ret = "UNKNOWN_TYPE";
-    }
-    if (typedesc.vt & VT_ARRAY)
-        ret += "[]";
-    if (typedesc.vt & VT_BYREF)
-        ret += "*";
-    return ret;
-}
-
-CComBSTR class_entity::GetInterfaceName(ITypeInfo* typeInfo)
-{
-    CComBSTR ret;
-    ITypeLibPtr tempTypeLib;
-    unsigned int nIndex;
-    HRESULT hr = typeInfo->GetContainingTypeLib(&tempTypeLib, &nIndex);
-    if (FAILED(hr))
-        return ret;
-
-    tempTypeLib->GetDocumentation(nIndex, &ret, NULL, NULL, NULL);
-
-    return ret;
-}
-#endif
 
 void class_entity::extract_path_and_load(const char*& pData, const char* file, bool in_import)
 {

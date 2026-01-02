@@ -11,14 +11,6 @@
 #include <unordered_map>
 #include <cstdint>
 
-#ifdef WIN32
-#ifdef USE_COM
-#include <comdef.h>
-#include <crtdbg.h>
-#include "atlconv.h"
-#include <atlbase.h>
-#endif
-#endif
 
 class parameter_entity;
 class function_entity;
@@ -33,18 +25,13 @@ enum class entity_type : uint64_t
     SEQUENCE = 8,
     INTERFACE = 16,
     TYPEDEF = 32,
-    COCLASS = 64,
     UNION = 128,
-    LIBRARY = 256,
-    DISPATCH_INTERFACE = 512,
     CLASS = 1024,
     TEMPLATE = 2048,
     NAMESPACE = 4096,
     PARAMETER = 8192,
 
     FUNCTION_METHOD = 16384,
-    FUNCTION_PROPERTYPUT = 32768,
-    FUNCTION_PROPERTYGET = 65536,
     FUNCTION_VARIABLE = 131072,
     CPPQUOTE = 262144,
     FUNCTION_PUBLIC = 524288,
@@ -52,9 +39,9 @@ enum class entity_type : uint64_t
     CONSTEXPR = 2097152,
     TEMPLATE_DECLARATION = 4194304,
 
-    NAMESPACE_MEMBERS = STRUCT | ENUM | EXCEPTION | SEQUENCE | INTERFACE | TYPEDEF | COCLASS | UNION | LIBRARY
-                        | DISPATCH_INTERFACE | CLASS | TEMPLATE | NAMESPACE | CPPQUOTE | CONSTEXPR,
-    STRUCTURE_MEMBERS = TYPEDEF | FUNCTION_METHOD | FUNCTION_PROPERTYPUT | FUNCTION_PROPERTYGET | FUNCTION_VARIABLE
+    NAMESPACE_MEMBERS = STRUCT | ENUM | EXCEPTION | SEQUENCE | INTERFACE | TYPEDEF | UNION
+                        | CLASS | TEMPLATE | NAMESPACE | CPPQUOTE | CONSTEXPR,
+    STRUCTURE_MEMBERS = TYPEDEF | FUNCTION_METHOD | FUNCTION_VARIABLE
                         | CPPQUOTE | FUNCTION_PUBLIC | FUNCTION_PRIVATE | CONSTEXPR,
 };
 
@@ -262,8 +249,6 @@ public:
 enum interface_spec
 {
     header,
-    com,
-    corba,
     edl
 };
 
@@ -339,17 +324,6 @@ public:
     void set_is_template(bool is_template) { is_template_ = is_template; }
 
     bool get_is_template() const { return is_template_; }
-
-#ifdef USE_COM
-    CComBSTR GetInterfaceName(ITypeInfo* typeInfo);
-    void GetInterfaceAttributes(class_entity& theClass, ITypeInfoPtr& typeInfo, unsigned short& functionCount,
-                                unsigned short& variableCount, unsigned short& implTypes);
-    std::string GenerateTypeString(TYPEDESC& typedesc, ITypeInfo* typeInfo);
-    void GetVariables(class_entity& theClass, unsigned variableCount, ITypeInfo* typeInfo);
-    void GetCoclassInterfaces(TYPEATTR* pTypeAttr, class_entity& obj, ITypeInfo* typeInfo);
-    void GetInterfaceFunctions(TYPEATTR* pTypeAttr, class_entity& obj, ITypeInfo* typeInfo);
-    void GetInterfaceProperties(TYPEATTR* pTypeAttr, class_entity& obj, ITypeInfo* typeInfo);
-#endif
 };
 
 const class_entity& get_root(const class_entity& cls);
