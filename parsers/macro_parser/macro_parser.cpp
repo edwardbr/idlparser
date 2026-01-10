@@ -1408,7 +1408,7 @@ void CleanBufferOfComments(const char*& pData)
                     oldBufPos++;
                 }
             }
-            else if (begins_with(pData, "R\""))
+            else if (begins_with(pData, "R\"") || begins_with(pData, "R^"))
             {
                 const char* pTmp = pData;
                 const char* pStart = nullptr;
