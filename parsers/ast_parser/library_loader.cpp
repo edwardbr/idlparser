@@ -708,48 +708,6 @@ void class_entity::parse_structure(const char*& pData, bool bInCurlyBrackets, bo
                         if (*pData == ';')
                             pData++;
                     }
-
-                    else if (get_entity_type() == entity_type::UNION)
-                    {
-                        if (if_is_word_eat(pData, "case"))
-                        {
-                            EAT_SPACES(pData);
-
-                            std::string caseName("case(");
-                            extract_word(pData, caseName);
-                            caseName += ')';
-
-                            attribs.push_back(caseName);
-
-                            EAT_SPACES(pData);
-                            assert(*pData == ':');
-                            pData++;
-
-                            EAT_SPACES(pData);
-                        }
-
-                        if (if_is_word_eat(pData, "default"))
-                        {
-                            attribs.push_back(std::string("default"));
-
-                            EAT_SPACES(pData);
-                            assert(*pData == ':');
-                            pData++;
-
-                            EAT_SPACES(pData);
-                        }
-
-                        auto tmp = get_attributes(pData);
-                        attribs.merge(tmp);
-                        auto func = parse_function(pData, attribs, false);
-                        func.set_is_in_import(in_import);
-                        add_function(func);
-                        EAT_SPACES(pData);
-                        assert(*pData == ';');
-                        if (*pData == ';')
-                            pData++;
-                    }
-
                     else if (get_entity_type() == entity_type::ENUM)
                     {
                         std::string elemname;
@@ -886,28 +844,6 @@ void class_entity::parse_structure(const char*& pData, bool bInCurlyBrackets, bo
                 set_name(name);
                 bHasName = true;
 
-                EAT_SPACES(pData)
-            }
-
-            if (get_entity_type() == entity_type::UNION)
-            {
-                if (if_is_word_eat(pData, "switch"))
-                {
-                    EAT_SPACES(pData)
-                    if (*pData != '(')
-                        assert(0);
-                    pData++;
-
-                    attributes attribs = get_attributes(pData);
-                    attribs.push_back(std::string("switch"));
-                    parse_function(pData, attribs, false);
-
-                    EAT_SPACES(pData)
-
-                    std::string switch_name;
-                    extract_word(pData, switch_name);
-                    set_alias_name(switch_name);
-                }
                 EAT_SPACES(pData)
             }
 
@@ -1309,20 +1245,9 @@ bool class_entity::parse_class(const char*& pData, attributes& attribs, std::sha
         obj = parse_interface(pData, entity_type::NAMESPACE, attribs, in_import);
         add_class(obj);
     }
-    else if (if_is_word_eat(pData, "union"))
-    {
-        obj = parse_interface(pData, entity_type::UNION, attribs, in_import);
-        add_class(obj);
-        return false;
-    }
     else if (is_variable == false && if_is_word_eat(pData, "enum"))
     {
         obj = parse_interface(pData, entity_type::ENUM, attribs, in_import);
-        add_class(obj);
-    }
-    else if (if_is_word_eat(pData, "exception"))
-    {
-        obj = parse_interface(pData, entity_type::EXCEPTION, attribs, in_import);
         add_class(obj);
     }
     else if (if_is_word_eat(pData, "interface"))

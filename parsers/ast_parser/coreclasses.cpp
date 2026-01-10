@@ -179,7 +179,7 @@ std::string get_full_name(const class_entity& cls, bool stop_when_base_has_no_na
         tmp = tmp1;
     }
     if (add_prefix_delimiter)
-        name = "::" + name;
+        name = delimiter + name;
     return name;
 }
 

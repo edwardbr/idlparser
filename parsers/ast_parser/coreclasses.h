@@ -11,7 +11,6 @@
 #include <unordered_map>
 #include <cstdint>
 
-
 class parameter_entity;
 class function_entity;
 class class_entity;
@@ -21,11 +20,8 @@ enum class entity_type : uint64_t
     TYPE_NULL = 0,
     STRUCT = 1,
     ENUM = 2,
-    EXCEPTION = 4,
-    SEQUENCE = 8,
     INTERFACE = 16,
     TYPEDEF = 32,
-    UNION = 128,
     CLASS = 1024,
     TEMPLATE = 2048,
     NAMESPACE = 4096,
@@ -39,10 +35,9 @@ enum class entity_type : uint64_t
     CONSTEXPR = 2097152,
     TEMPLATE_DECLARATION = 4194304,
 
-    NAMESPACE_MEMBERS = STRUCT | ENUM | EXCEPTION | SEQUENCE | INTERFACE | TYPEDEF | UNION
-                        | CLASS | TEMPLATE | NAMESPACE | CPPQUOTE | CONSTEXPR,
-    STRUCTURE_MEMBERS = TYPEDEF | FUNCTION_METHOD | FUNCTION_VARIABLE
-                        | CPPQUOTE | FUNCTION_PUBLIC | FUNCTION_PRIVATE | CONSTEXPR,
+    NAMESPACE_MEMBERS = STRUCT | ENUM | INTERFACE | TYPEDEF | CLASS | TEMPLATE | NAMESPACE | CPPQUOTE | CONSTEXPR,
+    STRUCTURE_MEMBERS
+    = TYPEDEF | FUNCTION_METHOD | FUNCTION_VARIABLE | CPPQUOTE | FUNCTION_PUBLIC | FUNCTION_PRIVATE | CONSTEXPR,
 };
 
 inline entity_type operator|(entity_type lhs, entity_type rhs)
