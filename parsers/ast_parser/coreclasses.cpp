@@ -240,7 +240,7 @@ void getTypeStringInfo(const char* type, typeInfo& info, const class_entity& lib
                         {
                                 if(info.prefix.length())
                                         info.prefix += ' ';
-                                if(temp == "const" || temp == "unsigned" || temp == "signed")
+                                if(temp == "const")
                                         info.prefix += temp;
                                 else
                                 {

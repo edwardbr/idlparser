@@ -14,6 +14,8 @@ bool is_ulong(std::string type);
 bool is_long(std::string type);
 bool is_uint64(std::string type);
 bool is_int64(std::string type);
+bool is_uint128(std::string type);
+bool is_int128(std::string type);
 bool is_bool(std::string type);
 bool is_float(std::string type);
 bool is_double(std::string type);

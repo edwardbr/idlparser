@@ -80,8 +80,8 @@ bool is_int16(std::string type)
 }
 bool is_uint32(std::string type)
 {
-    if (find_key_word(type, "unsigned", true) != -1 || find_key_word(type, "unsigned int", true) != -1
-        || find_key_word(type, "unsigned __int32", true) != -1 || find_key_word(type, "uint32_t", true) != -1)
+    if (find_key_word(type, "unsigned int", true) != -1 || find_key_word(type, "unsigned __int32", true) != -1
+        || find_key_word(type, "uint32_t", true) != -1)
     {
         type = "uint32_t";
         return true;
@@ -124,6 +124,25 @@ bool is_int64(std::string type)
         || find_key_word(type, "int64_t", true) != -1)
     {
         type = "int64_t";
+        return true;
+    }
+    return false;
+}
+bool is_uint128(std::string type)
+{
+    if (find_key_word(type, "unsigned __int128", true) != -1 || find_key_word(type, "uint128_t", true) != -1)
+    {
+        type = "unsigned __int128";
+        return true;
+    }
+    return false;
+}
+bool is_int128(std::string type)
+{
+    if (find_key_word(type, "__int128", true) != -1 || find_key_word(type, "signed __int128", true) != -1
+        || find_key_word(type, "int128_t", true) != -1)
+    {
+        type = "__int128";
         return true;
     }
     return false;

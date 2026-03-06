@@ -164,8 +164,7 @@ function_entity class_entity::parse_function(const char*& pData, attributes& att
             func.set_entity_type(entity_type::CONSTEXPR);
             func_name = "";
         }
-        else if (func_name == "const" || func_name == "unsigned" || func_name == "signed"
-                 || (interface_spec_ == edl && func_name == "public"))
+        else if (func_name == "const" || (interface_spec_ == edl && func_name == "public"))
         {
             func.push_back(func_name);
             func_name = "";
@@ -358,7 +357,7 @@ function_entity class_entity::parse_function(const char*& pData, attributes& att
 
                 EAT_SPACES(pData)
 
-                if (parameter_name == "const" || parameter_name == "unsigned" || parameter_name == "signed")
+                if (parameter_name == "const")
                 {
                     parameter.push_back(parameter_name);
                     parameter_name = "";
