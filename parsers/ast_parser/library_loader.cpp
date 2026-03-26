@@ -740,6 +740,10 @@ void class_entity::parse_structure(const char*& pData, bool bInCurlyBrackets, bo
 
                             if (*pData == ',')
                                 pData++;
+                            else if (*pData == ';')
+                                throw std::runtime_error(
+                                    "enum values must be separated by ',' not ';' — use ',' between "
+                                    "enum values and omit the trailing separator before '}'");
 
                             EAT_SPACES(pData);
                         }
