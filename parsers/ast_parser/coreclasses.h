@@ -34,10 +34,13 @@ enum class entity_type : uint64_t
     FUNCTION_PRIVATE = 1048576,
     CONSTEXPR = 2097152,
     TEMPLATE_DECLARATION = 4194304,
+    RUSTQUOTE = 8388608,
 
-    NAMESPACE_MEMBERS = STRUCT | ENUM | INTERFACE | TYPEDEF | CLASS | TEMPLATE | NAMESPACE | CPPQUOTE | CONSTEXPR,
+    NAMESPACE_MEMBERS
+    = STRUCT | ENUM | INTERFACE | TYPEDEF | CLASS | TEMPLATE | NAMESPACE | CPPQUOTE | RUSTQUOTE | CONSTEXPR,
     STRUCTURE_MEMBERS
-    = TYPEDEF | FUNCTION_METHOD | FUNCTION_VARIABLE | CPPQUOTE | FUNCTION_PUBLIC | FUNCTION_PRIVATE | CONSTEXPR,
+    = TYPEDEF | FUNCTION_METHOD | FUNCTION_VARIABLE | CPPQUOTE | RUSTQUOTE | FUNCTION_PUBLIC | FUNCTION_PRIVATE
+    | CONSTEXPR,
 };
 
 inline entity_type operator|(entity_type lhs, entity_type rhs)
@@ -305,7 +308,7 @@ public:
     void parse_variable(const char*& pData, bool in_import);
     std::shared_ptr<class_entity> parse_interface(const char*& pData, const entity_type type, attributes& attr,
                                                   bool in_import);
-    std::string parse_cpp_quote(const char*& pData);
+    std::string parse_quote(const char*& pData, const char* macro_name);
     void parse_template(const char*& pData, std::list<template_declaration>& templateParams);
     void parse_namespace(const char*& pData, bool in_import);
     void parse_structure(const char*& pData, bool bInCurlyBrackets, bool in_import);

@@ -429,9 +429,12 @@ bool macro_parser::ParseInclude(const char*& pData, int ignoreText, std::ostream
     return true;
 }
 
-void find_end_quote(const char*& pData)
+void find_end_quote(
+    const char*& pData,
+    const char* macro_name)
 {
-    for (auto ch : "#cpp_quote(")
+    std::string prefix = std::string(macro_name) + "(";
+    for (auto ch : prefix)
     {
         if (!ch)
             break;
@@ -451,7 +454,7 @@ void find_end_quote(const char*& pData)
     else
     {
         if (*pData != '\"' && *pData != '^')
-            throw std::runtime_error("missing initial \" in #cpp_quote");
+            throw std::runtime_error(std::string("missing initial \" in ") + macro_name);
         auto quote_char = *pData;
         pData++;
         while (*pData && *pData != quote_char)
@@ -460,18 +463,18 @@ void find_end_quote(const char*& pData)
             {
                 pData++;
                 if (!*pData)
-                    throw std::runtime_error("invalid ending in #cpp_quote (no quote)");
+                    throw std::runtime_error(std::string("invalid ending in ") + macro_name + " (no quote)");
             }
             pData++;
         }
         if (!*pData || *pData != quote_char)
-            throw std::runtime_error("invalid ending in #cpp_quote (no quote)");
+            throw std::runtime_error(std::string("invalid ending in ") + macro_name + " (no quote)");
         pData++;
     }
     while (*pData && (*pData == ' ' || *pData == '\t'))
         pData++;
     if (!*pData || *pData != ')')
-        throw std::runtime_error("missing final ) in #cpp_quote");
+        throw std::runtime_error(std::string("missing final ) in ") + macro_name);
     ++pData;
 }
 
@@ -589,7 +592,14 @@ void macro_parser::CleanBuffer(const char*& pData, std::ostream& dest, const pat
         else if (begins_with(pData, "#cpp_quote("))
         {
             auto* start = pData; // save the beginning
-            find_end_quote(pData);
+            find_end_quote(pData, "#cpp_quote");
+            std::string data(start, pData);
+            dest << data;
+        }
+        else if (begins_with(pData, "#rust_quote("))
+        {
+            auto* start = pData; // save the beginning
+            find_end_quote(pData, "#rust_quote");
             std::string data(start, pData);
             dest << data;
         }
@@ -1400,7 +1410,18 @@ void CleanBufferOfComments(const char*& pData)
             else if (begins_with(pData, "#cpp_quote("))
             {
                 const char* start = pData;
-                find_end_quote(pData);
+                find_end_quote(pData, "#cpp_quote");
+                while (start != pData)
+                {
+                    *oldBufPos = *start;
+                    start++;
+                    oldBufPos++;
+                }
+            }
+            else if (begins_with(pData, "#rust_quote("))
+            {
+                const char* start = pData;
+                find_end_quote(pData, "#rust_quote");
                 while (start != pData)
                 {
                     *oldBufPos = *start;

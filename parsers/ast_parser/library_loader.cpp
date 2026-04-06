@@ -633,11 +633,11 @@ std::shared_ptr<class_entity> class_entity::parse_interface(const char*& pData, 
     return cls;
 }
 
-std::string class_entity::parse_cpp_quote(const char*& pData)
+std::string class_entity::parse_quote(const char*& pData, const char* macro_name)
 {
     EAT_SPACES_AND_NEW_LINES(pData)
     if (*pData != '(')
-        throw std::runtime_error("missing bracket after #cpp_quote");
+        throw std::runtime_error(std::string("missing bracket after ") + macro_name);
     pData++;
 
     EAT_SPACES_AND_NEW_LINES(pData)
@@ -653,10 +653,10 @@ std::string class_entity::parse_cpp_quote(const char*& pData)
     else
     {
         if (!extract_string_literal(pData, contents))
-            throw std::runtime_error("missing initial \" in #cpp_quote");
+            throw std::runtime_error(std::string("missing initial \" in ") + macro_name);
     }
     if (!*pData || *pData != ')')
-        throw std::runtime_error("invalid ending in #cpp_quote (no bracket)");
+        throw std::runtime_error(std::string("invalid ending in ") + macro_name + " (no bracket)");
     pData++;
     return contents;
 }
@@ -769,9 +769,17 @@ void class_entity::parse_structure(const char*& pData, bool bInCurlyBrackets, bo
                         else if (if_is_word_eat(pData, "#cpp_quote"))
                         {
                             function_entity func;
-                            func.set_name(parse_cpp_quote(pData));
+                            func.set_name(parse_quote(pData, "#cpp_quote"));
                             func.set_is_in_import(in_import);
                             func.set_entity_type(entity_type::CPPQUOTE);
+                            add_function(func);
+                        }
+                        else if (if_is_word_eat(pData, "#rust_quote"))
+                        {
+                            function_entity func;
+                            func.set_name(parse_quote(pData, "#rust_quote"));
+                            func.set_is_in_import(in_import);
+                            func.set_entity_type(entity_type::RUSTQUOTE);
                             add_function(func);
                         }
                         else
@@ -804,9 +812,17 @@ void class_entity::parse_structure(const char*& pData, bool bInCurlyBrackets, bo
                     else if (if_is_word_eat(pData, "#cpp_quote"))
                     {
                         function_entity func;
-                        func.set_name(parse_cpp_quote(pData));
+                        func.set_name(parse_quote(pData, "#cpp_quote"));
                         func.set_is_in_import(in_import);
                         func.set_entity_type(entity_type::CPPQUOTE);
+                        add_function(func);
+                    }
+                    else if (if_is_word_eat(pData, "#rust_quote"))
+                    {
+                        function_entity func;
+                        func.set_name(parse_quote(pData, "#rust_quote"));
+                        func.set_is_in_import(in_import);
+                        func.set_entity_type(entity_type::RUSTQUOTE);
                         add_function(func);
                     }
                     else if (if_is_word_eat(pData, "constexpr"))
