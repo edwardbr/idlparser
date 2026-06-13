@@ -1,9 +1,12 @@
 #include <algorithm>
 #include <array>
+#include <cctype>
 #include <filesystem>
 #include <fstream>
 #include <iostream>
 #include <list>
+#include <limits>
+#include <map>
 #include <set>
 #include <sstream>
 #include <stack>
@@ -29,6 +32,25 @@
 std::set<std::string> loaded_files;
 std::stack<std::string> current_import;
 
+namespace
+{
+    void trim_attribute_name(std::string& value)
+    {
+        value.erase(value.begin(),
+                    std::find_if(value.begin(), value.end(), [](unsigned char ch) { return std::isspace(ch) == 0; }));
+        value.erase(
+            std::find_if(value.rbegin(), value.rend(), [](unsigned char ch) { return std::isspace(ch) == 0; }).base(),
+            value.end());
+    }
+
+    void push_attribute(attributes& attribs, std::pair<std::string, std::string>& property)
+    {
+        trim_attribute_name(property.first);
+        attribs.push_back(property);
+        property = {};
+    }
+}
+
 attributes get_attributes(const char*& pData)
 {
     attributes attribs;
@@ -50,15 +72,14 @@ attributes get_attributes(const char*& pData)
                 continue;
             if (bInAttribute && !inBracket && *pData == ',')
             {
-                attribs.push_back(property);
-                property = {};
+                push_attribute(attribs, property);
                 bInAttribute = false;
                 inValue = false;
             }
             else if (*pData == ']')
             {
                 if (bInAttribute)
-                    attribs.push_back(property);
+                    push_attribute(attribs, property);
                 pData++;
                 break;
             }
@@ -78,6 +99,9 @@ attributes get_attributes(const char*& pData)
 
                 if (inValue)
                 {
+                    if (property.second.empty() && std::isspace(static_cast<unsigned char>(*pData)) != 0)
+                        continue;
+
                     const char* pDataBeforeExtract = pData;
                     const char* pStart = nullptr;
                     const char* pSuffix = nullptr;
@@ -87,8 +111,7 @@ attributes get_attributes(const char*& pData)
                     {
                         property.second.append(pStart, pSuffix - pStart);
                         pData--; // To compensate for loop increment
-                        attribs.push_back(property);
-                        property = {};
+                        push_attribute(attribs, property);
                         bInAttribute = false;
                         inValue = false;
                     }
@@ -96,10 +119,16 @@ attributes get_attributes(const char*& pData)
                     {
                         if (extract_string_literal(pData, extracted_string))
                         {
-                            property.second.append(pDataBeforeExtract, pData - pDataBeforeExtract);
+                            auto attribute_name = property.first;
+                            trim_attribute_name(attribute_name);
+                            // Descriptions are prose, not source-code literals. Store the decoded text so
+                            // single-line and multiline descriptions present the same value to generators.
+                            if (attribute_name == attribute_types::description)
+                                property.second = std::move(extracted_string);
+                            else
+                                property.second.append(pDataBeforeExtract, pData - pDataBeforeExtract);
                             pData--; // To compensate for loop increment
-                            attribs.push_back(property);
-                            property = {};
+                            push_attribute(attribs, property);
                             bInAttribute = false;
                             inValue = false;
                         }
@@ -122,6 +151,38 @@ attributes get_attributes(const char*& pData)
         EAT_SPACES(pData)
     }
     return attribs;
+}
+
+namespace
+{
+    int parse_error_integer_value(const std::string& value, const std::string& error_name,
+                                  const std::string& member_name)
+    {
+        if (value.empty())
+            throw std::runtime_error("error value " + error_name + "::" + member_name + " has an empty assignment");
+
+        size_t parsed_chars = 0;
+        long long parsed_value = 0;
+        try
+        {
+            parsed_value = std::stoll(value, &parsed_chars, 0);
+        }
+        catch (const std::exception&)
+        {
+            throw std::runtime_error("error value " + error_name + "::" + member_name + " must be an integer literal");
+        }
+
+        if (parsed_chars != value.size())
+            throw std::runtime_error("error value " + error_name + "::" + member_name + " must be an integer literal");
+
+        if (parsed_value < 0)
+            throw std::runtime_error("error value " + error_name + "::" + member_name + " must not be negative");
+
+        if (parsed_value > std::numeric_limits<int>::max())
+            throw std::runtime_error("error value " + error_name + "::" + member_name + " must fit in int");
+
+        return static_cast<int>(parsed_value);
+    }
 }
 
 function_entity class_entity::parse_function(const char*& pData, attributes& attribs, bool bFunctionIsInterface)
@@ -711,16 +772,29 @@ void class_entity::parse_structure(const char*& pData, bool bInCurlyBrackets, bo
                         if (*pData == ';')
                             pData++;
                     }
-                    else if (get_entity_type() == entity_type::ENUM)
+                    else if (get_entity_type() == entity_type::ENUM || get_entity_type() == entity_type::ERROR)
                     {
+                        const bool is_error_declaration = get_entity_type() == entity_type::ERROR;
+                        long long next_error_value = 1;
+                        size_t error_value_index = 0;
+                        std::map<int, std::string> error_values_seen;
+                        attributes member_attribs;
+                        member_attribs.swap(attribs);
+
                         std::string elemname;
-                        while (extract_word(pData, elemname))
+                        while (true)
                         {
+                            member_attribs.merge(get_attributes(pData));
+                            if (!extract_word(pData, elemname))
+                                break;
+
                             EAT_SPACES(pData);
                             std::string elemValue;
+                            bool has_explicit_value = false;
                             if (*pData == '=')
                             {
                                 pData++;
+                                has_explicit_value = true;
 
                                 EAT_SPACES(pData);
 
@@ -734,13 +808,61 @@ void class_entity::parse_structure(const char*& pData, bool bInCurlyBrackets, bo
                                 }
                             }
 
+                            if (is_error_declaration)
+                            {
+                                int numeric_value = 0;
+                                if (elemname == "OK")
+                                {
+                                    if (error_value_index != 0)
+                                        throw std::runtime_error("OK is reserved and must be the first value in error "
+                                                                 + get_name());
+
+                                    numeric_value = has_explicit_value
+                                                        ? parse_error_integer_value(elemValue, get_name(), elemname)
+                                                        : 0;
+                                    if (numeric_value != 0)
+                                        throw std::runtime_error("OK must be 0 in error " + get_name());
+                                    elemValue = "0";
+                                    next_error_value = 1;
+                                }
+                                else
+                                {
+                                    if (!has_explicit_value && next_error_value > std::numeric_limits<int>::max())
+                                        throw std::runtime_error("implicit error value " + get_name() + "::" + elemname
+                                                                 + " must fit in int");
+                                    numeric_value = has_explicit_value
+                                                        ? parse_error_integer_value(elemValue, get_name(), elemname)
+                                                        : static_cast<int>(next_error_value);
+                                    if (numeric_value == 0)
+                                        throw std::runtime_error("only OK may use value 0 in error " + get_name());
+                                    elemValue = std::to_string(numeric_value);
+                                    next_error_value = numeric_value + 1;
+                                }
+
+                                const auto existing = error_values_seen.find(numeric_value);
+                                if (existing != error_values_seen.end())
+                                {
+                                    std::cerr << "warning: duplicate error value " << numeric_value << " in error "
+                                              << get_name() << " for " << existing->second << " and " << elemname
+                                              << '\n';
+                                }
+                                else
+                                {
+                                    error_values_seen.emplace(numeric_value, elemname);
+                                }
+                                ++error_value_index;
+                            }
+
                             function_entity fn;
+                            fn.swap(member_attribs);
                             fn.set_name(elemname);
                             fn.set_return_type(elemValue);
+                            fn.set_has_explicit_value(has_explicit_value);
                             fn.set_is_in_import(in_import);
                             add_function(fn);
 
                             elemname = "";
+                            member_attribs = {};
 
                             if (*pData == ',')
                                 pData++;
@@ -873,6 +995,9 @@ void class_entity::parse_structure(const char*& pData, bool bInCurlyBrackets, bo
             // get the parent name
             if (*pData == ':')
             {
+                if (get_entity_type() == entity_type::ERROR)
+                    throw std::runtime_error("error declarations do not support explicit base types");
+
                 pData++;
 
                 EAT_SPACES(pData)
@@ -1175,8 +1300,8 @@ bool class_entity::has_typedefs(const char* pData)
 
     if (*pData == ';' || *pData == '[' || *pData == '\0' || is_word(pData, "struct") || is_word(pData, "interface")
         || is_word(pData, "class") || is_word(pData, "namespace") || is_word(pData, "exception")
-        || is_word(pData, "enum") || is_word(pData, "union") || is_word(pData, "typedef") || is_word(pData, "#include")
-        || is_word(pData, "import"))
+        || is_word(pData, "enum") || is_word(pData, "error") || is_word(pData, "union") || is_word(pData, "typedef")
+        || is_word(pData, "#include") || is_word(pData, "import"))
         return false;
 
     return true;
@@ -1236,7 +1361,7 @@ bool class_entity::parse_class(const char*& pData, attributes& attribs, std::sha
     bool is_variable = false;
 
     if (is_word(pData, "struct") || is_word(pData, "interface") || is_word(pData, "class") || is_word(pData, "template")
-        || is_word(pData, "exception") || is_word(pData, "enum") || is_word(pData, "union"))
+        || is_word(pData, "exception") || is_word(pData, "enum") || is_word(pData, "error") || is_word(pData, "union"))
     {
         // continue if this is only a forward declarantion
         const char* curlyPos = strchr(&*pData, '{');
@@ -1271,6 +1396,11 @@ bool class_entity::parse_class(const char*& pData, attributes& attribs, std::sha
     else if (is_variable == false && if_is_word_eat(pData, "enum"))
     {
         obj = parse_interface(pData, entity_type::ENUM, attribs, in_import);
+        add_class(obj);
+    }
+    else if (is_variable == false && if_is_word_eat(pData, "error"))
+    {
+        obj = parse_interface(pData, entity_type::ERROR, attribs, in_import);
         add_class(obj);
     }
     else if (if_is_word_eat(pData, "interface"))

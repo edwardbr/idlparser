@@ -20,6 +20,7 @@ enum class entity_type : uint64_t
     TYPE_NULL = 0,
     STRUCT = 1,
     ENUM = 2,
+    ERROR = 4,
     INTERFACE = 16,
     TYPEDEF = 32,
     CLASS = 1024,
@@ -37,10 +38,9 @@ enum class entity_type : uint64_t
     RUSTQUOTE = 8388608,
 
     NAMESPACE_MEMBERS
-    = STRUCT | ENUM | INTERFACE | TYPEDEF | CLASS | TEMPLATE | NAMESPACE | CPPQUOTE | RUSTQUOTE | CONSTEXPR,
-    STRUCTURE_MEMBERS
-    = TYPEDEF | FUNCTION_METHOD | FUNCTION_VARIABLE | CPPQUOTE | RUSTQUOTE | FUNCTION_PUBLIC | FUNCTION_PRIVATE
-    | CONSTEXPR,
+    = STRUCT | ENUM | ERROR | INTERFACE | TYPEDEF | CLASS | TEMPLATE | NAMESPACE | CPPQUOTE | RUSTQUOTE | CONSTEXPR,
+    STRUCTURE_MEMBERS = TYPEDEF | FUNCTION_METHOD | FUNCTION_VARIABLE | CPPQUOTE | RUSTQUOTE | FUNCTION_PUBLIC
+                        | FUNCTION_PRIVATE | CONSTEXPR,
 };
 
 inline entity_type operator|(entity_type lhs, entity_type rhs)
@@ -207,6 +207,7 @@ class function_entity : public entity
     std::string return_type_;
     bool pure_virtual_ = false;
     bool static_ = false;
+    bool has_explicit_value_ = false;
 
     std::list<parameter_entity> parameters_;
     std::string default_value;
@@ -228,6 +229,9 @@ public:
 
     bool is_static() const { return static_; }
     void set_static(bool stat) { static_ = stat; }
+
+    bool has_explicit_value() const { return has_explicit_value_; }
+    void set_has_explicit_value(bool explicit_value) { has_explicit_value_ = explicit_value; }
 
     std::string get_array_string() const { return array_string_; }
     void set_array_string(const std::string& s) { array_string_ = s; }
