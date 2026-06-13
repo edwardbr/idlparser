@@ -230,6 +230,10 @@ function_entity class_entity::parse_function(const char*& pData, attributes& att
         ; // no processing
     else if (bFunctionIsProperty)
     {
+        // Struct field default values are captured here: parse_function (not
+        // parse_variable) handles the `=` suffix for FUNCTION_VARIABLE entries.
+        // parse_variable is the simpler path that runs only when isFunction()
+        // returns false AND there is no `=` to consume.
         if (func.get_entity_type() != entity_type::CONSTEXPR)
             func.set_entity_type(entity_type::FUNCTION_VARIABLE);
         if (*pData == '=') // this may be a default value

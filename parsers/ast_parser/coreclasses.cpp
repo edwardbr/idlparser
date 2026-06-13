@@ -4,6 +4,7 @@
 #include <list>
 #include <unordered_map>
 #include <memory>
+#include <stdexcept>
 
 #include "cpp_parser.h"
 #include "commonfuncs.h"
@@ -81,6 +82,19 @@ void class_entity::add_class(std::shared_ptr<class_entity> classObject)
         auto& cls = *it;
         if (cls->get_name() == classObject->get_name())
         {
+            if (cls->get_entity_type() == entity_type::NAMESPACE
+                && classObject->get_entity_type() == entity_type::NAMESPACE)
+            {
+                continue;
+            }
+            if (cls->get_import_lib() != "" && classObject->get_import_lib() != ""
+                && cls->get_import_lib() != classObject->get_import_lib())
+            {
+                std::stringstream err;
+                err << "duplicate imported IDL symbol '" << classObject->get_name() << "' from '"
+                    << cls->get_import_lib() << "' and '" << classObject->get_import_lib() << "'";
+                throw std::runtime_error(err.str());
+            }
             if (cls->get_import_lib() == "")
                 return;
             if (cls->get_import_lib() != "" && classObject->get_import_lib() == "")
@@ -126,26 +140,72 @@ bool class_entity::find_class(std::string type, std::shared_ptr<class_entity>& o
 
 bool class_entity::find_class(const std::vector<std::string>& type, std::shared_ptr<class_entity>& obj) const
 {
+    std::shared_ptr<class_entity> found;
     for (auto& cls : get_classes())
     {
         if (cls->get_name() == type[0])
         {
+            std::shared_ptr<class_entity> candidate;
+            bool candidate_found = false;
             if (type.size() == 1)
             {
-                obj = cls;
-                return true;
+                candidate = cls;
+                candidate_found = true;
             }
             else
             {
                 std::vector<std::string> t(++type.begin(), type.end());
-                // keep looking if not found : may happen when an imported namespace "hides" the loaded one
-                bool found = cls->find_class(t, obj);
-                if (found)
-                    return true;
+                // Keep looking if not found: repeated namespace declarations
+                // can exist when separate imports contribute to the same
+                // namespace.
+                candidate_found = cls->find_class(t, candidate);
             }
+
+            if (!candidate_found)
+                continue;
+
+            if (!found)
+            {
+                found = candidate;
+                continue;
+            }
+
+            if (found.get() == candidate.get())
+                continue;
+
+            if (found->get_entity_type() == entity_type::NAMESPACE
+                && candidate->get_entity_type() == entity_type::NAMESPACE)
+            {
+                continue;
+            }
+
+            if (!found->get_import_lib().empty() && found->get_import_lib() == candidate->get_import_lib()
+                && found->get_entity_type() == candidate->get_entity_type())
+            {
+                continue;
+            }
+
+            std::stringstream err;
+            err << "ambiguous IDL type '";
+            for (size_t i = 0; i < type.size(); ++i)
+            {
+                if (i)
+                    err << "::";
+                err << type[i];
+            }
+            err << "'";
+            if (!found->get_import_lib().empty() || !candidate->get_import_lib().empty())
+            {
+                err << " resolved from imports '" << found->get_import_lib() << "' and '" << candidate->get_import_lib()
+                    << "'";
+            }
+            throw std::runtime_error(err.str());
         }
     }
-    return false;
+    if (!found)
+        return false;
+    obj = found;
+    return true;
 }
 
 const class_entity& get_root(const class_entity& cls)
