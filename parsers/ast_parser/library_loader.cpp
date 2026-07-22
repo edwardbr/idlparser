@@ -1149,7 +1149,8 @@ std::shared_ptr<class_entity> class_entity::parse_typedef(const char*& pData, at
             EAT_SPACES(pData)
 
             int template_count = 0;
-            while (*pData != 0 && *pData != ' ' && *pData != '*' && *pData != ';' && *pData != '{' && *pData != '['
+            while (*pData != 0 && (*pData != ' ' || template_count > 0) && *pData != '*' && *pData != ';'
+                   && *pData != '{' && *pData != '['
                    && (*pData != ',' || template_count > 0))
             {
                 if (*pData == '<')
