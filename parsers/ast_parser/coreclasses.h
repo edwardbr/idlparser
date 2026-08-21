@@ -312,6 +312,7 @@ public:
     void parse_variable(const char*& pData, bool in_import);
     std::shared_ptr<class_entity> parse_interface(const char*& pData, const entity_type type, attributes& attr,
                                                   bool in_import);
+    std::shared_ptr<class_entity> parse_version(const char*& pData, attributes& attr, bool in_import);
     std::string parse_quote(const char*& pData, const char* macro_name);
     void parse_template(const char*& pData, std::list<template_declaration>& templateParams);
     void parse_namespace(const char*& pData, bool in_import);

@@ -698,6 +698,43 @@ std::shared_ptr<class_entity> class_entity::parse_interface(const char*& pData, 
     return cls;
 }
 
+std::shared_ptr<class_entity> class_entity::parse_version(const char*& pData, attributes& attr, bool in_import)
+{
+    EAT_SPACES(pData)
+
+    std::string version;
+    while (*pData != 0 && *pData != ' ' && *pData != '\t' && *pData != '\r' && *pData != '\n' && *pData != '{')
+        version += *pData++;
+    if (version.empty())
+        throw std::runtime_error("version declaration requires a version value");
+
+    std::string namespace_name("v");
+    for (const auto character : version)
+    {
+        if (character == '.')
+            namespace_name += '_';
+        else if (character == '-')
+            namespace_name += "_M_";
+        else if (character == '+')
+            namespace_name += "_P_";
+        else
+            namespace_name += character;
+    }
+
+    EAT_SPACES(pData)
+    if (*pData != '{')
+        throw std::runtime_error("version declaration requires a '{'");
+    ++pData;
+
+    auto cls = std::make_shared<class_entity>(this);
+    cls->set_is_in_import(in_import);
+    cls->set_entity_type(entity_type::NAMESPACE);
+    cls->set_name(namespace_name);
+    cls->swap(attr);
+    cls->parse_structure(pData, true, in_import);
+    return cls;
+}
+
 std::string class_entity::parse_quote(const char*& pData, const char* macro_name)
 {
     EAT_SPACES_AND_NEW_LINES(pData)
@@ -1300,7 +1337,8 @@ bool class_entity::has_typedefs(const char* pData)
     EAT_SPACES(pData)
 
     if (*pData == ';' || *pData == '[' || *pData == '\0' || is_word(pData, "struct") || is_word(pData, "interface")
-        || is_word(pData, "class") || is_word(pData, "namespace") || is_word(pData, "exception")
+        || is_word(pData, "class") || is_word(pData, "namespace") || is_word(pData, "version")
+        || is_word(pData, "exception")
         || is_word(pData, "enum") || is_word(pData, "error") || is_word(pData, "union") || is_word(pData, "typedef")
         || is_word(pData, "#include") || is_word(pData, "import"))
         return false;
@@ -1362,7 +1400,8 @@ bool class_entity::parse_class(const char*& pData, attributes& attribs, std::sha
     bool is_variable = false;
 
     if (is_word(pData, "struct") || is_word(pData, "interface") || is_word(pData, "class") || is_word(pData, "template")
-        || is_word(pData, "exception") || is_word(pData, "enum") || is_word(pData, "error") || is_word(pData, "union"))
+        || is_word(pData, "exception") || is_word(pData, "enum") || is_word(pData, "error") || is_word(pData, "union")
+        || is_word(pData, "version"))
     {
         // continue if this is only a forward declarantion
         const char* curlyPos = strchr(&*pData, '{');
@@ -1372,7 +1411,9 @@ bool class_entity::parse_class(const char*& pData, attributes& attribs, std::sha
             is_variable = true;
         }
 
-        if (handleTypeDefs && has_typedefs(pData))
+        // A version scope is a namespace-like container and can never be the
+        // anonymous declaration in a typedef.
+        if (handleTypeDefs && !is_word(pData, "version") && has_typedefs(pData))
             bUseTypeDef = true;
     }
 
@@ -1387,6 +1428,11 @@ bool class_entity::parse_class(const char*& pData, attributes& attribs, std::sha
     else if (is_variable == false && if_is_word_eat(pData, "namespace"))
     {
         obj = parse_interface(pData, entity_type::NAMESPACE, attribs, in_import);
+        add_class(obj);
+    }
+    else if (is_variable == false && if_is_word_eat(pData, "version"))
+    {
+        obj = parse_version(pData, attribs, in_import);
         add_class(obj);
     }
     else if (is_variable == false && if_is_word_eat(pData, "import"))
