@@ -46,7 +46,15 @@ namespace
     void push_attribute(attributes& attribs, std::pair<std::string, std::string>& property)
     {
         trim_attribute_name(property.first);
-        attribs.push_back(property);
+        if (property.first == "in out" || property.first == "in_out")
+        {
+            attribs.push_back(attribute_types::in_param);
+            attribs.push_back(attribute_types::out_param);
+        }
+        else
+        {
+            attribs.push_back(property);
+        }
         property = {};
     }
 }
@@ -318,6 +326,11 @@ function_entity class_entity::parse_function(const char*& pData, attributes& att
             parameter_entity parameter;
             bool b_nullParam = false;
 
+            EAT_SPACES(pData)
+
+            // `mut` is a C++ parameter projection marker. It does not form part
+            // of the value type seen by legacy wire-format generators.
+            if_is_word_eat(pData, "mut");
             EAT_SPACES(pData)
 
             auto attribs = get_attributes(pData);
@@ -1187,8 +1200,7 @@ std::shared_ptr<class_entity> class_entity::parse_typedef(const char*& pData, at
 
             int template_count = 0;
             while (*pData != 0 && (*pData != ' ' || template_count > 0) && *pData != '*' && *pData != ';'
-                   && *pData != '{' && *pData != '['
-                   && (*pData != ',' || template_count > 0))
+                   && *pData != '{' && *pData != '[' && (*pData != ',' || template_count > 0))
             {
                 if (*pData == '<')
                     template_count++;
@@ -1338,9 +1350,8 @@ bool class_entity::has_typedefs(const char* pData)
 
     if (*pData == ';' || *pData == '[' || *pData == '\0' || is_word(pData, "struct") || is_word(pData, "interface")
         || is_word(pData, "class") || is_word(pData, "namespace") || is_word(pData, "version")
-        || is_word(pData, "exception")
-        || is_word(pData, "enum") || is_word(pData, "error") || is_word(pData, "union") || is_word(pData, "typedef")
-        || is_word(pData, "#include") || is_word(pData, "import"))
+        || is_word(pData, "exception") || is_word(pData, "enum") || is_word(pData, "error") || is_word(pData, "union")
+        || is_word(pData, "typedef") || is_word(pData, "#include") || is_word(pData, "import"))
         return false;
 
     return true;
